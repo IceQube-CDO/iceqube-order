@@ -2,125 +2,155 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, system-ui, sans-serif;
 }
 
 body {
-    background: #f8fafc;
-    color: #1e293b;
+    background: #eef2f6;
     height: 100vh;
     overflow: hidden;
+    color: #1a202c;
 }
 
 .container {
     width: 100% !important;
     max-width: 100% !important;
     height: 100vh;
+    padding: 15px;
     display: flex;
     flex-direction: column;
-    padding: 20px;
 }
 
 header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 h1 {
-    font-size: 24px;
-    font-weight: 800;
-    color: #0f172a;
+    font-size: 22px;
+    font-weight: 900;
+    color: #2d3748;
 }
 
-.status-badge {
-    font-size: 12px;
-    color: #10b981;
-    font-weight: 600;
-    margin-bottom: 5px;
+.loc {
+    font-size: 13px;
+    color: #718096;
+    margin-top: 2px;
 }
 
-.location {
-    font-size: 14px;
-    color: #64748b;
-}
-
-/* BULK PROMPT STYLING */
+/* PROMPT FIX */
 .bulk-tier-prompt {
-    background: #f0fdf4;
-    border: 2px solid #22c55e;
+    background: #f0fff4;
+    border: 2px solid #38a169;
     border-radius: 12px;
     padding: 12px;
     margin-bottom: 15px;
     text-align: center;
-    color: #15803d;
-    font-weight: 700;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    color: #2f855a;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .product-card {
     background: white;
-    border-radius: 24px;
-    padding: 24px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
 
-.image-container img {
+.product-img {
     width: 100%;
-    max-width: 180px;
-    display: block;
-    margin: 0 auto 15px;
+    max-width: 160px;
+    margin-bottom: 10px;
 }
 
-.order-controls {
+h2 {
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.desc {
+    font-size: 14px;
+    color: #4a5568;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.selection-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #f1f5f9;
+    padding-top: 15px;
+    border-top: 1px solid #edf2f7;
 }
 
-.price-tag {
+.amount {
     display: block;
-    font-weight: 700;
-    color: #0284c7;
+    font-size: 20px;
+    font-weight: 800;
+    color: #2b6cb0;
 }
 
-.qty-stepper {
+.unit {
+    font-size: 12px;
+    color: #a0aec0;
+}
+
+.stepper {
     display: flex;
     align-items: center;
     gap: 15px;
-    background: #f1f5f9;
-    padding: 5px;
-    border-radius: 12px;
+    background: #f7fafc;
+    padding: 6px;
+    border-radius: 10px;
 }
 
-.step-btn {
-    width: 35px;
-    height: 35px;
+.stepper button {
+    width: 32px;
+    height: 32px;
     border: none;
     background: white;
-    border-radius: 8px;
-    font-size: 20px;
+    border-radius: 6px;
     font-weight: bold;
-    cursor: pointer;
+    font-size: 18px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 #qty {
-    font-weight: 700;
+    font-weight: 800;
     font-size: 18px;
-    width: 25px;
-    text-align: center;
+    min-width: 25px;
 }
 
-.submit-btn {
+.footer-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding: 15px 5px;
+    font-weight: 600;
+}
+
+.total {
+    font-size: 20px;
+    font-weight: 900;
+    color: #1a202c;
+}
+
+.confirm-btn {
     width: 100%;
-    background: #0284c7;
+    background: #3182ce;
     color: white;
     border: none;
     padding: 18px;
-    border-radius: 16px;
+    border-radius: 15px;
     font-size: 18px;
     font-weight: 700;
-    margin-top: auto;
 }

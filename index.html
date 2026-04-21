@@ -4,16 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IceQube | Order Premium Ice</title>
+    <title>IceQube CDO | Premium Ice</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <div class="container">
         <header>
-            <div class="status-badge">● Dispatcher Online</div>
-            <h1>IceQube CDO</h1>
-            <p class="location">📍 Piaping Itum, Macabalan</p>
+            <div class="brand">
+                <span class="logo">🧊</span>
+                <h1>IceQube</h1>
+            </div>
+            <p class="loc">Piaping Itum, Macabalan</p>
         </header>
 
         <main>
@@ -22,30 +24,34 @@
             </div>
 
             <div class="product-card">
-                <div class="image-container">
-                    <img src="ice_bg.png" alt="Crystal Ice">
-                </div>
-                <h2>Premium Crystal Ice</h2>
-                <p class="product-info">Engineered for maximum density. Slow-melting 22mm cubes.</p>
+                <img src="ice_bg.png" alt="Crystal Ice" class="product-img">
+                <h2>Full Dice Ice (3kg)</h2>
+                <p class="desc">Crystal clear, slow-melting cubes. Perfect for cocktails and coffee.</p>
 
-                <div class="order-controls">
-                    <div class="price-box">
-                        <span class="label">3kg Bag</span>
-                        <span class="price-tag">₱40/bag</span>
+                <div class="selection-row">
+                    <div class="price-info">
+                        <span class="amount">₱40.00</span>
+                        <span class="unit">per bag</span>
                     </div>
-                    <div class="qty-stepper">
-                        <button class="step-btn" id="minus">-</button>
+                    <div class="stepper">
+                        <button id="minus">−</button>
                         <span id="qty">15</span>
-                        <button class="step-btn" id="plus">+</button>
+                        <button id="plus">+</button>
                     </div>
                 </div>
             </div>
         </main>
 
+        <div class="footer-stats">
+            <span>Total to Pay:</span>
+            <span class="total">₱600.00</span>
+        </div>
+
         <footer>
-            <button class="submit-btn">Confirm Order</button>
+            <button class="confirm-btn">Confirm Order</button>
         </footer>
     </div>
+    <script src="app.js"></script>
 </body>
 
 </html>
