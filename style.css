@@ -675,6 +675,33 @@ input:focus, textarea:focus {
     width: 100%;
 }
 
+.btn-secondary-action {
+    width: 100%;
+    padding: 1.25rem;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1.5px solid var(--border);
+    font-weight: 600;
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn-secondary-action:hover {
+    background: var(--bg-secondary);
+    border-color: var(--text-secondary);
+}
+
+.btn-secondary-action:active {
+    transform: scale(0.98);
+}
+
 /* Success Animation */
 .success-checkmark {
     width: 80px;
