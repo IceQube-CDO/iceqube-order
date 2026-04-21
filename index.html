@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IceQube CDO | Premium Crystal Ice</title>
+    <meta name="description" content="Order premium crystal clear ice in Cagayan de Oro. Fast delivery and high-quality ice cubes.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+</head>
+<body>
+    <div class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+    </div>
+
+    <main id="app">
+        <div class="container">
+            <!-- Step 1: START (Hero) -->
+            <section id="step-start" class="step-content">
+                <img src="./assets/hero.png" alt="Crystal Ice Cubes" class="hero-image">
+                <h1>IceQube CDO</h1>
+                <p class="subtitle">Experience the finest crystal ice in Cagayan de Oro. Perfect for every occasion.</p>
+                <button class="btn-primary" onclick="app.nextStep()">
+                    Start Your Order
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </section>
+
+            <!-- Step 2: QTY (Mixed Orders) -->
+            <section id="step-qty" class="step-content">
+                <div class="tab-switcher">
+                    <button class="tab-item active" id="tab-full-dice" onclick="app.slideQty('full-dice')">Full Dice 🧊</button>
+                    <button class="tab-item" id="tab-half-dice" onclick="app.slideQty('half-dice')">Half-Dice ❄️</button>
+                </div>
+                <p class="subtitle">Select the number of bags for your order.</p>
+                
+                <div id="bulk-bonus-notification" style="display: none; background: #f0fdf4; color: #166534; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.85rem; text-align: center; margin-bottom: 1rem; border: 1px solid #bbf7d0; animation: fadeIn 0.3s ease; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                    <span id="bulk-bonus-text">Bulk Tier Reached! Add 1 more bag for FREE.</span>
+                </div>
+                
+                <div class="qty-carousel-container">
+                    <div id="qty-carousel-track" class="qty-carousel-track">
+                        <!-- Slide: Full Dice -->
+                        <div class="qty-slide" id="slide-full-dice">
+                            <div class="ice-product-card">
+                                <div class="ice-product-layout">
+                                    <div class="ice-product-content">
+                                        <div class="ice-product-subtitle">The Artisan’s Choice (22mm³)</div>
+                                        <p>The gold standard for premium beverages. These crystal-clear, slow-melting cubes are engineered for maximum density. They chill your coffee or cocktails without diluting the flavor, ensuring the first sip is as bold as the last.</p>
+                                    </div>
+                                    <div class="ice-product-image-container">
+                                        <img src="./assets/full_dice.png" alt="Full Dice Ice Cube" class="ice-product-image">
+                                        <div class="ice-dimension">22mm³</div>
+                                    </div>
+                                </div>
+                            
+                                <div class="counter-row">
+                                    <div class="product-info">
+                                        <h3>3kg Bag</h3>
+                                        <p>₱40 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', -1)">−</button>
+                                        <span id="qty-fullDice-3kg" class="counter-value-small">0</span>
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="counter-row" style="margin-bottom: 0;">
+                                    <div class="product-info">
+                                        <h3>1kg Bag</h3>
+                                        <p>₱15 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', -1)">−</button>
+                                        <span id="qty-fullDice-1kg" class="counter-value-small">0</span>
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', 1)">+</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Slide: Half-Dice -->
+                        <div class="qty-slide" id="slide-half-dice">
+                            <div class="ice-product-card">
+                                <div class="ice-product-layout">
+                                    <div class="ice-product-content">
+                                        <div class="ice-product-title-row">
+                                            <div style="text-align: left;">
+                                                <div class="ice-product-subtitle" style="margin-bottom: 0;">The Rapid Chill (10mm³)</div>
+                                            </div>
+                                        </div>
+                                        <p>The high-performance choice for rapid cooling. Designed with a larger surface area to chill carbonated drinks and blended smoothies instantly.</p>
+                                    </div>
+                                    <div class="ice-product-image-container">
+                                        <img src="./assets/half_dice.png" alt="Half-Dice Ice Cube" class="ice-product-image">
+                                        <div class="ice-dimension">10mm³</div>
+                                    </div>
+                                </div>
+                            
+                                <div class="counter-row">
+                                    <div class="product-info">
+                                        <h3>3kg Bag</h3>
+                                        <p>₱40 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', -1)">−</button>
+                                        <span id="qty-halfDice-3kg" class="counter-value-small">0</span>
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', 1)">+</button>
+                                    </div>
+                                </div>
+                                <div class="counter-row" style="margin-bottom: 0;">
+                                    <div class="product-info">
+                                        <h3>1kg Bag</h3>
+                                        <p>₱15 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', -1)">−</button>
+                                        <span id="qty-halfDice-1kg" class="counter-value-small">0</span>
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', 1)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="qty-sticky-footer">
+                    <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled style="margin-top: 1rem;">
+                        Confirm Order (₱0)
+                    </button>
+                    <button class="btn-secondary" onclick="app.prevStep()">Back</button>
+                </div>
+            </section>
+
+            <!-- Step 4: SCHEDULE -->
+            <section id="step-schedule" class="step-content">
+                <h1>When should we deliver?</h1>
+                <p class="subtitle">Choose your preferred timing.</p>
+                <div class="selection-grid">
+                    <div id="card-deliver-now" class="card" onclick="app.selectSchedule('Deliver Now', this)">
+                        <div>
+                            <h3>Deliver Now</h3>
+                            <span class="subtext">Arrives in 30-45 mins</span>
+                        </div>
+                        <div class="check-icon">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                    </div>
+                    <div id="card-schedule-date" class="card" onclick="app.selectSchedule('Schedule a Date & Time', this)">
+                        <div>
+                            <h3>Schedule a Date & Time</h3>
+                            <p>Pick a future slot.</p>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                </div>
+
+                <div id="schedule-inputs" style="display: none;">
+                    <div class="picker-grid">
+                        <div class="picker-group">
+                            <label>Date</label>
+                            <input type="date" id="schedule-date" class="input-picker" onchange="app.validateSchedule()">
+                        </div>
+                        <div class="picker-group">
+                            <label>Time (8 AM - 10 PM)</label>
+                            <input type="time" id="schedule-time" class="input-picker" onchange="app.validateSchedule()">
+                        </div>
+                    </div>
+                </div>
+
+                <button id="schedule-next" class="btn-primary" onclick="app.nextStep()" disabled style="margin-top: 2rem; display: none;">
+                    Continue to Logistics
+                </button>
+                <button class="btn-secondary" onclick="app.prevStep()">Back</button>
+            </section>
+
+            <!-- Step 4: LOGISTICS (Nested Flow) -->
+            <section id="step-logistics" class="step-content">
+                <div id="logistics-selection" class="logistics-subview active">
+                    <h1>Logistics</h1>
+                    <p class="subtitle">How would you like to receive your order?</p>
+                    <div class="selection-grid">
+                        <div class="card" onclick="app.selectLogistics('Doorstep Delivery', this)">
+                            <div>
+                                <h3>Doorstep Delivery</h3>
+                                <p>Direct to your home or business in CDO.</p>
+                            </div>
+                            <div class="check-icon">✓</div>
+                        </div>
+                        <div class="card" onclick="app.selectLogistics('Self-Pickup in Macabalan', this)">
+                            <div>
+                                <h3>Self-Pickup in Macabalan</h3>
+                                <p>From our facility in Piaping Itum.</p>
+                            </div>
+                            <div class="check-icon">✓</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="logistics-delivery" class="logistics-subview">
+                    <h1>Delivery Details</h1>
+                    <p class="subtitle">Enter your details for doorstep delivery.</p>
+                    <div class="input-stack">
+                        <input type="text" id="delivery-location" class="input-high-contrast" placeholder="Tap to select Delivery Location" onclick="app.openMapOverlay()" readonly style="cursor: pointer;">
+                        <input type="text" id="delivery-person" class="input-high-contrast" placeholder="Person Receiving">
+                        <input type="text" id="delivery-contact" class="input-high-contrast" placeholder="Contact Number">
+                        <input type="text" id="delivery-maps" class="input-high-contrast" placeholder="Google Maps Pin Link (Try: 'center' or 'uptown')" oninput="app.calculateDeliveryFee()">
+                    </div>
+
+                    <div id="delivery-summary" style="display: none; margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 0.75rem;">Order Summary</h3>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="opacity: 0.8;">Subtotal:</span>
+                            <span id="summary-subtotal" style="font-weight: 600;">₱0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="opacity: 0.8;">Delivery Fee (<span id="summary-zone" style="font-weight: 500;">Zone 1</span>):</span>
+                            <span id="summary-delivery-fee" style="font-weight: 600;">₱30</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                            <span>Total to Pay:</span>
+                            <span id="summary-total" style="font-weight: bold; font-size: 1.1rem;">₱0</span>
+                        </div>
+                        <div id="summary-manual-review" style="display: none; color: #d97706; margin-top: 0.75rem; font-size: 0.85rem; background: #fef3c7; padding: 0.75rem; border-radius: 0.5rem; display: flex; gap: 0.5rem; align-items: flex-start;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 0.1rem;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span>Region is marked outside CDO. Delivery fee requires manual review before dispatch.</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.goToPayment()" style="margin-top: 2rem;" disabled>
+                        Continue to Payment
+                    </button>
+                </div>
+
+                <div id="logistics-pickup" class="logistics-subview">
+                    <h1>Pickup Info</h1>
+                    <p class="subtitle">Our warehouse details for self-pickup.</p>
+                    <div class="pickup-card">
+                        <a href="https://www.google.com/maps/place/IceQube/@8.5020476,124.6582801,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu&g_ep=EgoyMDI2MDQxNS4wIKXMDSoASAFQAw%3D%3D" target="_blank" style="text-decoration: none; color: inherit; display: block;">
+                            <div class="pickup-map-placeholder">
+                                <!-- Visual placeholder for a map -->
+                                <div style="text-align: center; color: var(--text-secondary);">
+                                    <div style="margin-bottom: 0.5rem; display: flex; justify-content: center;">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    </div>
+                                    <div style="font-weight: 600;">IceQube Warehouse</div>
+                                    <div style="font-size: 0.75rem; opacity: 0.8;">Piaping Itum, Macabalan</div>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="pickup-details">
+                            <h4>Macabalan Warehouse</h4>
+                            <p>Located near the Macabalan Port. Parallel to the main road.</p>
+                            <span class="landmark-badge" style="margin-bottom: 0.5rem; display: inline-block;">Near Piaping Itum Chapel</span>
+                            <br>
+                            <a href="https://www.google.com/maps/place/IceQube/@8.5020476,124.6582801,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu&g_ep=EgoyMDI2MDQxNS4wIKXMDSoASAFQAw%3D%3D" target="_blank" style="display: inline-block; margin-top: 0.5rem; color: var(--accent); font-weight: 600; text-decoration: none; font-size: 0.875rem;">View on Google Maps →</a>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="app.goToPayment()" style="margin-top: 2rem;">
+                        Continue to Payment
+                    </button>
+                </div>
+
+                <button class="btn-secondary" onclick="app.prevStep()">Back</button>
+            </section>
+
+            <!-- Step 5: PAYMENT -->
+            <section id="step-payment" class="step-content">
+                <h1>Payment Method</h1>
+                <p class="subtitle">Choose how you'd like to pay for this order.</p>
+                <div class="selection-grid">
+                    <div class="card" onclick="app.selectPayment('GCash', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #007DFE;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/><path d="M16 8h2"/><path d="M16 12h2"/><path d="M16 16h2"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">GCash</h3>
+                                <p>Fastest & most popular.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                    <div class="card" onclick="app.selectPayment('Cash on Delivery', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #22c55e;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2"/><path d="M9 3h10a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2Z"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">Cash on Delivery</h3>
+                                <p>Pay our rider in Piaping Itum/CDO.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                    <div class="card" onclick="app.selectPayment('Bank Transfer', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #00D1FF;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/><path d="M5 21V10.9"/><path d="M9 21V10.9"/><path d="M15 21V10.9"/><path d="M19 21V10.9"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">Bank Transfer</h3>
+                                <p>GoTyme, Maya, or BPI.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                    <div id="card-payment-po" class="card" onclick="app.selectPayment('Purchase Order', this)" style="display: none;">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #6366f1;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">Purchase Order</h3>
+                                <p>For Enterprise & Verified Partners.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                </div>
+
+                <div id="po-entry-box" class="cod-verification-box">
+                    <label class="cod-label">Business PO Reference</label>
+                    <div class="cod-input-group">
+                        <input type="text" id="po-number-input" class="cod-input" placeholder="PO-XXXXX (Optional for small accounts)" oninput="app.orderData.poNumber = this.value">
+                    </div>
+                </div>
+
+                <div id="cod-verification-box" class="cod-verification-box">
+                    <label class="cod-label" id="cod-verification-text">To prevent fake orders, please verify your number.</label>
+                    <div class="cod-input-group" id="cod-phone-group">
+                        <input type="text" id="cod-phone-input" class="cod-input" placeholder="Contact Number">
+                        <button id="btn-send-otp" class="btn-verify-action" onclick="app.sendVerificationCode()">Send Verification Code</button>
+                    </div>
+                    
+                    <div id="otp-reveal-section" class="otp-reveal">
+                        <label class="cod-label">Enter 4-digit OTP</label>
+                        <div class="cod-input-group">
+                            <input type="text" id="cod-otp-input" class="cod-input" placeholder="0 0 0 0" maxlength="4" style="text-align: center; letter-spacing: 0.5rem;" oninput="app.verifyOTP()">
+                        </div>
+                    </div>
+
+                    <div id="cod-verified-msg" style="display: none; color: #166534; font-weight: 600; margin-top: 0.5rem; font-size: 0.875rem;">
+                        ✅ Number Verified. Order is being prepared.
+                    </div>
+                </div>
+
+                <button id="btn-finish-order" class="btn-primary" onclick="app.finishOrder()" style="margin-top: 2rem;" disabled>
+                    Place Order & Pay
+                </button>
+                <button class="btn-secondary" onclick="app.prevStep()">Back</button>
+            </section>
+
+            <div id="qr-modal" class="modal-overlay">
+                <div class="modal-content" style="background: white; border-radius: 24px; padding: 2.25rem 2rem; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+                    
+                    <!-- Stage 1: Instructions -->
+                    <div id="initial-payment-step" class="step-stage active">
+                        <div id="modal-header-area" style="text-align: center; margin-bottom: 1.5rem;">
+                            <div id="modal-icon-container">
+                                <svg id="modal-icon-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007DFE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.5rem;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><path d="M12 2a14.5 14.5 0 0 1 0 20 14.5 14.5 0 0 1 0-20"/></svg>
+                            </div>
+                            <h2 id="modal-title" style="color: #007DFE; font-weight: 800; letter-spacing: -0.05em; margin-bottom: 0;">GCash Payment</h2>
+                        </div>
+
+                        <div id="modal-qr-container" style="display: none; text-align: center; margin-bottom: 1.5rem; position: relative;">
+                            <img id="qr-image" src="" alt="Payment QR Code" style="width: 100%; max-width: 280px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);" onerror="app.handleQRImageError()">
+                            
+                            <div id="qr-fallback-ui" class="qr-fallback-card" style="display: none;">
+                                <div class="qr-fallback-title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    QR Failed to Load
+                                </div>
+                                <div class="qr-account-details">
+                                    <div class="qr-account-row"><span class="qr-account-label">Bank:</span> <span class="qr-account-value">GoTyme Bank</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">Name:</span> <span class="qr-account-value">LAWRENCE FE BACAYO</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">Account:</span> <span class="qr-account-value">........ 9031</span></div>
+                                </div>
+                                <button id="btn-reload-qr" class="btn-reload-qr" onclick="app.reloadQRImage()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                                    Reload Image
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="modal-instructions-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;">
+                            <button id="btn-open-app" class="btn-primary" onclick="app.openGCash()" style="background: #007DFE; margin: 0 auto 1.25rem; width: auto; padding: 0.875rem 1.75rem; border-radius: 99px; display: flex; align-items: center; gap: 0.75rem; font-size: 1rem;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20a10 10 0 0 0-10-10Z"/></svg>
+                                <span id="btn-open-app-text">Open GCash App</span>
+                            </button>
+                            <p id="modal-instructions-text" style="font-size: 0.875rem; color: #64748b; line-height: 1.5; margin: 0;">
+                                Pay to the merchant and return here to finish your order.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2: Verification (Hidden by default) -->
+                    <div id="verification-step" class="verification-step">
+                        <div style="text-align: center; margin-bottom: 1rem;">
+                            <h3 style="font-weight: 800; color: #0f172a; margin-bottom: 0.25rem;">Almost done!</h3>
+                        <p id="verification-text" style="font-size: 0.875rem; color: #64748b;">Please upload your payment screenshot.</p>
+                        </div>
+
+                        <div id="tally-upload-area" class="tally-upload-box" onclick="document.getElementById('staged-receipt-upload').click()">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="upload-icon-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span id="upload-status-text">📎 Tap to Upload Receipt</span>
+                            <img id="staged-receipt-preview" class="tally-receipt-preview">
+                            <input type="file" id="staged-receipt-upload" accept="image/*" style="display: none;" onchange="app.handleStagedUpload(event)">
+                        </div>
+
+                        <!-- Verification Overlay (Loading Spinner) -->
+                        <div id="receipt-verification-overlay" class="verification-overlay">
+                            <div class="spinner-container">
+                                <div class="ice-spinner"></div>
+                                <div class="verification-text">Verifying Receipt...</div>
+                                <div class="verification-subtext">Checking legitimacy and amount</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <p style="font-size: 0.8125rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Total to Pay</p>
+                        <div style="font-size: 2.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.05em;">₱<span id="qr-total">0</span></div>
+                    </div>
+
+                    <button id="btn-confirm-finish" class="btn-primary" onclick="app.handleStageTransition()" style="background: #007DFE; margin-top: 0;">
+                        I have paid
+                    </button>
+                    <button id="btn-cancel-modal" class="btn-secondary" onclick="app.closeQRModal()" style="margin-top: 0.5rem; color: #ef4444;">Cancel</button>
+                </div>
+
+            <!-- Step 6: COMPLETE -->
+            <section id="step-complete" class="step-content">
+                <div class="success-checkmark">
+                    <svg viewBox="0 0 52 52">
+                        <circle class="circle-path" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="check-path" fill="none" stroke="white" stroke-width="2" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </div>
+                <h1 style="text-align: center;">Order Confirmed!</h1>
+                <p class="subtitle" style="text-align: center;">Your order has been placed successfully. We'll notify you on Messenger shortly.</p>
+                
+                <div id="finish-card" class="card" style="margin-top: 2rem; cursor: default; position: relative; overflow: hidden;">
+                    <div style="width: 100%;">
+                        <div id="finish-status-container" style="display: none; justify-content: center; margin-bottom: 1.25rem;">
+                            <span class="status-badge-neutral">Billed to Account</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                            <span id="finish-doc-type">Order ID:</span>
+                            <span id="finish-id" style="font-weight: 600;">#IQ-12345</span>
+                        </div>
+                        <div id="finish-doc-msg" style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 0.75rem; text-align: right;">
+                            A copy of this receipt has been sent to your Messenger inbox.
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Type:</span>
+                            <span id="finish-type" style="font-weight: 600;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: flex-start;">
+                            <span>Quantity:</span>
+                            <span id="finish-qty" style="font-weight: 600; text-align: right;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Timing:</span>
+                            <span id="finish-timing" style="font-weight: 600;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Logistics:</span>
+                            <span id="finish-logistics" style="font-weight: 600;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Payment:</span>
+                            <span id="finish-payment" style="font-weight: 600;">-</span>
+                        </div>
+                        <div id="finish-fee-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; display: none;">
+                            <span>Delivery Fee:</span>
+                            <span id="finish-fee" style="font-weight: 600;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                            <span>Total:</span>
+                            <span id="finish-total" style="font-weight: bold; font-size: 1.1rem;">₱0</span>
+                        </div>
+                        <div id="finish-po-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>PO Reference:</span>
+                            <span id="finish-po-num" style="font-weight: 600;">-</span>
+                        </div>
+                        <div id="finish-cod-note" style="display: none; color: #22c55e; margin-top: 0.75rem; font-size: 0.85rem; background: #dcfce7; padding: 0.5rem; border-radius: 0.25rem;">
+                            <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; justify-content: center; margin-top: 0.1rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                </div>
+                                <div>Payment to be collected by rider upon delivery.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="standard-finish-buttons">
+                    <button class="btn-secondary" onclick="app.goToAutomate()" style="margin-top: 1.5rem; border: 2px solid var(--accent); color: var(--accent); width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                        Automate This Order
+                    </button>
+
+                    <button class="btn-primary" onclick="app.returnToMessenger()" style="margin-top: 1rem;">
+                        Return to Messenger
+                    </button>
+                </div>
+
+                <div id="po-finish-buttons" style="display: none;">
+                    <button class="btn-primary" onclick="app.viewWeeklyStatement()" style="margin-top: 1.5rem;">
+                        View Weekly Statement
+                    </button>
+                    <button class="btn-secondary" onclick="app.returnToMessenger()" style="margin-top: 1rem;">
+                        Back to Messenger
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 7: AUTOMATE -->
+            <section id="step-automate" class="step-content">
+                <h1>Set your Schedule</h1>
+                <p class="subtitle">Choose which days you want IceQube to arrive automatically.</p>
+
+                <div style="background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 1rem; margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div style="display: flex; align-items: center; color: var(--accent);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent); margin-bottom: 0.25rem;">Seamless Billing</h4>
+                        <p style="font-size: 0.875rem; line-height: 1.4; color: var(--text-secondary);">Setting up a subscription? Link your GCash or Maya in Messenger later so you won't have to handle cash every morning.</p>
+                    </div>
+                </div>
+                
+                <div class="days-grid stacked-grid" style="margin-top: 1.5rem;">
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('Su', this)">Su</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('M', this)">M</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('T', this)">T</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('W', this)">W</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('Th', this)">Th</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('F', this)">F</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('S', this)">S</div>
+                </div>
+
+                <div id="dynamic-schedule-list" style="margin-top: 2rem;">
+                    <!-- Rows will be injected here by app.js -->
+                </div>
+
+                <div id="dynamic-schedule-summary" style="margin-top: 1.5rem; text-align: center; color: var(--text-secondary); font-weight: 600; display: none;">
+                    Scheduled for <span id="schedule-count">0</span> days.
+                </div>
+
+                <button id="btn-save-schedule" class="btn-primary" onclick="app.saveDynamicSchedule()" style="margin-top: 1.5rem;" disabled>
+                    Save Schedule
+                </button>
+                <button class="btn-secondary" onclick="app.cancelAutomate()">Skip</button>
+            </section>
+
+            <!-- Step 8: AUTOMATE SUCCESS -->
+            <section id="step-automate-success" class="step-content">
+                <div class="success-checkmark">
+                    <svg viewBox="0 0 52 52">
+                        <circle class="circle-path" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="check-path" fill="none" stroke="white" stroke-width="2" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </div>
+                <h1 style="text-align: center;">Subscription Active</h1>
+                <p class="subtitle" style="text-align: center;">Your automated delivery schedule is set. We'll send you reminders on Messenger before each dispatch.</p>
+                <div class="card" style="margin-top: 2rem; cursor: default;">
+                    <div style="width: 100%;">
+                        <h3 style="margin-bottom: 0.75rem;">Schedule Summary</h3>
+                        <div id="automate-success-summary">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="app.finishAutomate()" style="margin-top: 2rem;">
+                    Finish & Go to Messenger
+                </button>
+            </section>
+        </div>
+    </main>
+
+    <!-- Map Overlay -->
+    <div id="map-overlay" class="modal-overlay map-overlay-fullscreen">
+        <div class="map-overlay-content">
+            <div class="map-header">
+                <button class="btn-back-icon" onclick="app.closeMapOverlay()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h2 style="font-size: 1.25rem; margin-bottom: 0;">Select Location</h2>
+                <div style="width: 24px;"></div>
+            </div>
+            <div id="map-container" style="flex: 1; width: 100%; position: relative;"></div>
+            <div class="map-footer">
+                <div class="map-address-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span id="map-address-text" style="font-size: 0.9rem; font-weight: 500; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Drag pin to your location...</span>
+                </div>
+                <button id="btn-confirm-map" class="btn-primary" onclick="app.confirmMapLocation()" style="margin-top: 0; padding: 1rem;">Confirm Location</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
