@@ -16,6 +16,7 @@
             background-color: #f1f5f9 !important;
             overflow: hidden !important;
             height: 100vh !important;
+            height: 100dvh !important;
             font-family: 'Outfit', sans-serif !important;
             display: flex;
             justify-content: center;
@@ -24,6 +25,7 @@
             width: 100% !important;
             max-width: 500px !important;
             height: 100vh !important;
+            height: 100dvh !important;
             position: relative !important;
             overflow: hidden !important;
             background: white !important;
@@ -139,7 +141,7 @@
                                         <p>Slow-melting, high-density cubes. Best for premium coffee and cocktails to prevent dilution.</p>
                                     </div>
                                     <div class="ice-product-image-container">
-                                        <img src="/Users/macbookpro/.gemini/antigravity/brain/f1b6c8ce-0f1b-4ff8-b7c1-c3d7071d77b8/full_dice_macro_studio_1776926342054.png" alt="Full Dice Ice Cube" class="ice-product-image">
+                                        <img src="./assets/full_dice.png" alt="Full Dice Ice Cube" class="ice-product-image">
                                         <div class="ice-dimension">23x23x23mm</div>
                                     </div>
                                 </div>
@@ -189,7 +191,7 @@
                                         <p>Rapid-cooling slender cubes. Perfect for frappes, smoothies, and carbonated drinks.</p>
                                     </div>
                                     <div class="ice-product-image-container">
-                                        <img src="/Users/macbookpro/.gemini/antigravity/brain/f1b6c8ce-0f1b-4ff8-b7c1-c3d7071d77b8/half_dice_macro_studio_1776925750328.png" alt="Half-Dice Ice Cube" class="ice-product-image">
+                                        <img src="./assets/half_dice.png" alt="Half-Dice Ice Cube" class="ice-product-image">
                                         <div class="ice-dimension">10x29x22mm</div>
                                     </div>
                                 </div>
@@ -575,14 +577,22 @@
                         <p id="verification-text-top" class="modal-subtitle">Please upload your GCash screenshot.</p>
 
                         <!-- QR Container (Conditionally shown for Bank Transfer) -->
-                        <div id="modal-qr-container" style="display: none; margin-bottom: 2rem;">
-                            <img id="qr-image" src="./assets/gcash-qr.png" alt="Payment QR Code" style="width: 100%; max-width: 280px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);" onerror="app.handleQRImageError()">
+                        <div id="modal-qr-container" style="display: none; margin-bottom: 1.5rem;">
+                            <img id="qr-image" src="./assets/gcash-qr-iceqube.png" alt="Payment QR Code" style="width: 100%; max-width: 280px; margin: 0 auto; display: block; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);" onerror="app.handleQRImageError()">
+                            
+                            <!-- New: Text-based Bank Details for High Clarity -->
+                            <div id="modal-bank-details-text" class="qr-account-details" style="display: none; margin-top: 1.5rem; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div class="qr-account-row"><span class="qr-account-label">Bank:</span> <span class="qr-account-value">GoTyme Bank</span></div>
+                                <div class="qr-account-row"><span class="qr-account-label">Name:</span> <span class="qr-account-value">LAWRENCE FE BACAYO</span></div>
+                                <div class="qr-account-row"><span class="qr-account-label">Account:</span> <span class="qr-account-value">0176-3092-9031</span></div>
+                            </div>
+
                             <div id="qr-fallback-ui" class="qr-fallback-card" style="display: none;">
                                 <div class="qr-fallback-title">QR Failed to Load</div>
                                 <div class="qr-account-details">
-                                    <div class="qr-account-row"><span class="qr-account-label">Name:</span> <span class="qr-account-value">LA*****E F* B.</span></div>
-                                    <div class="qr-account-row"><span class="qr-account-label">Mobile:</span> <span class="qr-account-value">0961 039 ....</span></div>
-                                    <div class="qr-account-row"><span class="qr-account-label">User ID:</span> <span class="qr-account-value">...........9EW6SH</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">Name:</span> <span class="qr-account-value">LAWRENCE FE BACAYO</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">Mobile:</span> <span class="qr-account-value">(0961) 039 1173</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">User ID:</span> <span class="qr-account-value">90319EW6SH</span></div>
                                 </div>
                             </div>
                         </div>
@@ -1222,7 +1232,7 @@
                                 <div class="ice-vertical-layout ice-reverse">
                                     <div class="ice-macro-column">
                                         <div class="ice-macro-zoom-container">
-                                            <img src="/Users/macbookpro/.gemini/antigravity/brain/e543b102-838e-4506-b603-77885e8e5b5c/full_dice_premium_1776860433843.png" alt="Full Dice Macro" class="ice-macro-image">
+                                            <img src="./assets/full_dice_macro.png" alt="Full Dice Macro" class="ice-macro-image">
                                             <div class="macro-overlay">22MM* ARTISAN CUBE</div>
                                         </div>
                                     </div>
@@ -1295,7 +1305,7 @@
                                 <div class="ice-vertical-layout">
                                     <div class="ice-macro-column">
                                         <div class="ice-macro-zoom-container">
-                                            <img src="/Users/macbookpro/.gemini/antigravity/brain/3574a074-f09a-454e-a69e-f3850e81fd62/half_dice_miniature_rectangular_ice_1776864601841.png" alt="Half-Dice Macro" class="ice-macro-image">
+                                            <img src="./assets/half_dice_macro.png" alt="Half-Dice Macro" class="ice-macro-image">
                                             <div class="macro-overlay">10X29X22MM RECTANGULAR</div>
                                         </div>
                                     </div>
@@ -1534,7 +1544,7 @@
                             <div class="map-overlay">
                                 <span class="map-btn">📍 Open in Google Maps</span>
                             </div>
-                            <img src="/Users/macbookpro/.gemini/antigravity/brain/8299710b-765a-47c2-b351-5903cd3acd6f/warehouse_map_relocated_pin_1776840975792.png" alt="Hub Location" class="map-img">
+                            <img src="./assets/map.png" alt="Hub Location" class="map-img">
                         </a>
 
                         <p class="pickup-hours">Open daily from 8:00 AM to 10:00 PM for self-pickup.</p>
@@ -1931,14 +1941,14 @@
             <span class="step-badge">STEP 1: TRANSFER</span>
             <h2 id="amount-to-transfer">Transfer exactly: ₱1,665.00</h2>
             
-            <div class="qr-container">
-                <img id="payment-qr-image" src="assets/gcash-qr.png" alt="Payment QR">
+            <div class="qr-container" style="background: white; padding: 15px; border-radius: 12px; display: block; margin: 20px auto; width: fit-content;">
+                <img id="payment-qr-image" src="assets/gcash-qr-iceqube.png" alt="Payment QR" style="width: 180px; height: 180px; display: block;">
             </div>
 
             <div id="gcash-details-view">
                 <div class="account-details">
-                    <span id="account-number">0917-882-9031 (IceQube CDO)</span>
-                    <button class="copy-btn" onclick="copyText('09178829031')">📋</button>
+                    <span id="account-number">(0961) 039 1173 (LAWRENCE FE BACAYO)</span>
+                    <button class="copy-btn" onclick="copyText('09610391173')">📋</button>
                 </div>
                 <a href="intent://#Intent;package=com.globe.gcash.android;scheme=gcash;end;" class="btn-action" target="_blank">
                     <span class="icon">📱</span> Open GCash App

@@ -1425,6 +1425,8 @@ const app = {
             // Reset modal classes
             modal.classList.remove('modal-gcash', 'modal-bank-transfer');
 
+            const bankDetailsText = document.getElementById('modal-bank-details-text');
+
             if (method === 'GCash') {
                 modal.classList.add('modal-gcash');
                 title.innerText = 'GCash Payment';
@@ -1432,8 +1434,9 @@ const app = {
                 openAppBtn.style.display = 'flex';
                 openAppBtnText.innerText = 'Open GCash App';
                 qrContainer.style.display = 'block'; 
-                qrImage.src = './assets/gcash-qr.png';
+                qrImage.src = './assets/gcash-qr-iceqube.png';
                 if (verificationText) verificationText.innerText = 'Please upload your GCash screenshot.';
+                if (bankDetailsText) bankDetailsText.style.display = 'none';
             } else {
                 modal.classList.add('modal-bank-transfer');
                 title.innerText = 'Bank Transfer';
@@ -1445,6 +1448,7 @@ const app = {
                 const fallbackUI = document.getElementById('qr-fallback-ui');
                 if (fallbackUI) fallbackUI.style.display = 'none';
                 if (verificationText) verificationText.innerText = 'Please upload your Bank Transfer/InstaPay screenshot.';
+                if (bankDetailsText) bankDetailsText.style.display = 'block';
             }
             
             // Reset modal state
@@ -1483,7 +1487,7 @@ const app = {
         const fallbackUI = document.getElementById('qr-fallback-ui');
         
         // Append a timestamp to bypass cache and trigger a retry
-        const baseUrl = './assets/gcash-qr.png';
+        const baseUrl = './assets/gcash-qr-iceqube.png';
         qrImage.src = `${baseUrl}?t=${new Date().getTime()}`;
         
         qrImage.style.display = 'block';
