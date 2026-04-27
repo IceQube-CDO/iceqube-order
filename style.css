@@ -29,6 +29,7 @@ body {
     padding: 0;
     width: 100%;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -38,6 +39,7 @@ body {
     width: 100%;
     max-width: 500px;
     height: 100vh;
+    height: 100dvh;
     position: relative;
     overflow: hidden;
     background: var(--bg-primary);
@@ -67,11 +69,11 @@ body {
 /* Layout */
 .container {
     width: 100%;
-    padding: 2rem;
+    padding: 1.25rem;
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     position: relative;
 }
 
@@ -97,7 +99,7 @@ body {
 .step-content {
     display: none;
     position: relative;
-    padding-top: 3rem; 
+    padding-top: 2.5rem; 
     width: 100%;
 }
 
@@ -163,7 +165,7 @@ h1 {
 .subtitle {
     color: var(--text-secondary);
     font-size: 1.125rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
     text-align: center;
 }
 
@@ -597,10 +599,10 @@ h1 {
 /* Hero Step */
 .hero-image {
     width: 100%;
-    height: 300px;
+    height: 220px;
     border-radius: 24px;
     object-fit: cover;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     box-shadow: var(--shadow-lg);
 }
 
@@ -1108,14 +1110,14 @@ input:focus, textarea:focus {
 .hero-actions {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
 }
 
 .hero-btn {
     width: 100%;
-    padding: 1.25rem 1.5rem;
+    padding: 0.875rem 1.25rem;
     border-radius: 20px;
     background: #ffffff;
     color: var(--text-primary);
@@ -1365,6 +1367,7 @@ input:checked + .slider:before {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     display: flex;
@@ -3547,7 +3550,7 @@ input:checked + .slider:before {
 
 .landing-title {
     margin: 0;
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 800;
     letter-spacing: -0.03em;
     color: var(--text-primary);
@@ -5256,6 +5259,7 @@ input:checked + .slider:before {
     transform: translateX(-50%) translateY(100%);
     width: 500px;
     height: 100vh;
+    height: 100dvh;
     background: white;
     z-index: 4000;
     transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
