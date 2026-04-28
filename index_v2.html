@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IceQube CDO | Premium Crystal Ice</title>
+    <meta name="description" content="Order premium crystal clear ice in Cagayan de Oro. Fast delivery and high-quality ice cubes.">
+    <link rel="stylesheet" href="css/style_v2.css?v=2.0.5">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+    <style>
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #f1f5f9 !important;
+            overflow: hidden !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            font-family: 'Outfit', sans-serif !important;
+            display: flex;
+            justify-content: center;
+        }
+        .app-shell {
+            width: 100% !important;
+            max-width: 500px !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            position: relative !important;
+            overflow: hidden !important;
+            background: white !important;
+            box-shadow: 0 0 100px rgba(0,0,0,0.1) !important;
+            z-index: 1000 !important;
+        }
+        #app {
+            width: 100% !important;
+            height: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease !important;
+            background: white !important;
+        }
+        #app.panel-push {
+            transform: translateX(-100%) !important;
+            opacity: 0 !important;
+        }
+        .bottom-panel {
+            width: 100% !important;
+            height: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            transform: translateX(100%) !important;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease !important;
+            z-index: 1001 !important;
+            background: white !important;
+            opacity: 0;
+            visibility: hidden;
+        }
+        .bottom-panel.active {
+            transform: translateX(0) !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        .bottom-panel, .side-panel, .bottom-sheet, .panel-overlay, .sheet-overlay {
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        .bottom-panel.active, .side-panel.active, .bottom-sheet.active, .panel-overlay.active, .sheet-overlay.active {
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <main id="app">
+            <div class="container">
+            <!-- Step 1: START (Hero) -->
+            <section id="step-start" class="step-content active">
+                <img src="./assets/hero.png" alt="Crystal Ice Cubes" class="hero-image">
+                
+                <div class="brand-header">
+                    <svg width="0" height="0" style="position: absolute;">
+                        <defs>
+                            <filter id="remove-white" color-interpolation-filters="sRGB">
+                                <feColorMatrix type="matrix" values="1 0 0 0 0
+                                                                     0 1 0 0 0
+                                                                     0 0 1 0 0
+                                                                     -1 -1 2 1 -1" />
+                            </filter>
+                        </defs>
+                    </svg>
+                    <img src="./assets/logo.png" alt="IceQube Logo" class="brand-logo logo-cutout">
+                    <h1 class="landing-title">IceQube CDO</h1>
+                </div>
+                <p class="subtitle">Solid-Core Cubes. No Holes. The New Standard for CDO’s Finest Drinks.</p>
+                <div class="hero-actions">
+                    <button class="hero-btn primary-highlight" id="btn-my-account" onclick="app.togglePanel('account', true)">
+                        <span>My Account</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </button>
+                    <button class="hero-btn" onclick="app.nextStep()">
+                        <span>Start Your Order</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                    <button class="hero-btn" onclick="app.goToAbout()">
+                        <span>About our ICE</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 2: QTY (Mixed Orders) -->
+            <section id="step-qty" class="step-content">
+                <button class="back-nav" onclick="app.prevStep()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h1 style="text-align: left; margin: 0.65rem 0 1.5rem 3.5rem; font-size: 1.6rem; color: var(--text-primary); font-weight: 700;">Choose your Ice</h1>
+                <div class="tab-switcher">
+                    <button class="tab-item active" id="tab-full-dice" onclick="app.slideQty('full-dice')">Full Dice 🧊</button>
+                    <button class="tab-item" id="tab-half-dice" onclick="app.slideQty('half-dice')">Half-Dice ❄️</button>
+                </div>
+                <p class="subtitle">Select the number of bags for your order.</p>
+                
+                
+                
+                <div class="qty-carousel-container">
+                    <div id="qty-carousel-track" class="qty-carousel-track">
+                        <!-- Slide: Full Dice -->
+                        <div class="qty-slide" id="slide-full-dice">
+                            <div class="ice-product-card">
+                                <div class="ice-product-layout">
+                                    <div class="ice-product-content">
+                                        <div class="ice-product-subtitle">The Artisan’s Choice (23x23x23mm)</div>
+                                        <p>Slow-melting, high-density cubes. Best for premium coffee and cocktails to prevent dilution.</p>
+                                    </div>
+                                    <div class="ice-product-image-container">
+                                        <img src="./assets/full_dice.png" alt="Full Dice Ice Cube" class="ice-product-image">
+                                        <div class="ice-dimension">23x23x23mm</div>
+                                    </div>
+                                </div>
+                            
+                                <div class="counter-row">
+                                    <div class="product-info">
+                                        <h3>3kg Bag</h3>
+                                        <p>₱40 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', -1)">−</button>
+                                        <input type="number" id="qty-fullDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '3kg', this.value)">
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', 1)">+</button>
+                                    </div>
+                                </div>
+
+                                <div class="bulk-promo-box promo-info">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                    <span class="bulk-promo-text">Wholesale: 15+ 3kg (₱35) or 40+ 1kg (₱14)</span>
+                                </div>
+
+                                <div class="counter-row" style="margin-bottom: 0;">
+                                    <div class="product-info">
+                                        <h3>1kg Bag</h3>
+                                        <p>₱15 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', -1)">−</button>
+                                        <input type="number" id="qty-fullDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '1kg', this.value)">
+                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', 1)">+</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Slide: Half-Dice -->
+                        <div class="qty-slide" id="slide-half-dice">
+                            <div class="ice-product-card">
+                                <div class="ice-product-layout">
+                                    <div class="ice-product-content">
+                                        <div class="ice-product-title-row">
+                                            <div style="text-align: left;">
+                                        <div class="ice-product-subtitle" style="margin-bottom: 0;">The Premium Rectangular (10x29x22mm)</div>
+                                            </div>
+                                        </div>
+                                        <p>Rapid-cooling slender cubes. Perfect for frappes, smoothies, and carbonated drinks.</p>
+                                    </div>
+                                    <div class="ice-product-image-container">
+                                        <img src="./assets/half_dice.png" alt="Half-Dice Ice Cube" class="ice-product-image">
+                                        <div class="ice-dimension">10x29x22mm</div>
+                                    </div>
+                                </div>
+                            
+                                <div class="counter-row">
+                                    <div class="product-info">
+                                        <h3>3kg Bag</h3>
+                                        <p>₱40 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', -1)">−</button>
+                                        <input type="number" id="qty-halfDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '3kg', this.value)">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', 1)">+</button>
+                                    </div>
+                                </div>
+
+                                <div class="bulk-promo-box promo-info">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                    <span class="bulk-promo-text">Wholesale: 15+ 3kg (₱35) or 40+ 1kg (₱14)</span>
+                                </div>
+
+                                <div class="counter-row" style="margin-bottom: 0;">
+                                    <div class="product-info">
+                                        <h3>1kg Bag</h3>
+                                        <p>₱15 / bag</p>
+                                    </div>
+                                    <div class="counter-controls">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', -1)">−</button>
+                                        <input type="number" id="qty-halfDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '1kg', this.value)">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', 1)">+</button>
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <div class="qty-sticky-footer">
+                    <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled style="margin-top: 1rem;">
+                        Confirm Order (₱0)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 4: SCHEDULE -->
+            <section id="step-schedule" class="step-content">
+                <button class="back-nav" onclick="app.prevStep()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h1>When should we deliver?</h1>
+                <p class="subtitle">Choose your preferred timing.</p>
+                <div class="selection-grid">
+                    <div id="card-deliver-now" class="card" onclick="app.selectSchedule('Deliver Now', this)">
+                        <div>
+                            <h3>Deliver Now</h3>
+                            <span class="subtext">Arrives in 30-45 mins</span>
+                        </div>
+                        <div class="check-icon">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                    </div>
+                    <div id="card-schedule-date" class="card" onclick="app.selectSchedule('Schedule a Date & Time', this)">
+                        <div>
+                            <h3>Schedule a Date & Time</h3>
+                            <p>Pick a future slot.</p>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                </div>
+
+                <div id="schedule-inputs" style="display: none;">
+                    <div class="premium-picker-grid">
+                        <div class="premium-picker-card" onclick="this.querySelector('input').showPicker()">
+                            <div class="picker-icon-wrapper">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div class="picker-info">
+                                <label>Delivery Date</label>
+                                <div id="display-date" class="picker-display-value">Select Date</div>
+                            </div>
+                            <input type="date" id="schedule-date" class="hidden-input" oninput="app.handlePickerChange('date', this.value)">
+                        </div>
+
+                        <div class="premium-picker-row">
+                            <div class="premium-picker-card compact" onclick="this.querySelector('select').showPicker()">
+                                <div class="picker-icon-wrapper small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </div>
+                                <div class="picker-info">
+                                    <label>Hour</label>
+                                    <div id="display-hour" class="picker-display-value">Pick</div>
+                                </div>
+                                <select id="select-hour" class="hidden-input" onchange="app.handleInlineTimeChange()">
+                                    <option value="" disabled selected>Pick</option>
+                                    <option value="08">8 AM</option>
+                                    <option value="09">9 AM</option>
+                                    <option value="10">10 AM</option>
+                                    <option value="11">11 AM</option>
+                                    <option value="12">12 PM</option>
+                                    <option value="13">1 PM</option>
+                                    <option value="14">2 PM</option>
+                                    <option value="15">3 PM</option>
+                                    <option value="16">4 PM</option>
+                                    <option value="17">5 PM</option>
+                                    <option value="18">6 PM</option>
+                                    <option value="19">7 PM</option>
+                                    <option value="20">8 PM</option>
+                                    <option value="21">9 PM</option>
+                                </select>
+                            </div>
+
+                            <div class="premium-picker-card compact" onclick="this.querySelector('select').showPicker()">
+                                <div class="picker-icon-wrapper small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                                </div>
+                                <div class="picker-info">
+                                    <label>Minute</label>
+                                    <div id="display-minute" class="picker-display-value">00</div>
+                                </div>
+                                <select id="select-minute" class="hidden-input" onchange="app.handleInlineTimeChange()">
+                                    <option value="00">00</option>
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="45">45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="time" id="schedule-time" style="display: none;">
+                    </div>
+                    <!-- Time Frame Warning -->
+                    <div id="time-warning" class="time-warning">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Delivery is only available between 8 AM - 10 PM. For special requests outside these hours, please message our <a href="https://m.me/icequbecdo" target="_blank" style="color: inherit; font-weight: 700; text-decoration: underline;">FB Page</a> for negotiation.</span>
+                    </div>
+                </div>
+
+                <button id="schedule-next" class="btn-primary" onclick="app.nextStep()" disabled style="margin-top: 2rem; display: none;">
+                    Continue to Logistics
+                </button>
+            </section>
+
+            <!-- Step 4: LOGISTICS (Nested Flow) -->
+            <section id="step-logistics" class="step-content">
+                <button class="back-nav" onclick="app.prevStep()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div id="logistics-selection" class="logistics-subview active">
+                    <h1>Logistics</h1>
+                    <p class="subtitle">How would you like to receive your order?</p>
+                    <div class="selection-grid">
+                        <div class="card" onclick="app.selectLogistics('Doorstep Delivery', this)">
+                            <div>
+                                <h3>Doorstep Delivery</h3>
+                                <p>Direct to your home or business in CDO.</p>
+                            </div>
+                            <div class="check-icon">✓</div>
+                        </div>
+                        <div class="card" onclick="app.selectLogistics('Self-Pickup in Macabalan', this)">
+                            <div>
+                                <h3>Self-Pickup in Macabalan</h3>
+                                <p>From our facility in Piaping Itum.</p>
+                            </div>
+                            <div class="check-icon">✓</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="logistics-delivery" class="logistics-subview">
+                    <h1>Delivery Details</h1>
+                    <p class="subtitle">Enter your details for doorstep delivery.</p>
+                    <div class="input-stack" style="margin-top: 2rem;">
+                        <!-- Location Input -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            </div>
+                            <input type="text" id="delivery-location" class="input-high-contrast" placeholder="Location or Establishment" oninput="app.handleLocationInput(this.value)">
+                            <div id="establishment-badge" class="establishment-tag-overlay" style="display: none;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                Tagged Establishment
+                            </div>
+                            <div class="input-icon-btn" onclick="app.openMapOverlay()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Person Receiving -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <input type="text" id="delivery-person" class="input-high-contrast" placeholder="Person Receiving">
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div class="premium-input-group" style="margin-bottom: 0.5rem;">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </div>
+                                                        <input type="tel" id="delivery-contact" class="input-high-contrast" placeholder="Contact Number (09XX XXX XXXX)" oninput="app.validateContact(this.value)" maxlength="13">
+                            <div id="contact-warning" class="input-warning" style="display: none;">Number must start with 09 and be 11 digits.</div>
+                        </div>
+
+                        <!-- Special Instructions -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </div>
+                            <input type="text" id="delivery-instructions" class="input-high-contrast" placeholder="Special Instructions (e.g. Unit #, Landmark)">
+                        </div>
+
+                        <!-- Google Maps Pin Link (Display Only) -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><path d="M12 2a14.5 14.5 0 0 1 0 20 14.5 14.5 0 0 1 0-20"/></svg>
+                            </div>
+                            <input type="text" id="delivery-maps" class="input-high-contrast" placeholder="Tap to Pin on Map" onclick="app.openMapOverlay()" readonly style="cursor: pointer; background: var(--bg-secondary) !important; color: var(--accent) !important; border-style: dashed !important;">
+                            <div class="input-icon-btn" onclick="app.openMapOverlay()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="delivery-summary" style="display: none; margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 0.75rem;">Order Summary</h3>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="opacity: 0.8;">Subtotal:</span>
+                            <span id="summary-subtotal" style="font-weight: 600;">₱0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="opacity: 0.8;">Delivery Fee (<span id="summary-zone" style="font-weight: 500;">Zone 1</span>):</span>
+                            <span id="summary-delivery-fee" style="font-weight: 600;">₱30</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                            <span>Total to Pay:</span>
+                            <span id="summary-total" style="font-weight: bold; font-size: 1.1rem;">₱0</span>
+                        </div>
+                        <div id="summary-manual-review" style="display: none; color: #d97706; margin-top: 0.75rem; font-size: 0.85rem; background: #fef3c7; padding: 0.75rem; border-radius: 0.5rem; display: flex; gap: 0.5rem; align-items: flex-start;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 0.1rem;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span>Region is marked outside CDO. Delivery fee requires manual review before dispatch.</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.goToPayment()" style="margin-top: 2rem;" disabled>
+                        Continue to Payment
+                    </button>
+                </div>
+
+                <div id="logistics-pickup" class="logistics-subview">
+                    <h1>Pickup Info</h1>
+                    <p class="subtitle">Our hub details for self-pickup.</p>
+                    <div class="pickup-card premium-hub-card">
+                        <div class="hub-header-minimal">
+                            <h4>IceQube Hub - Macabalan</h4>
+                            <p>Piaping Itum, Macabalan, Cagayan de Oro City</p>
+                        </div>
+                        
+                        <a href="https://www.google.com/maps/place/IceQube/@8.5020529,124.6582747,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu" target="_blank" style="text-decoration: none; display: block; border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem;">
+                            <div class="map-card-container-small" style="margin-bottom: 0;">
+                                <div id="pickup-map" class="hub-style-map"></div>
+                                <div class="hub-marker-static">
+                                    <img src="https://i.ibb.co/VpkxK9G/iq-marker.png" alt="Marker">
+                                </div>
+                            </div>
+                        </a>
+
+                        <div class="pickup-details-hub">
+                            <div class="hub-info-row">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <span>50 meters near from the Cagayan de Oro Regional Post Office</span>
+                            </div>
+                            <div class="hub-info-row">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span>Open daily: 8:00 AM - 10:00 PM</span>
+                            </div>
+                            <a href="https://www.google.com/maps/place/IceQube/@8.5020529,124.6582747,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu" target="_blank" class="btn-external-link">Open in Google Maps →</a>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="app.goToPayment()" style="margin-top: 2rem;">
+                        Continue to Payment
+                    </button>
+                </div>
+
+            </section>
+
+            <!-- Step 5: PAYMENT -->
+            <section id="step-payment" class="step-content">
+                <button class="back-nav" onclick="app.prevStep()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h1>Payment Method</h1>
+                <p class="subtitle">Choose how you'd like to pay for this order.</p>
+                <div class="selection-grid">
+                    <div class="card" onclick="app.selectPayment('GCash', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #007DFE;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/><path d="M16 8h2"/><path d="M16 12h2"/><path d="M16 16h2"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">GCash</h3>
+                                <p>Fastest & most popular.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                    <div class="card" onclick="app.selectPayment('Cash on Delivery', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #22c55e;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2"/><path d="M9 3h10a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2Z"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">Cash on Delivery</h3>
+                                <p>Pay our rider in Piaping Itum/CDO.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                    <div class="card" onclick="app.selectPayment('Bank Transfer', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #00D1FF;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/><path d="M5 21V10.9"/><path d="M9 21V10.9"/><path d="M15 21V10.9"/><path d="M19 21V10.9"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">Bank Transfer</h3>
+                                <p>GoTyme, Maya, or BPI.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                    <div id="card-payment-po" class="card" onclick="app.selectPayment('Purchase Order', this)" style="display: none;">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #6366f1;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">Purchase Order</h3>
+                                <p>For Enterprise & Verified Partners.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                </div>
+
+                <div id="po-entry-box" class="cod-verification-box">
+                    <label class="cod-label">Business PO Reference</label>
+                    <div class="cod-input-group">
+                        <input type="text" id="po-number-input" class="cod-input" placeholder="PO-XXXXX (Optional for small accounts)" oninput="app.orderData.poNumber = this.value">
+                    </div>
+                </div>
+
+                <div id="cod-verification-box" class="cod-verification-box">
+                    <label class="cod-label" id="cod-verification-text">To prevent fake orders, please verify your number.</label>
+                    <div class="cod-input-group" id="cod-phone-group">
+                                                <input type="text" id="cod-phone-input" class="cod-input" placeholder="Contact Number (09XX XXX XXXX)" oninput="app.validateContact(this.value, 'cod')" maxlength="13">
+                        <button id="btn-send-otp" class="btn-verify-action" onclick="app.sendVerificationCode()">Send Verification Code</button>
+                    </div>
+                    
+                    <div id="otp-reveal-section" class="otp-reveal">
+                        <label class="cod-label">Enter 4-digit OTP</label>
+                        <div class="cod-input-group">
+                            <input type="text" id="cod-otp-input" class="cod-input" placeholder="0 0 0 0" maxlength="4" style="text-align: center; letter-spacing: 0.5rem;" oninput="app.verifyOTP()">
+                        </div>
+                    </div>
+
+                    <div id="cod-verified-msg" style="display: none; color: #166534; font-weight: 600; margin-top: 0.5rem; font-size: 0.875rem;">
+                        ✅ Number Verified. Order is being prepared.
+                    </div>
+                </div>
+
+                <button id="btn-finish-order" class="btn-primary" onclick="app.finishOrder()" style="margin-top: 2rem;" disabled>
+                    Place Order & Pay
+                </button>
+            </section>
+
+            <div id="qr-modal" class="modal-overlay">
+                <div class="modal-content">
+                    <div id="payment-combined-step">
+                        <div class="modal-icon-wrapper">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><path d="M12 2a14.5 14.5 0 0 1 0 20 14.5 14.5 0 0 1 0-20"/></svg>
+                        </div>
+                        
+                        <h2 id="modal-title" class="modal-title">GCash Payment</h2>
+                        <p id="verification-text-top" class="modal-subtitle">Please upload your GCash screenshot.</p>
+
+                        <!-- QR Container (Conditionally shown for Bank Transfer) -->
+                        <div id="modal-qr-container" style="display: none; margin-bottom: 1.5rem;">
+                            <img id="qr-image" src="./assets/gcash-qr-iceqube.png" alt="Payment QR Code" style="width: 100%; max-width: 280px; margin: 0 auto; display: block; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);" onerror="app.handleQRImageError()">
+                            
+                            <!-- New: Text-based Bank Details for High Clarity -->
+                            <div id="modal-bank-details-text" class="qr-account-details" style="display: none; margin-top: 1.5rem; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div class="qr-account-row"><span class="qr-account-label">Bank:</span> <span class="qr-account-value">GoTyme Bank</span></div>
+                                <div class="qr-account-row"><span class="qr-account-label">Name:</span> <span class="qr-account-value">LAWRENCE FE BACAYO</span></div>
+                                <div class="qr-account-row"><span class="qr-account-label">Account:</span> <span class="qr-account-value">0176-3092-9031</span></div>
+                            </div>
+
+                            <div id="qr-fallback-ui" class="qr-fallback-card" style="display: none;">
+                                <div class="qr-fallback-title">QR Failed to Load</div>
+                                <div class="qr-account-details">
+                                    <div class="qr-account-row"><span class="qr-account-label">Name:</span> <span class="qr-account-value">LAWRENCE FE BACAYO</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">Mobile:</span> <span class="qr-account-value">(0961) 039 1173</span></div>
+                                    <div class="qr-account-row"><span class="qr-account-label">User ID:</span> <span class="qr-account-value">90319EW6SH</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="modal-instructions-box" class="instructions-box">
+                            <button id="btn-open-app" class="btn-pill-blue" onclick="app.openGCash()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                <span id="btn-open-app-text">Open GCash App</span>
+                            </button>
+                            <p id="modal-instructions-text" class="instructions-text">
+                                Pay to our GCash merchant account and upload the receipt.
+                            </p>
+                        </div>
+
+                        <div id="tally-upload-area" class="upload-box-dashed" onclick="document.getElementById('staged-receipt-upload').click()">
+                            <div class="upload-icon">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            </div>
+                            <span id="upload-status-text" class="upload-text">Attach Receipt Screenshot</span>
+                            <img id="staged-receipt-preview" class="receipt-preview-thumbnail">
+                            <input type="file" id="staged-receipt-upload" accept="image/*" style="display: none;" onchange="app.handleStagedUpload(event)">
+                        </div>
+
+                        <div id="receipt-verification-overlay" class="verification-overlay">
+                            <div class="spinner-container">
+                                <div class="ice-spinner"></div>
+                                <div class="verification-text">Verifying Receipt...</div>
+                            </div>
+                        </div>
+
+                        <button id="btn-confirm-finish" class="btn-confirm-finish" onclick="app.processFinalOrder()" disabled>
+                            Confirm & Finish
+                        </button>
+                        
+                        <button id="btn-cancel-modal" class="btn-cancel-link" onclick="app.closeQRModal()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: COMPLETE (New Modern Design) -->
+            <section id="step-complete" class="step-content">
+                <div class="success-header">
+                    <div class="success-check">✓</div>
+                    <h2>Order Confirmed!</h2>
+                    <p class="order-id" id="finish-id-new">Order #IQ-4492</p>
+                </div>
+
+                <div class="live-tracker">
+                    <div class="track-step active">
+                        <span class="t-dot"></span>
+                        <p><strong>Order Received</strong><br><small id="finish-received-time">Today, 5:35 PM</small></p>
+                    </div>
+                    <div class="track-step live">
+                        <span class="t-dot"></span>
+                        <p><strong>Preparing at Hub</strong><br><small>Macabalan, CDO</small></p>
+                    </div>
+                    <div class="track-step next">
+                        <span class="t-dot"></span>
+                        <p><strong>Out for Delivery</strong><br><small>Ready in ~45 mins</small></p>
+                    </div>
+                    <div class="track-line" style="height: 60px;"></div>
+                </div>
+
+                <div class="order-summary-card">
+                    <div class="s-row"><span>Scheduled Arrival:</span> <strong id="finish-timing-new">Tomorrow, 9:00 AM</strong></div>
+                    <div class="s-row"><span>Items:</span> <strong id="finish-qty-new">15 Bags (Half-Dice)</strong></div>
+                    <div class="s-row"><span>Payment:</span> <strong id="finish-payment-new">Purchase Order</strong></div>
+                </div>
+
+                <button class="calendar-btn" onclick="app.addToCalendar()" style="margin-bottom: 15px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Add to Calendar
+                </button>
+
+                <div class="exit-actions" style="margin-top: 10px;">
+                    <button class="pill-btn primary" onclick="app.goToDashboard()" style="margin-bottom: 10px; width: 100%;">
+                        Back to Dashboard
+                    </button>
+
+                    <button class="exit-link-btn" onclick="app.finishAndExit()">
+                        <span class="icon">💬</span> Return to Messenger
+                    </button>
+                    
+                    <p class="auto-close-note">This window will auto-close in 15 seconds.</p>
+                </div>
+                
+                <div id="standard-finish-buttons" style="margin-top: 1.5rem; padding-bottom: 2rem;">
+                    <button id="btn-finish-automate-active" class="btn-automate-highlight" onclick="app.goToAutomate()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                        Automate This Order
+                    </button>
+
+                    <button id="btn-finish-automate-locked" class="pill-btn locked" onclick="app.showEliteUpgrade()" style="display: none;">
+                        <span class="icon">🔒</span> Unlock Automation
+                        <small>Elite Partners Only</small>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 7: AUTOMATE -->
+            <section id="step-automate" class="step-content">
+                <button class="back-nav" onclick="app.prevStep()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h1>Set your Schedule</h1>
+                <p class="subtitle">Choose which days you want IceQube to arrive automatically.</p>
+
+                <div style="background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 1rem; margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div style="display: flex; align-items: center; color: var(--accent);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent); margin-bottom: 0.25rem;">Seamless Billing</h4>
+                        <p style="font-size: 0.875rem; line-height: 1.4; color: var(--text-secondary);">Setting up a subscription? Link your GCash or Maya now to enable automated morning clearing and skip the cash handling.</p>
+                        <button class="ghost-link" style="margin-top: 8px; text-align: left; padding: 0; width: auto; font-size: 0.8125rem;" onclick="app.togglePanel('auto-settle', true)">Link Payment Source →</button>
+                    </div>
+                </div>
+                
+                <div class="days-grid stacked-grid" style="margin-top: 1.5rem;">
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('Su', this)">Su</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('M', this)">M</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('T', this)">T</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('W', this)">W</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('Th', this)">Th</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('F', this)">F</div>
+                    <div class="day-bubble dynamic-day" onclick="app.toggleDynamicDay('S', this)">S</div>
+                </div>
+
+                <div id="dynamic-schedule-list" style="margin-top: 2rem;">
+                    <!-- Rows will be injected here by app.js -->
+                </div>
+
+                <div id="dynamic-schedule-summary" style="margin-top: 1.5rem; text-align: center; color: var(--text-secondary); font-weight: 600; display: none;">
+                    Scheduled for <span id="schedule-count">0</span> days.
+                </div>
+
+                <button id="btn-save-schedule" class="btn-primary" onclick="app.saveDynamicSchedule()" style="margin-top: 1.5rem;" disabled>
+                    Save Schedule
+                </button>
+            </section>
+
+            <!-- Step 8: AUTOMATE SUCCESS -->
+            <section id="step-automate-success" class="step-content">
+                <div class="success-checkmark">
+                    <svg viewBox="0 0 52 52">
+                        <circle class="circle-path" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="check-path" fill="none" stroke="white" stroke-width="2" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </div>
+                <h1 style="text-align: center;">Subscription Active</h1>
+                <p class="subtitle" style="text-align: center;">Your automated delivery schedule is set. We'll send you reminders on Messenger before each dispatch.</p>
+                <div class="card" style="margin-top: 2rem; cursor: default;">
+                    <div style="width: 100%;">
+                        <h3 style="margin-bottom: 0.75rem;">Schedule Summary</h3>
+                        <div id="automate-success-summary">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="success-footer">
+                    <button class="pill-btn primary" onclick="app.goToDashboard()" style="margin-bottom: 12px; width: 100%;">
+                        Back to Dashboard
+                    </button>
+
+                    <button class="exit-link-btn" onclick="app.finishAndExit()">
+                        <span class="icon">💬</span> Finish & Go to Messenger
+                    </button>
+
+                    <button class="ghost-link" onclick="app.openScheduleSettings()">
+                        View or Edit Schedule
+                    </button>
+
+                    <div class="trust-badge">
+                        <span class="icon">🔒</span> Managed by IceQube Enterprise
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <div id="map-overlay" class="modal-overlay map-overlay-fullscreen" style="background: rgba(241, 245, 249, 0.98);">
+        <div class="map-overlay-content premium-hub-layout">
+            <div class="map-header-minimal">
+                <button class="btn-back-icon" onclick="app.closeMapOverlay()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="header-title-stack">
+                    <h2 style="font-size: 1.1rem; margin-bottom: 0; font-weight: 800; letter-spacing: -0.01em;">Select Location</h2>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Pin your delivery point precisely</p>
+                </div>
+                <button class="btn-locate-minimal" onclick="app.geolocateUser()" title="Use My Location">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+                </button>
+                <button id="map-type-toggle" class="btn-locate-minimal" onclick="app.toggleMapType()" title="Satellite View" style="margin-right: 0; right: 10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </button>
+            </div>
+
+            <div class="map-search-wrapper-minimal">
+                <div class="map-search-bar-minimal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="map-search-input" placeholder="Search street or landmark..." onkeyup="if(event.key === 'Enter') app.searchLocation(this.value)">
+                </div>
+            </div>
+
+            <div class="map-card-container">
+                <div id="map-container" class="hub-style-map"></div>
+                <div class="center-pin-overlay">
+                    <div class="pin-wrap">
+                        <div class="pin-head"></div>
+                        <div class="pin-point"></div>
+                    </div>
+                    <div class="pin-shadow"></div>
+                </div>
+            </div>
+
+            <div class="map-footer-minimal">
+                <div class="address-display-hub">
+                    <div class="pin-indicator"></div>
+                    <span id="map-address-text">Drag pin to your location...</span>
+                </div>
+                
+                <div class="map-actions-grid">
+                    <button id="btn-confirm-map" class="btn-primary hub-btn" onclick="app.confirmMapLocation()">Confirm This Location</button>
+                    <button class="btn-google-maps-minimal" onclick="app.openExternalGoogleMaps()" title="Open in Google Maps">
+                        <img src="https://www.google.com/images/branding/product/2x/maps_96dp.png" alt="Google Maps" style="width: 20px; height: 20px;">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Global Overlay -->
+    <div id="overlay" onclick="app.closeAllPanels()"></div>
+
+    <!-- Time Picker Panel -->
+    <div id="timepicker-overlay" class="panel-overlay" onclick="app.togglePanel('timepicker', false)"></div>
+    <div id="timepicker-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.togglePanel('timepicker', false)" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Delivery Time</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        <div class="panel-content">
+            <p class="subtitle" style="margin-bottom: 1.5rem;">Select your preferred 15-minute slot.</p>
+            
+            <div class="time-selector-columns">
+                <div class="time-column" id="hour-column">
+                    <div class="time-column-header">Hour</div>
+                    <!-- Hours populated by JS -->
+                </div>
+                <div class="time-column" id="minute-column">
+                    <div class="time-column-header">Minute</div>
+                    <div class="time-option" onclick="app.selectTimePart('minute', '00', this)">00</div>
+                    <div class="time-option" onclick="app.selectTimePart('minute', '15', this)">15</div>
+                    <div class="time-option" onclick="app.selectTimePart('minute', '30', this)">30</div>
+                    <div class="time-option" onclick="app.selectTimePart('minute', '45', this)">45</div>
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="app.confirmCustomTime()" style="margin-top: 2rem;">
+                Set Delivery Time
+            </button>
+        </div>
+    </div>
+
+    <!-- Account Side Panel -->
+    <div id="account-overlay" class="panel-overlay" onclick="app.togglePanel('account', false)"></div>
+    <div id="account-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header header">
+            <button onclick="app.togglePanel('account', false)" class="close-btn back-btn" id="close-account-panel">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="user-avatar-sm" id="user-pfp" style="margin-left: 8px;">
+                <span class="avatar-placeholder">👤</span>
+            </div>
+            <div class="user-meta-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <strong id="user-full-name">Authenticating...</strong>
+                    <div class="verified-seal">✓ Verified</div>
+                </div>
+                <span class="user-role-tag" id="user-role">Authorized Staff</span>
+            </div>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        
+        <div class="panel-content">
+            <div class="dispatch-card" aria-label="Upcoming Delivery Details">
+                <div class="dispatch-header">
+                    <div class="status-indicator" aria-label="Status: Active">
+                        <span class="status-dot"></span>
+                        <strong>Upcoming Dispatch</strong>
+                    </div>
+                    <button class="auto-link" onclick="app.goToAutomate(true)" aria-label="Manage Automation Settings">
+                        <span class="icon">🔄</span> Auto-On
+                    </button>
+                </div>
+                
+                <div class="dispatch-body">
+                    <div class="dispatch-main">
+                        <h2>Tomorrow, 9:00 AM</h2>
+                        <p>15 Bags • Half-Dice</p>
+                    </div>
+                    <button class="manage-btn" onclick="app.openDeliveriesPanel()" aria-label="Manage Scheduled Deliveries">Manage Order ›</button>
+                </div>
+
+                <div class="dispatch-footer">
+                    <span>PO #8821</span>
+                    <span style="font-size: 11px; opacity: 0.7;">Subscription Active</span>
+                </div>
+            </div>
+
+
+            <div style="padding: 0 0 20px 0; display: flex; flex-direction: column; gap: 12px;">
+                <button id="quick-reorder-btn" class="power-reorder-btn" onclick="openReorderModal()">
+                    <span class="icon">⚡</span> Quick Reorder
+                </button>
+            </div>
+
+
+            <div class="finance-alignment-wrapper" style="display: flex; gap: 12px; align-items: stretch; margin-bottom: 24px;">
+                <div class="financial-module" style="flex: 1; margin-bottom: 0;">
+                    <div class="credit-status-container">
+                        <div class="command-card" id="credit-card" onclick="app.openDebtSheet()">
+                            <div class="card-top">
+                                <div class="title-group">
+                                    <span class="tag">Elite Tier</span>
+                                    <h3>Available Power</h3>
+                                </div>
+                                <button id="recharge-btn" class="recharge-btn" onclick="app.handlePowerButtonClick(event)">Recharge Now</button>
+                            </div>
+
+                            <div class="battery-data">
+                                <h2 id="available-power-text" style="margin-bottom: 0;">₱125</h2>
+                            </div>
+
+                            <div class="card-bottom">
+                                <div class="stat">
+                                    <span>MAX LIMIT</span>
+                                    <strong id="max-limit-amt">₱2,500</strong>
+                                </div>
+                                <div class="stat text-right clickable-stat" onclick="app.toggleBottomSheet('debt', true)">
+                                    <span>TOTAL DEBT</span>
+                                    <strong id="total-debt-text">₱1,665.00</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="battery-container" class="battery-outer standalone">
+                    <div class="battery-tip"></div>
+                    <div class="battery-inner">
+                        <div id="battery-fill" class="battery-fill warning" style="height: 5%; width: 100%;">
+                            <div class="glow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="quick-actions-grid">
+                <button class="action-item" id="btn-view-history" onclick="app.togglePanel('history', true)">
+                    <div class="icon-circle history">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span>History</span>
+                </button>
+                <button class="action-item" id="btn-generate-soa" onclick="app.openSOA()">
+                    <div class="icon-circle soa">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                    </div>
+                    <span>Statement</span>
+                </button>
+                <button class="action-item" id="btn-report-issue" onclick="app.toggleBottomSheet('report', true)">
+                    <div class="icon-circle report">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <span>Support</span>
+                </button>
+            </div>
+
+            <div id="staff-management-tab" class="admin-section">
+                <div class="section-header">
+                    <h4>Staff Management</h4>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="edit-toggle edit-btn" onclick="app.toggleStaffEdit()">Edit</button>
+                        <button class="add-staff-btn invite-btn" style="padding: 4px 12px;" onclick="app.generateInvite()">+ Invite</button>
+                    </div>
+                </div>
+
+                <div id="staff-list" class="staff-list view-mode">
+                    <div class="staff-card">
+                        <div class="staff-info" onclick="app.openPermissions('Junjun Reyes', 'Barista')">
+                            <strong>Junjun Reyes</strong>
+                            <span>Added Apr 20 • Barista</span>
+                        </div>
+                        <div class="admin-controls">
+                            <button class="manage-btn-sm" onclick="app.openPermissions('Junjun Reyes', 'Barista')">Manage</button>
+                            <button class="revoke-btn-sm" onclick="app.revokeAccess('Junjun Reyes')">Revoke</button>
+                        </div>
+                    </div>
+                    <div class="staff-card">
+                        <div class="staff-info" onclick="app.openPermissions('Maria Santos', 'Barista / Assistant')">
+                            <strong>Maria Santos</strong>
+                            <span>Added Apr 22 • Barista / Assistant</span>
+                        </div>
+                        <div class="admin-controls">
+                            <button class="manage-btn-sm" onclick="app.openPermissions('Maria Santos', 'Barista / Assistant')">Manage</button>
+                            <button class="revoke-btn-sm" onclick="app.revokeAccess('Maria Santos')">Revoke</button>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    <!-- Scheduled Deliveries Panel -->
+    <div id="deliveries-overlay" class="panel-overlay" onclick="app.togglePanel('deliveries', false)"></div>
+    <div id="deliveries-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.backToAccount()" class="close-btn back-btn" id="close-deliveries-panel">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Scheduled Deliveries</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        
+        <div class="panel-content">
+            <div class="info-list" style="background: white; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
+                <div class="info-item" style="padding: 0.5rem 0;">
+                    <p style="font-size: 0.85rem; font-weight: 700; color: #64748b;">Active Purchase Orders</p>
+                    <span class="status-value" style="font-weight: 800; color: #0f172a;">None</span>
+                </div>
+            </div>
+
+            <div class="deliveries-list">
+                <div class="delivery-card active">
+                    <div class="delivery-card-header">
+                        <div class="status-indicator">
+                            <span class="status-dot pulsing"></span>
+                            <span class="status-label">Upcoming Delivery</span>
+                        </div>
+                        <span class="delivery-id">#IQ-9823</span>
+                    </div>
+                    
+                    <div class="delivery-card-body">
+                        <div class="delivery-time-info">
+                            <h3>Tomorrow, 9:00 AM</h3>
+                            <p>Bulk Tier Order • 15 Bags (3kg)</p>
+                        </div>
+                        <div class="delivery-location-info">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span>Loft Living CDO</span>
+                        </div>
+                    </div>
+                    
+                    <div class="delivery-card-footer">
+                        <button id="btn-edit-order" class="manage-order-btn" onclick="app.showOrderOptions()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Edit Order
+                        </button>
+                        <div id="order-options-group" class="order-management-group" style="display: none;">
+                            <button class="btn-management reschedule" onclick="app.rescheduleOrder()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                Reschedule
+                            </button>
+                            <button class="btn-management cancel" onclick="app.confirmCancelOrder()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="deliveries-empty-state" style="display: none;">
+                <p>No upcoming deliveries scheduled.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Billing Panel -->
+    <div id="billing-overlay" class="panel-overlay" onclick="app.togglePanel('billing', false)"></div>
+    <div id="billing-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.backToAccount()" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Payments</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        <div class="panel-content">
+            <div style="text-align: center; margin-bottom: 2rem; padding: 20px;">
+                <h3 style="color: #0f172a; margin-bottom: 8px;">Select Payment Method</h3>
+                <p style="color: #64748b; font-weight: 700;">Account Balance: <span style="color: #ef4444;">₱2,550.00</span></p>
+            </div>
+            
+            <div class="payment-options" style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
+                <button class="btn-blue" onclick="openSecureCheckout('gcash')">Pay with GCash</button>
+                <button class="btn-white" onclick="openSecureCheckout('qrph')">Show QR Code</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order History Panel -->
+    <div id="history-overlay" class="panel-overlay" onclick="app.togglePanel('history', false)"></div>
+    <div id="history-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.backToAccount()" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Order History</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        <div class="panel-content">
+            <div class="info-list" style="background: white; border: 1px solid #f1f5f9; margin-bottom: 2rem;">
+                <div class="info-item" style="padding: 0.75rem 0;">
+                    <p style="font-weight: 700; color: #64748b;">Last Order Status</p>
+                    <span class="status-badge success">Delivered</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #0f172a; letter-spacing: -0.03em;">Past Orders</h3>
+                <button class="invoice-btn" onclick="app.openSOA()" style="padding: 6px 12px; margin-top: 0;">
+                    📄 Generate PO Statement
+                </button>
+            </div>
+            
+            <div class="history-list">
+                <!-- Most Recent -->
+                <div class="history-card po-account" onclick="app.viewReceipt('IQ-9750')">
+                    <div class="card-header">
+                        <div class="id-group">
+                            <strong class="order-id">#IQ-9750</strong>
+                            <span class="po-tag">PO #8821</span>
+                        </div>
+                        <span class="order-date">April 20, 2026</span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <p>15 Bags • Full Dice (3kg)</p>
+                        <div class="total-row">
+                            <strong class="order-amount">₱2,550.00</strong>
+                            <span class="view-receipt-label">View Receipt ›</span>
+                        </div>
+                    </div>
+
+                    <div class="card-actions" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- Previous -->
+                <div class="history-card po-account" onclick="app.viewReceipt('IQ-9688')">
+                    <div class="card-header">
+                        <div class="id-group">
+                            <strong class="order-id">#IQ-9688</strong>
+                            <span class="po-tag">PO #8815</span>
+                        </div>
+                        <span class="order-date">April 17, 2026</span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <p>10 Bags • Half-Dice (3kg)</p>
+                        <div class="total-row">
+                            <strong class="order-amount">₱1,700.00</strong>
+                            <span class="view-receipt-label">View Receipt ›</span>
+                        </div>
+                    </div>
+
+                    <div class="card-actions" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- Another one -->
+                <div class="history-card po-account" onclick="app.viewReceipt('IQ-9521')">
+                    <div class="card-header">
+                        <div class="id-group">
+                            <strong class="order-id">#IQ-9521</strong>
+                            <span class="po-tag">PO #8792</span>
+                        </div>
+                        <span class="order-date">April 12, 2026</span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <p>20 Bags • Full Dice (3kg)</p>
+                        <div class="total-row">
+                            <strong class="order-amount">₱3,400.00</strong>
+                            <span class="view-receipt-label">View Receipt ›</span>
+                        </div>
+                    </div>
+
+                    <div class="card-actions" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Our ICE Panel -->
+    <div id="about-overlay" class="panel-overlay" onclick="app.togglePanel('about', false)"></div>
+    <div id="about-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.togglePanel('about', false)" class="close-btn back-btn" id="close-about-panel">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 style="flex: 1; margin-left: 8px;">About our ICE</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        <div class="about-tabs-container">
+            <div class="about-tabs-track">
+                <button class="about-tab-item active" id="tab-about-ice" onclick="app.switchAboutTab('tab-about-ice')">Ice Types</button>
+                <button class="about-tab-item" id="tab-about-water" onclick="app.switchAboutTab('tab-about-water')">Water Used</button>
+                <button class="about-tab-item" id="tab-about-delivery" onclick="app.switchAboutTab('tab-about-delivery')">Delivery</button>
+                <button class="about-tab-item" id="tab-about-payments" onclick="app.switchAboutTab('tab-about-payments')">Payments</button>
+                <button class="about-tab-item" id="tab-about-hub" onclick="app.switchAboutTab('tab-about-hub')">Hub</button>
+            </div>
+        </div>
+        <div class="panel-content">
+
+            <div class="about-content">
+                <!-- Tab: Ice Types -->
+                <div class="about-tab-pane active" id="pane-about-ice">
+                    <div class="ice-sub-tabs">
+                        <button class="ice-sub-tab active" onclick="app.switchToFull()">Full Dice</button>
+                        <button class="ice-sub-tab" onclick="app.switchToHalf()">Half-Dice</button>
+                    </div>
+
+                    <div class="ice-types-wrapper">
+                        <div class="tab-slider" id="diceSlider">
+                            <!-- Full Dice Showcase -->
+                            <div class="dice-page" id="fullDicePage">
+                                <div class="ice-vertical-layout ice-reverse">
+                                    <div class="ice-macro-column">
+                                        <div class="ice-macro-zoom-container">
+                                            <img src="./assets/full_dice_macro.png" alt="Full Dice Macro" class="ice-macro-image">
+                                            <div class="macro-overlay">22MM* ARTISAN CUBE</div>
+                                        </div>
+                                    </div>
+                                    <div class="ice-info-column">
+                                        <p class="ice-desc-vertical">
+                                            Crystal-clear, slow-melting cubes engineered for maximum density and purity.
+                                        </p>
+                                        
+                                        <div class="ice-benefits-vertical">
+                                            <div class="ice-benefit-item">
+                                                <span class="benefit-icon icon-blue">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/></svg>
+                                                </span>
+                                                <div class="benefit-text">
+                                                    <strong>Crystal Clarity</strong>
+                                                    <span>Zero impurities, zero clouds.</span>
+                                                </div>
+                                            </div>
+                                            <div class="ice-benefit-item">
+                                                <span class="benefit-icon icon-yellow">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22c0-3-2.5-4.5-5-4.5s-5 1.5-5 4.5"/><path d="M7 2c0 3 2.5 4.5 5 4.5s5-1.5 5-4.5"/><path d="M12 17.5v-11"/></svg>
+                                                </span>
+                                                <div class="benefit-text">
+                                                    <strong>Slow Melting</strong>
+                                                    <span>Chills without diluting flavor.</span>
+                                                </div>
+                                            </div>
+                                            <div class="ice-benefit-item">
+                                                <span class="benefit-icon icon-blue">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11 6 11"/><path d="M6 11 12 17"/><path d="M12 17 18 11"/><path d="M12 17 12 22"/><path d="M8 22 16 22"/></svg>
+                                                </span>
+                                                <div class="benefit-text">
+                                                    <strong>Mixology Ready</strong>
+                                                    <span>The choice for premium cafes.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pricing-table-container">
+                                    <table class="pricing-table">
+                                        <tbody>
+                                            <tr>
+                                                <th>ITEM</th>
+                                                <td><strong>3kg Bag</strong></td>
+                                                <td><strong>1kg Bag</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <th>STANDARD</th>
+                                                <td>₱40</td>
+                                                <td>₱15</td>
+                                            </tr>
+                                            <tr>
+                                                <th>WHOLESALE</th>
+                                                <td class="wholesale-price-cell">₱35</td>
+                                                <td class="wholesale-price-cell">₱14</td>
+                                            </tr>
+                                            <tr>
+                                                <th>THRESHOLD</th>
+                                                <td class="threshold-cell">15+ bags</td>
+                                                <td class="threshold-cell">40+ bags</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Half-Dice Showcase -->
+                            <div class="dice-page" id="halfDicePage">
+                                <div class="ice-vertical-layout">
+                                    <div class="ice-macro-column">
+                                        <div class="ice-macro-zoom-container">
+                                            <img src="./assets/half_dice_macro.png" alt="Half-Dice Macro" class="ice-macro-image">
+                                            <div class="macro-overlay">10X29X22MM RECTANGULAR</div>
+                                        </div>
+                                    </div>
+                                    <div class="ice-info-column">
+                                        <p class="ice-desc-vertical">
+                                            High-performance rectangular cubes designed for instant cooling and perfect blending.
+                                        </p>
+                                        
+                                        <div class="ice-benefits-vertical">
+                                            <div class="ice-benefit-item">
+                                                <span class="benefit-icon icon-yellow">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                                </span>
+                                                <div class="benefit-text">
+                                                    <strong>Instant Cool</strong>
+                                                    <span>Rapid temperature drop.</span>
+                                                </div>
+                                            </div>
+                                            <div class="ice-benefit-item">
+                                                <span class="benefit-icon icon-red">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H9a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"/><path d="M7 8h10"/><path d="M12 18h.01"/></svg>
+                                                </span>
+                                                <div class="benefit-text">
+                                                    <strong>Blender Safe</strong>
+                                                    <span>Ideal for frappes and smoothies.</span>
+                                                </div>
+                                            </div>
+                                            <div class="ice-benefit-item">
+                                                <span class="benefit-icon icon-purple">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                                                </span>
+                                                <div class="benefit-text">
+                                                    <strong>Space Efficient</strong>
+                                                    <span>Fills cups more effectively.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pricing-table-container">
+                                    <table class="pricing-table">
+                                        <tbody>
+                                            <tr>
+                                                <th>ITEM</th>
+                                                <td><strong>3kg Bag</strong></td>
+                                                <td><strong>1kg Bag</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <th>STANDARD</th>
+                                                <td>₱40</td>
+                                                <td>₱15</td>
+                                            </tr>
+                                            <tr>
+                                                <th>WHOLESALE</th>
+                                                <td class="wholesale-price-cell">₱35</td>
+                                                <td class="wholesale-price-cell">₱14</td>
+                                            </tr>
+                                            <tr>
+                                                <th>THRESHOLD</th>
+                                                <td class="threshold-cell">15+ bags</td>
+                                                <td class="threshold-cell">40+ bags</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Water Used -->
+                <div class="about-tab-pane" id="pane-about-water">
+                    <div class="filtration-showcase">
+
+
+                        <div class="filtration-grid">
+                            <div class="filter-step">
+                                <div class="step-icon-box icon-slate-soft">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+                                </div>
+                                <h4>1. Raw Source</h4>
+                                <p>Sourced from COWD. Pre-treated with health standards. No Ground Contaminants.</p>
+                            </div>
+                            <div class="filter-step">
+                                <div class="step-icon-box icon-blue-soft">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+                                </div>
+                                <h4>2. Sediment</h4>
+                                <p>Removes particles, rust, and micro-debris from city pipes.</p>
+                            </div>
+                            <div class="filter-step">
+                                <div class="step-icon-box icon-amber-soft">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                </div>
+                                <h4>3. Ceramic</h4>
+                                <p>Blocks micro-parasites and fine suspended solids.</p>
+                            </div>
+                            <div class="filter-step">
+                                <div class="step-icon-box icon-indigo-soft">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/><path d="M12 18s-1.5-1.5-1.5-3.5"/><path d="M12 18s1.5-1.5 1.5-3.5"/></svg>
+                                </div>
+                                <h4>4. Carbon</h4>
+                                <p>Eliminates chlorine and odors for a neutral taste profile.</p>
+                            </div>
+                            <div class="filter-step highlighted">
+                                <div class="step-icon-box icon-purple-soft">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+                                </div>
+                                <h4>5. Ultra-Filter</h4>
+                                <p>0.01 micron membrane blocks 99.9% of bacteria.</p>
+                            </div>
+                            <div class="filter-step">
+                                <div class="step-icon-box icon-cyan-soft">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                                </div>
+                                <h4>6. UV-Light</h4>
+                                <p>Destroys viruses and pathogens without chemicals.</p>
+                            </div>
+                        </div>
+
+                        <div class="advantage-box">
+                            <h3>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                                The Alkaline Advantage
+                            </h3>
+                            <p>Our process preserves natural minerals, avoiding the "dead" water common in Reverse Osmosis systems.</p>
+                            <div class="benefit-pills">
+                                <span>Superior Taste</span>
+                                <span>Alkaline pH</span>
+                                <span>Coffee-First</span>
+                            </div>
+                            <p class="summary-text">Truly Crystal. Truly Mineral.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Delivery -->
+                <div class="about-tab-pane" id="pane-about-delivery">
+                    <div class="delivery-info">
+                        <div class="rate-card">
+                            <h4>Standard Rates</h4>
+                            <div class="rate-item">
+                                <div class="item-label">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="line-icon"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <span>Base Fare (within 1km)</span>
+                                </div>
+                                <strong>₱30</strong>
+                            </div>
+                            <div class="rate-item">
+                                <div class="item-label">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="line-icon"><path d="M10 17h4V5H2v12h3"/><path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+                                    <span>Added distance</span>
+                                </div>
+                                <strong>₱10/km</strong>
+                            </div>
+                        </div>
+
+                        <div class="surcharge-notice">
+                            <div class="surcharge-header">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="line-icon"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                <h5>Priority & Peak Adjustments</h5>
+                            </div>
+                            <ul class="surcharge-list">
+                                <li>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sub-icon"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span><strong>Busy Hours:</strong> +₱15 (11AM-1PM / 5PM-7PM)</span>
+                                </li>
+                                <li>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sub-icon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                                    <span><strong>Late Night:</strong> +₱25 (After 8:00 PM)</span>
+                                </li>
+                                <li>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sub-icon"><path d="M14.121 14.121 12 12l2.121-2.121"/><path d="m20 16-4-4 4-4"/><path d="M10 16H3"/><path d="M10 8H3"/><path d="M10 12H3"/></svg>
+                                    <span><strong>High-Traffic:</strong> Rates may adjust for Cogon/Market zones.</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="delivery-notes">
+                            <div class="note-item">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="line-icon"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                                <span><strong>Min:</strong> 2 (3kg) or 10 (1kg) bags.</span>
+                            </div>
+                            <div class="note-item schedule">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="line-icon"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span><strong>Bulk:</strong> Book 1 day ahead for priority.</span>
+                            </div>
+                        </div>
+                        
+                        <p class="disclaimer">* Distance calculated via Google Maps from Macabalan Hub.</p>
+                    </div>
+                </div>
+
+                <!-- Tab: Payments -->
+                <div class="about-tab-pane" id="pane-about-payments">
+                    <div class="info-card payment-methods-card">
+                        <h3>Accepted Methods</h3>
+                        <div class="payment-icons-grid">
+                            <div class="pay-method">
+                                <span class="pay-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                                </span>
+                                <span>GCash</span>
+                            </div>
+                            <div class="pay-method">
+                                <span class="pay-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                </span>
+                                <span>Cash on Delivery</span>
+                            </div>
+                            <div class="pay-method">
+                                <span class="pay-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/><path d="M5 21V10.9"/><path d="M9 21V10.9"/><path d="M15 21V10.9"/><path d="M19 21V10.9"/></svg>
+                                </span>
+                                <span>Bank Transfer</span>
+                            </div>
+                            <div class="pay-method premium">
+                                <span class="pay-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                                </span>
+                                <span>Purchase Order</span>
+                                <small class="premium-note">Only for Premium Partner</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Hub -->
+                <div class="about-tab-pane" id="pane-about-hub">
+                    <div class="hub-card">
+                        <h4>IceQube CDO Hub</h4>
+                        <p>Piaping Itum, Macabalan, Cagayan de Oro City</p>
+                        
+                        <a href="https://www.google.com/maps/place/IceQube/@8.5020529,124.6582801,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu&g_ep=EgoyMDI2MDQyMC4wIKXMDSoASAFQAw%3D%3D" 
+                           target="_blank" class="map-preview">
+                            <div class="map-overlay">
+                                <span class="map-btn">📍 Open in Google Maps</span>
+                            </div>
+                            <img src="./assets/map.png" alt="Hub Location" class="map-img">
+                        </a>
+
+                        <p class="pickup-hours">Open daily from 8:00 AM to 10:00 PM for self-pickup.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <div id="reorderModal" class="modal-overlay" onclick="if(event.target === this) closeReorderModal()">
+        <div class="modal-card">
+            <h3>Confirm Your Order</h3>
+            <p>Current Default: <strong>15 Bags (Half-Dice)</strong></p>
+            
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="processOrder()">Continue with 15 Bags</button>
+                <button class="modal-btn secondary" onclick="goToEditQty()">Edit Quantity</button>
+                <button class="modal-btn cancel" onclick="closeReorderModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Auto-Settlement Side Panel -->
+    <div id="auto-settle-overlay" class="panel-overlay" onclick="app.togglePanel('auto-settle', false)"></div>
+    <div id="auto-settle-panel" class="side-panel">
+        <div class="panel-header">
+            <button onclick="app.togglePanel('auto-settle', false)" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 style="flex: 1; margin-left: 8px;">Auto-Settlement</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+
+        <div class="panel-body" style="padding: 20px;">
+            <div class="secure-badge">
+                <span class="icon">🔒</span> End-to-End Encrypted
+            </div>
+
+            <p class="instruction">Choose your primary payment source for automated clearing.</p>
+
+            <div class="provider-list">
+                <div class="provider-item active" onclick="app.selectAuthProvider('GCash', this)">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/GCash_logo.png/640px-GCash_logo.png" alt="GCash">
+                    <div class="p-info">
+                        <strong>GCash</strong>
+                        <span>Verified Account</span>
+                    </div>
+                    <div class="p-check">✓</div>
+                </div>
+
+                <div class="provider-item" onclick="app.selectAuthProvider('Maya', this)">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Maya_logo.png/1200px-Maya_logo.png" alt="Maya">
+                    <div class="p-info">
+                        <strong>Maya</strong>
+                        <span>Link via Wallet</span>
+                    </div>
+                    <div class="p-check">✓</div>
+                </div>
+            </div>
+
+            <div class="limit-setting">
+                <label>Weekly Auto-Pay Limit</label>
+                <div class="limit-input">
+                    <span>₱</span>
+                    <input type="number" id="auto-pay-limit" value="5000" step="500">
+                </div>
+                <small>Safety first: We will never charge more than this limit without a manual override.</small>
+            </div>
+
+            <button class="pill-btn primary" style="width: 100%; margin-top: 2rem;" onclick="app.confirmLinking()">Link Account & Enable</button>
+        </div>
+    </div>
+
+    <!-- Permissions Panel -->
+    <div id="permissions-overlay" class="panel-overlay" onclick="app.togglePanel('permissions', false)"></div>
+    <div id="permissions-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.backToAccount()" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Staff Permissions</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        <div class="panel-content">
+            <div class="permission-card">
+                <div class="staff-header">
+                    <div class="small-pfp" id="perm-pfp" style="display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; background: #4382ec;">M</div>
+                    <div>
+                        <strong id="perm-staff-name">Maria Santos</strong>
+                        <span id="perm-staff-role">Barista / Assistant</span>
+                    </div>
+                </div>
+
+                <div class="toggle-list">
+                    <div class="perm-item">
+                        <div class="perm-text">
+                            <strong>Place Orders</strong>
+                            <p>Can reorder ice and edit quantities</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="perm-item">
+                        <div class="perm-text">
+                            <strong>View Ledger & Payments</strong>
+                            <p>Access to billing history and credit limit</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox"> 
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="perm-item">
+                        <div class="perm-text">
+                            <strong>Invite/Remove Staff</strong>
+                            <p>Allow this person to onboard others</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button class="pill-btn primary" style="width: 100%; margin-top: 1rem;" onclick="app.savePermissions()">Update Permissions</button>
+        </div>
+    </div>
+
+    <!-- Limit Alert Panel -->
+    <div id="limit-overlay" class="panel-overlay" onclick="app.togglePanel('limit', false)"></div>
+    <div id="limit-panel" class="bottom-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.togglePanel('limit', false)" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 style="color: #be123c;">Limit Warning</h2>
+            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
+        </div>
+        <div class="panel-content" style="padding: 0;">
+            <div class="limit-alert-header">
+                <div class="alert-icon">⚠️</div>
+                <h2>Credit Limit Reached</h2>
+                <p>Order #IQ-22037 is <strong>Pending</strong></p>
+            </div>
+
+            <!-- Credit Utilization Gauge -->
+            <div class="limit-gauge-container">
+                <div class="gauge-meta">
+                    <span>Credit Utilization</span>
+                    <strong id="gauge-percent">98%</strong>
+                </div>
+                <div class="gauge-track">
+                    <div id="gauge-fill" class="gauge-fill"></div>
+                </div>
+                <div class="gauge-labels">
+                    <span class="label-ok">Optimal</span>
+                    <span class="label-critical">Over Limit</span>
+                </div>
+            </div>
+
+            <div class="limit-breakdown">
+                <div class="l-row">
+                    <span>Current Balance:</span>
+                    <strong>₱2,450.00</strong>
+                </div>
+                <div class="l-row">
+                    <span>This Order:</span>
+                    <strong>₱300.00</strong>
+                </div>
+                <div class="l-row total">
+                    <span>Required Payment:</span>
+                    <mark>₱250.00 min</mark>
+                </div>
+            </div>
+
+            <div class="action-box">
+                <p>To resume delivery, please settle at least the overage amount.</p>
+                <button class="pill-btn primary" onclick="app.openDebtSheet()" style="width: 100%;">Pay Now to Release Order</button>
+                <button class="ghost-btn" onclick="app.closeAllPanels()">View Ledger</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debt Breakdown Bottom Sheet -->
+    <div id="debt-overlay" class="sheet-overlay" onclick="app.toggleBottomSheet('debt', false)"></div>
+    <div id="debt-sheet" class="bottom-sheet dark-sheet">
+        <div class="sheet-header">
+            <div class="handle"></div>
+            <h3>Total Debt Breakdown</h3>
+            <h1 class="total-debt-display">₱1,665.00</h1>
+        </div>
+
+        <!-- VIEW 1: LEDGER BREAKDOWN -->
+        <div id="ledger-view">
+            <div class="ledger-list">
+                <div class="ledger-item">
+                    <div class="l-info">
+                        <strong>Order #IQ-9801</strong>
+                        <span>Delivered Apr 22 • 5 Bags</span>
+                    </div>
+                    <div class="l-action">
+                        <div class="l-amount">₱850.00</div>
+                    </div>
+                </div>
+
+                <div class="ledger-item">
+                    <div class="l-info">
+                        <strong>Order #IQ-9788</strong>
+                        <span>Delivered Apr 20 • 3 Bags</span>
+                        <span class="warning-text">Due Tomorrow</span>
+                    </div>
+                    <div class="l-action">
+                        <div class="l-amount">₱815.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sheet-footer">
+                
+                <div id="default-action-zone" class="action-row">
+                    <button class="pay-partial-btn" onclick="toggleCustomPay(true)">Pay Partial</button>
+                    <button class="pay-all-btn" onclick="showPaymentMethods()">Settle Full Balance</button>
+                </div>
+
+                <div id="custom-action-zone" class="custom-pay-wrapper" style="display: none;">
+                    <div class="input-group">
+                        <span class="currency-symbol">₱</span>
+                        <input type="number" id="custom-pay-amount" placeholder="Enter amount" min="1" max="1665" autofocus>
+                    </div>
+                    <div class="action-row">
+                        <button class="cancel-btn" onclick="toggleCustomPay(false)">Cancel</button>
+                        <button class="confirm-btn" onclick="showPaymentMethods()">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: PAYMENT METHODS -->
+        <div id="payment-methods-view" class="fade-in" style="display: none; padding: 0 20px 30px;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h3 style="color: white; margin-bottom: 8px;">Select Payment Method</h3>
+                <p class="amount-due" style="color: #94a3b8; font-weight: 700;">Total to Pay: <span style="color: #ef4444;">₱1,665.00</span></p>
+            </div>
+            
+            <div class="payment-options" style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="btn-blue" onclick="openSecureCheckout('gcash')">Pay with GCash</button>
+                <button class="btn-white" onclick="openSecureCheckout('qrph')">Show QR Code</button>
+            </div>
+            <button class="cancel-link" onclick="backToLedger()" style="background: transparent; border: none; color: #94a3b8; width: 100%; margin-top: 24px; font-weight: 700; cursor: pointer;">← Back to Breakdown</button>
+        </div>
+
+        <!-- VIEW 3: CASH PENDING -->
+        <div id="cash-pending-view" class="fade-in" style="display: none; padding: 0 20px 30px; text-align: center;">
+            <div class="cash-icon" style="font-size: 48px; margin-bottom: 10px;">🛵</div>
+            <h3 style="color: white; margin-bottom: 8px;">Cash Collection Scheduled</h3>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Please prepare the exact amount for your next delivery.</p>
+            
+            <div class="cash-ticket" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed #64748b; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Amount to Collect</span>
+                <h2 style="color: #eab308; font-size: 28px; margin: 5px 0 15px; font-weight: 800;">₱1,665.00</h2>
+                <div class="ticket-status" style="background: #334155; color: white; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;">Status: Awaiting Rider Verification</div>
+            </div>
+            
+            <button class="done-btn" onclick="activateProvisionalCredit()" style="width: 100%; background: #4382ec; color: white; border: none; padding: 16px; border-radius: 14px; font-weight: 800; cursor: pointer;">Understood</button>
+        </div>
+    </div>
+
+    <!-- Report Issue Bottom Sheet -->
+    <div id="report-overlay" class="sheet-overlay" onclick="app.toggleBottomSheet('report', false)"></div>
+    <div id="report-sheet" class="bottom-sheet">
+        <div class="sheet-header">
+            <div class="handle"></div>
+            <h3>Report an Issue</h3>
+            <p>We'll resolve this immediately.</p>
+        </div>
+
+        <div class="form-group" style="padding: 0 20px 10px;">
+            <select id="report-context" class="input-high-contrast" onchange="app.handleReportContextChange()" style="font-weight: 600;">
+                <option value="order_issue">Issue with an Order</option>
+                <option value="staff">Driver / Staff Feedback</option>
+                <option value="billing_app">App, Payments & Billing</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="report-order-selection" style="padding: 0 20px 15px;">
+            <select id="report-order-id" class="input-high-contrast" onchange="app.validateReport()">
+                <option value="" disabled selected>Which order is this for?</option>
+                <option value="current">Current Active Delivery</option>
+                <option value="9750">#IQ-9750 (Apr 20)</option>
+                <option value="9688">#IQ-9688 (Apr 17)</option>
+                <option value="9521">#IQ-9521 (Apr 12)</option>
+            </select>
+        </div>
+
+        <div class="issue-grid">
+            <button class="issue-btn" id="issue-melting" onclick="app.selectIssue('melting')">
+                <span class="icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                </span>
+                <span>Melted</span>
+            </button>
+            <button class="issue-btn" id="issue-missing" onclick="app.selectIssue('missing')">
+                <span class="icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v1.5"/><path d="M21 7.5 12 12 3 7.5"/><path d="M12 12v9"/><path d="m3 16.5 9 4.5 9-4.5"/><path d="M21 7.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5"/></svg>
+                </span>
+                <span>Missing</span>
+            </button>
+            <button class="issue-btn" id="issue-late" onclick="app.selectIssue('late')">
+                <span class="icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+                <span>Late</span>
+            </button>
+            <button class="issue-btn" id="issue-contamination" onclick="app.selectIssue('contamination')">
+                <span class="icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </span>
+                <span>Contamination</span>
+            </button>
+            <button class="issue-btn" id="issue-other" onclick="app.selectIssue('other')" style="grid-column: span 2;">
+                <span class="icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </span>
+                <span>Other / Notes</span>
+            </button>
+        </div>
+
+        <div id="critical-warning" style="display: none; padding: 0 20px 15px;"></div>
+
+        <div id="other-issue-container" style="display: none; padding: 0 20px 20px;">
+            <textarea id="other-issue-text" class="input-high-contrast" placeholder="Describe the issue..." style="height: 100px; padding: 15px !important; resize: none;" oninput="app.validateReport()"></textarea>
+        </div>
+
+        <div class="photo-upload-zone">
+            <button class="upload-trigger" id="report-upload-trigger" onclick="document.getElementById('report-photo-input').click()">
+                <span id="upload-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                </span>
+                <span id="upload-text">Snap Photo of Product</span>
+            </button>
+            <input type="file" id="report-photo-input" accept="image/*" style="display: none;" onchange="app.handleReportPhoto(event)">
+        </div>
+
+        <button class="submit-issue-btn" id="btn-submit-report" disabled onclick="app.submitReport()">Send to IceQube Support</button>
+    </div>
+
+
+
+
+    <div id="invite-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button class="close-btn" onclick="app.closeInviteModal()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; cursor: pointer; color: #64748b;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <h3>Invite Staff</h3>
+            <p>Share this link with your new employee. It expires in 24 hours.</p>
+            <div class="invite-link-box">
+                <input type="text" value="iceqube.app/join?t=LOFT-7721" id="linkText" readonly>
+                <button onclick="app.copyInviteLink()">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app_header.js?v=2.0.5"></script>
+    <script src="js/app_v2.js?v=2.0.5"></script>
+    <script>
+        // Emergency Reset: Ensure all panels are closed on startup
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.bottom-panel, .side-panel, .bottom-sheet, .panel-overlay, .sheet-overlay').forEach(el => {
+                el.classList.remove('active');
+            });
+            console.log('App Safety Reset: All panels closed.');
+        });
+    </script>
+    <!-- Secure Checkout Overlay -->
+    <div id="secure-checkout-overlay" class="fullscreen-modal" style="display: none;">
+        
+        <div class="checkout-header">
+            <button class="back-btn" onclick="closeCheckout()" aria-label="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h3>Secure Checkout</h3>
+        </div>
+
+        <div class="checkout-card">
+            <span class="step-badge">STEP 1: TRANSFER</span>
+            <h2 id="amount-to-transfer">Transfer exactly: ₱1,665.00</h2>
+            
+            <div class="qr-container" style="background: white; padding: 15px; border-radius: 12px; display: block; margin: 20px auto; width: fit-content;">
+                <img id="payment-qr-image" src="assets/gcash-qr-iceqube.png" alt="Payment QR" style="width: 180px; height: 180px; display: block;">
+            </div>
+
+            <div id="gcash-details-view">
+                <div class="account-details">
+                    <span id="account-number">(0961) 039 1173 (LAWRENCE FE BACAYO)</span>
+                    <button class="copy-btn" onclick="copyText('09610391173')">📋</button>
+                </div>
+                <a href="intent://#Intent;package=com.globe.gcash.android;scheme=gcash;end;" class="btn-action" target="_blank">
+                    <span class="icon">📱</span> Open GCash App
+                </a>
+            </div>
+
+            <div id="bank-details-view" style="display: none;">
+                <div class="account-details multi-line">
+                    <strong>Gotyme Bank</strong><br>
+                    <span>Account Name: LAWRENCE FE BACAYO</span><br>
+                    <span id="bank-account-number">0176-3092-9031</span>
+                    <button class="copy-btn" onclick="copyText('0176-3092-9031')">📋 Copy Acct #</button>
+                </div>
+                <button class="btn-action btn-secondary" onclick="saveQRToGallery()">
+                    <span class="icon">💾</span> Save QR to Gallery
+                </button>
+            </div>
+        </div>
+
+        <div class="checkout-card">
+            <span class="step-badge">STEP 2: UPLOAD RECEIPT</span>
+            <p class="warning-text">⚠️ Must be a clear, uncropped screenshot.</p>
+            
+            <label for="receipt-upload" class="upload-dropzone" id="dropzone-ui">
+                <span class="upload-icon">📤</span>
+                <span id="upload-text">Attach Receipt Screenshot</span>
+                <input type="file" id="receipt-upload" accept="image/png, image/jpeg" hidden onchange="handleFileSelection(this)">
+            </label>
+            
+            <div id="ai-scanner-loading" style="display: none;">
+                <div class="spinner"></div><p>Verifying screenshot...</p>
+            </div>
+            <div id="upload-error-box" class="error-box" style="display: none;"></div>
+
+            <button id="confirm-finish-btn" class="btn-confirm disabled" disabled onclick="submitAIReceipt()">
+                Confirm & Finish
+            </button>
+        </div>
+    </div>
+
+    <!-- Statement of Account (SOA) Overlay -->
+    <div id="soa-overlay" class="fullscreen-modal" style="display: none; background: #f8fafc; z-index: 5000; overflow-y: auto;">
+        <div class="soa-controls hide-on-print">
+            <div class="header-actions">
+                <button class="back-btn" onclick="app.closeSOA()" aria-label="Back">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h2 class="soa-title">Statement of Account</h2>
+                <button class="soa-print-btn" onclick="window.print()" title="Print or Save PDF">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    <span>Print / Save</span>
+                </button>
+            </div>
+            
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Statement Period:</label>
+                    <select id="soa-date-filter" onchange="app.generateLedger()">
+                        <option value="current">May 2026 (Month-to-Date)</option>
+                        <option value="last_month">April 2026</option>
+                        <option value="custom">Custom Range...</option>
+                    </select>
+                </div>
+                
+                <div id="custom-range-inputs" style="display: none;">
+                    <div class="premium-picker-card compact" onclick="this.querySelector('input').showPicker()">
+                        <div class="picker-icon-wrapper small" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                        <div class="picker-info">
+                            <label style="color: #94a3b8; font-size: 8px; font-weight: 800;">START</label>
+                            <div id="display-soa-start" class="picker-display-value" style="color: #0f172a; font-size: 11px; font-weight: 700;">Select Date</div>
+                        </div>
+                        <input type="date" id="soa-start-date" class="hidden-input" oninput="app.handleSOADateChange('start', this.value)">
+                    </div>
+
+                    <div class="premium-picker-card compact" onclick="this.querySelector('input').showPicker()">
+                        <div class="picker-icon-wrapper small" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                        <div class="picker-info">
+                            <label style="color: #94a3b8; font-size: 8px; font-weight: 800;">END</label>
+                            <div id="display-soa-end" class="picker-display-value" style="color: #0f172a; font-size: 11px; font-weight: 700;">Select Date</div>
+                        </div>
+                        <input type="date" id="soa-end-date" class="hidden-input" oninput="app.handleSOADateChange('end', this.value)">
+                    </div>
+
+                    <button class="btn-generate-soa" onclick="app.generateLedger(true)">Generate</button>
+                </div>
+
+
+            </div>
+        </div>
+
+        <div id="printable-soa-document" class="soa-paper">
+            
+            <div class="soa-header">
+                <div class="brand-block">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <img src="./assets/logo.png" alt="IceQube" style="height: 44px; width: auto; mix-blend-mode: multiply; filter: contrast(1.1);">
+                        <h1 class="logo-text" style="margin: 0;">IceQube</h1>
+                    </div>
+                    <p><strong>STATEMENT OF ACCOUNT (LEDGER)</strong></p>
+                    <p class="meta-text" id="generation-timestamp">Generated: May 26, 2026 @ 08:30 AM</p>
+                </div>
+                <div class="client-block">
+                    <p><strong>BILLED TO:</strong></p>
+                    <h3 id="client-name">Loft Living CDO</h3>
+                    <p id="client-tier">Account Type: Elite PO</p>
+                </div>
+            </div>
+
+            <div class="dynamic-summary">
+                <div class="stat-box">
+                    <span>Credit Limit</span>
+                    <strong id="soa-credit-limit">₱2,500.00</strong>
+                </div>
+                <div class="stat-box">
+                    <span>Available Power</span>
+                    <strong class="good" id="soa-available">₱835.00</strong>
+                </div>
+                <div class="stat-box highlight">
+                    <span>CURRENT DEBT</span>
+                    <strong class="alert" id="soa-debt">₱1,665.00</strong>
+                </div>
+            </div>
+
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Activity / Reference</th>
+                        <th class="align-right">Charge (Debit)</th>
+                        <th class="align-right">Payment (Credit)</th>
+                        <th class="align-right">Running Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="ledger-table-body">
+                    <!-- Data will be injected here by app.js -->
+                </tbody>
+            </table>
+            
+            <div class="soa-footer">
+                <p><strong>Payment Terms:</strong> Strictly Net 7 Days. Please settle via the IceQube App.</p>
+                <p>This is a system-generated document. For disputes, contact billing@iceqube.cdo.</p>
+            </div>
+
+        </div>
+    </div>
+    <!-- Digital Receipt Panel -->
+    <div id="receipt-overlay" class="panel-overlay" onclick="app.togglePanel('receipt', false)"></div>
+    <div id="receipt-panel" class="bottom-panel receipt-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="app.togglePanel('receipt', false)" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Digital Receipt</h2>
+            <button class="soa-print-btn" onclick="window.print()" title="Print Receipt">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+            </button>
+        </div>
+        
+        <div class="panel-content receipt-content-wrapper">
+            <div class="receipt-paper">
+                <div class="receipt-header">
+                    <img src="./assets/logo.png" alt="IceQube Logo" class="receipt-logo">
+                    <div class="receipt-title">
+                        <h1>IceQube</h1>
+                        <p>PREMIUM ICE SOLUTIONS</p>
+                    </div>
+                </div>
+
+                <div class="receipt-meta">
+                    <div class="meta-item">
+                        <span>ORDER ID</span>
+                        <strong id="receipt-order-id">#IQ-9750</strong>
+                    </div>
+                    <div class="meta-item">
+                        <span>DATE</span>
+                        <strong id="receipt-date">April 20, 2026</strong>
+                    </div>
+                </div>
+
+                <div class="receipt-divider"></div>
+
+                <div class="receipt-customer">
+                    <p class="section-label">CUSTOMER DETAILS</p>
+                    <strong id="receipt-customer-name">Loft Living CDO</strong>
+                    <p id="receipt-customer-address">Piaping Itum, Macabalan, CDO</p>
+                </div>
+
+                <div class="receipt-items">
+                    <p class="section-label">ORDER SUMMARY</p>
+                    <div id="receipt-items-list">
+                        <!-- Populated dynamically -->
+                        <div class="receipt-item">
+                            <div class="item-info">
+                                <strong>Full Dice (3kg)</strong>
+                                <span>15 Bags × ₱170.00</span>
+                            </div>
+                            <span class="item-price">₱2,550.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="receipt-totals">
+                    <div class="total-row">
+                        <span>Subtotal</span>
+                        <span id="receipt-subtotal">₱2,550.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Delivery Fee</span>
+                        <span id="receipt-delivery">₱0.00</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Amount Paid</span>
+                        <strong id="receipt-total">₱2,550.00</strong>
+                    </div>
+                </div>
+
+                <div class="receipt-footer">
+                    <div class="payment-tag">
+                        <span class="tag-icon">💳</span>
+                        <span id="receipt-payment-method">Purchase Order (#8821)</span>
+                    </div>
+                    <p>Thank you for choosing IceQube!</p>
+                    <div class="barcode">|||||||||||||||||||||||||||||</div>
+                </div>
+            </div>
+
+            <div class="receipt-actions hide-on-print">
+                <button class="btn-primary" onclick="window.print()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print / Save
+                </button>
+                <button class="btn-white" onclick="app.toggleBottomSheet('report', true, 'IQ-9750')">Report an Issue</button>
+                <button class="ghost-link" onclick="app.togglePanel('receipt', false)">Close Receipt</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
