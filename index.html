@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IceQube CDO | Premium Crystal Ice</title>
     <meta name="description" content="Order premium crystal clear ice in Cagayan de Oro. Fast delivery and high-quality ice cubes.">
-    <link rel="stylesheet" href="style.css?v=1.0.2">
+    <link rel="stylesheet" href="css/style_v10.css?v=10.0.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
     <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -81,7 +82,7 @@
             <div id="progress-bar" class="progress-bar"></div>
         </div>
         <main id="app">
-            <div class="container">
+    <div class="app-container" style="padding-top: 40px; min-height: 100vh; position: relative; z-index: 1;">
             <!-- Step 1: START (Hero) -->
             <section id="step-start" class="step-content active">
                 <img src="./assets/hero.png" alt="Crystal Ice Cubes" class="hero-image">
@@ -122,11 +123,11 @@
                 <button class="back-nav" onclick="app.prevStep()">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </button>
+                <h1 style="text-align: left; margin: 0.65rem 0 1.5rem 3.5rem; font-size: 1.6rem; color: var(--text-primary); font-weight: 700;">Choose your Ice</h1>
                 <div class="tab-switcher">
                     <button class="tab-item active" id="tab-full-dice" onclick="app.slideQty('full-dice')">Full Dice 🧊</button>
                     <button class="tab-item" id="tab-half-dice" onclick="app.slideQty('half-dice')">Half-Dice ❄️</button>
                 </div>
-                <h1 style="text-align: center; margin: 1rem 0; font-size: 1.75rem; color: var(--text-primary);">Choose your Ice</h1>
                 <p class="subtitle">Select the number of bags for your order.</p>
                 
                 
@@ -392,7 +393,7 @@
                             <div class="input-icon-left">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             </div>
-                            <input type="tel" id="delivery-contact" class="input-high-contrast" placeholder="Contact Number (09XXXXXXXXX)" oninput="app.validateContact(this.value)" maxlength="11">
+                                                        <input type="tel" id="delivery-contact" class="input-high-contrast" placeholder="Contact Number (09XX XXX XXXX)" oninput="app.validateContact(this.value)" maxlength="13">
                             <div id="contact-warning" class="input-warning" style="display: none;">Number must start with 09 and be 11 digits.</div>
                         </div>
 
@@ -546,7 +547,7 @@
                 <div id="cod-verification-box" class="cod-verification-box">
                     <label class="cod-label" id="cod-verification-text">To prevent fake orders, please verify your number.</label>
                     <div class="cod-input-group" id="cod-phone-group">
-                        <input type="text" id="cod-phone-input" class="cod-input" placeholder="Contact Number">
+                                                <input type="text" id="cod-phone-input" class="cod-input" placeholder="Contact Number (09XX XXX XXXX)" oninput="app.validateContact(this.value, 'cod')" maxlength="13">
                         <button id="btn-send-otp" class="btn-verify-action" onclick="app.sendVerificationCode()">Send Verification Code</button>
                     </div>
                     
@@ -790,6 +791,9 @@
                 <button class="btn-locate-minimal" onclick="app.geolocateUser()" title="Use My Location">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
                 </button>
+                <button id="map-type-toggle" class="btn-locate-minimal" onclick="app.toggleMapType()" title="Satellite View" style="margin-right: 0; right: 10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </button>
             </div>
 
             <div class="map-search-wrapper-minimal">
@@ -801,6 +805,13 @@
 
             <div class="map-card-container">
                 <div id="map-container" class="hub-style-map"></div>
+                <div class="center-pin-overlay">
+                    <div class="pin-wrap">
+                        <div class="pin-head"></div>
+                        <div class="pin-point"></div>
+                    </div>
+                    <div class="pin-shadow"></div>
+                </div>
             </div>
 
             <div class="map-footer-minimal">
@@ -1917,8 +1928,9 @@
         </div>
     </div>
 
-    <script src="app_header.js?v=1.0.2"></script>
-    <script src="app.js?v=1.0.2"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC6JwFLApTP1XlzZVn_E7SAl2ezmrm2_zg&libraries=places"></script>
+    <script src="js/app_header.js?v=10.0.0"></script>
+    <script src="js/app_v10.js?v=10.0.0"></script>
     <script>
         // Emergency Reset: Ensure all panels are closed on startup
         window.addEventListener('load', () => {

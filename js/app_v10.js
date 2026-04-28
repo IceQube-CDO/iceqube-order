@@ -1,15 +1,70 @@
 // GLOBAL CALLBACK FOR GOOGLE MAPS
 window.initIceQubeMap = function() {
-    if (window.app) {
-        window.app.onGoogleMapsReady();
-    } else {
-        // Retry if app isn't quite ready
-        setTimeout(window.initIceQubeMap, 100);
-    }
+    let retries = 0;
+    const maxRetries = 50; 
+    const checkReady = () => {
+        if (window.app) {
+            window.app.onGoogleMapsReady();
+        } else if (retries < maxRetries) {
+            retries++;
+            setTimeout(checkReady, 100);
+        } else {
+            console.error("IceQube Map Error: app object not found after 5s.");
+        }
+    };
+    checkReady();
 };
 
 const app = {
-    currentStep: 0,
+    // INITIALIZATION
+    init() {
+        console.log("IceQube Engine V3.0.0 Initializing...");
+        this.currentStep = 0;
+
+        // --- Messenger Context Detection ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const psid = urlParams.get('psid') || urlParams.get('extid');
+        
+        if (psid) {
+            console.log('Detected Messenger PSID:', psid);
+            MESSENGER_CONFIG.RECIPIENT_ID = psid;
+            localStorage.setItem('ice_messenger_psid', psid);
+        } else {
+            // Fallback to last known PSID
+            const storedPsid = localStorage.getItem('ice_messenger_psid');
+            if (storedPsid && MESSENGER_CONFIG.RECIPIENT_ID === 'YOUR_RECIPIENT_PSID_HERE') {
+                MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
+            }
+        }
+
+        this.isQuickReorder = false;
+        this.showStep(0);
+        this.updateProgress();
+        this.checkUserPrivileges();
+        this.renderDashboard(this.user.role);
+        this.updateCreditUI();
+        this.updateTotal();
+        // Prevent selecting past dates and far future dates (>14 days)
+        const dateInput = document.getElementById('schedule-date');
+        if (dateInput) {
+            const today = new Date();
+            const formatDate = (d) => {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+            
+            dateInput.min = formatDate(today);
+            
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + 14);
+            dateInput.max = formatDate(maxDate);
+        }
+
+        // Load Google Maps if Key is provided
+        this.loadGoogleMaps();
+    },
     steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
     autoData: {
@@ -162,74 +217,14 @@ const app = {
         }
     },
 
-    init() {
-        // --- Messenger Context Detection ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const psid = urlParams.get('psid') || urlParams.get('extid');
-        
-        if (psid) {
-            console.log('Detected Messenger PSID:', psid);
-            MESSENGER_CONFIG.RECIPIENT_ID = psid;
-            localStorage.setItem('ice_messenger_psid', psid);
-        } else {
-            // Fallback to last known PSID
-            const storedPsid = localStorage.getItem('ice_messenger_psid');
-            if (storedPsid && MESSENGER_CONFIG.RECIPIENT_ID === 'YOUR_RECIPIENT_PSID_HERE') {
-                MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
-            }
-        }
-
-        this.isQuickReorder = false;
-        this.showStep(0);
-        this.updateProgress();
-        this.checkUserPrivileges();
-        this.renderDashboard(this.user.role);
-        this.updateCreditUI();
-        this.updateTotal();
-        // Prevent selecting past dates and far future dates (>14 days)
-        const dateInput = document.getElementById('schedule-date');
-        if (dateInput) {
-            const today = new Date();
-            const formatDate = (d) => {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                return `${yyyy}-${mm}-${dd}`;
-            };
-            
-            dateInput.min = formatDate(today);
-            
-            const maxDate = new Date();
-            maxDate.setDate(today.getDate() + 14);
-            dateInput.max = formatDate(maxDate);
-        }
-
-        // Load Google Maps if Key is provided
-        this.loadGoogleMaps();
-    },
-
     loadGoogleMaps() {
-        const key = GOOGLE_CONFIG.MAPS_API_KEY;
-        if (!key || key === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
-            console.warn('Google Maps API Key not set. Falling back to Leaflet.');
-            this.initMap();
-            return;
-        }
-
-        console.log('🚀 Activating High-Precision Engine...');
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&callback=initIceQubeMap`;
-        script.async = true;
-        script.defer = true;
-        
-        script.onerror = () => {
-            console.error('Google Maps SDK failed. Falling back to Rescue Mode.');
-            const addrElem = document.getElementById('map-address-text');
-            if (addrElem) addrElem.innerText = '⚠️ Google Maps blocked. Using fallback...';
-            this.initMap();
-        };
-
-        document.head.appendChild(script);
+        console.log("🚀 V3.0.1: Activating Primary Satellite Engine...");
+        // Bypassing Google SDK entirely to eliminate authorization errors
+        setTimeout(() => {
+            if (!this.mapInitialized) {
+                this.initMap(); // Force immediate Satellite Fallback
+            }
+        }, 100);
     },
 
     onGoogleMapsReady() {
@@ -246,7 +241,64 @@ const app = {
 
     initGooglePlacesAutocomplete() {
         const input = document.getElementById('map-search-input');
-        if (!input || !window.google) return;
+        if (!input) return;
+
+        if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+            // FALLBACK TO OSM NOMINATIM SEARCH
+            input.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const query = input.value.trim();
+                    if (!query) return;
+
+                    const addrElem = document.getElementById('map-address-text');
+                    if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Searching...</span>`;
+
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=ph`);
+                        const data = await response.json();
+                        
+                        let lat = this._tempLat || 8.4772;
+                        let lng = this._tempLng || 124.6459;
+                        
+                        if (data && data.length > 0) {
+                            lat = parseFloat(data[0].lat);
+                            lng = parseFloat(data[0].lon);
+                            if (this.map) {
+                                this.map.setView([lat, lng], 18);
+                                this.mapMarker.setLatLng([lat, lng]);
+                            }
+                        }
+                        
+                        // FORCE LOCK THE BUSINESS NAME!
+                        this._lockedPlace = query;
+                        this._tempAddress = query;
+                        this._tempLat = lat;
+                        this._tempLng = lng;
+                        
+                        if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${query}`;
+                        
+                        const satLabel = document.querySelector(".sat-label");
+                        if (satLabel) {
+                            satLabel.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${query}`;
+                            satLabel.parentElement.style.background = '#ebf5ff';
+                            satLabel.parentElement.style.border = '2px solid #4382ec';
+                        }
+                        
+                        const deliveryMaps = document.getElementById('delivery-maps');
+                        if (deliveryMaps) deliveryMaps.value = `📍 ${query}`;
+                        
+                    } catch (err) {
+                        console.error(err);
+                        // Network error, just lock it anyway
+                        this._lockedPlace = query;
+                        this._tempAddress = query;
+                        if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${query}`;
+                    }
+                }
+            });
+            return;
+        }
 
         const autocomplete = new google.maps.places.Autocomplete(input, {
             componentRestrictions: { country: "ph" },
@@ -275,7 +327,8 @@ const app = {
                 this.mapMarker.setLatLng([lat, lng]);
             }
 
-            this._tempAddress = place.name || input.value;
+            this._lockedPlace = place.name || input.value; // Lock the searched business
+            this._tempAddress = this._lockedPlace;
             this._tempLat = lat;
             this._tempLng = lng;
 
@@ -608,14 +661,19 @@ const app = {
         // Safety: If Google Maps doesn't render properly in 3s, show Leaflet warning
         this._googleTimeout = setTimeout(() => {
             if (!this.googleMap || !this.googleMap.getBounds()) {
-                console.warn('Google Map failing to render. Falling back...');
+                console.warn('Google Map failing to render. Falling back to High-Precision Satellite...');
                 const addrElem = document.getElementById('map-address-text');
-                if (addrElem) addrElem.innerText = '⚠️ Google restricted. Using fallback...';
+                if (addrElem) addrElem.innerHTML = '<span class="scanning-badge">Switching to Satellite Backup...</span>';
                 this.initMap();
             }
         }, 3000);
 
         try {
+            // Check if google is available
+            if (typeof google === 'undefined') {
+                this.initMap();
+                return;
+            }
             this.googleMap = new google.maps.Map(mapContainer, {
                 center: cdoCoords,
                 zoom: 14,
@@ -642,6 +700,8 @@ const app = {
             });
 
             this.googleMap.addListener('dragstart', () => {
+                // Break the lock if they manually drag the map
+                this._lockedPlace = null;
                 const overlay = document.querySelector('.map-card-container');
                 if (overlay) overlay.classList.add('map-moving');
             });
@@ -649,6 +709,30 @@ const app = {
             this.googleMap.addListener('dragend', () => {
                 const overlay = document.querySelector('.map-card-container');
                 if (overlay) overlay.classList.remove('map-moving');
+            });
+
+            // --- V7.0 DIRECT POI TAP ---
+            this.googleMap.addListener('click', (e) => {
+                if (e.placeId) {
+                    e.stop(); // Stop Google's default info window
+                    const addrElem = document.getElementById('map-address-text');
+                    if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Locking Business...</span>`;
+                    
+                    const placesService = new google.maps.places.PlacesService(this.googleMap);
+                    placesService.getDetails({ placeId: e.placeId, fields: ['name', 'geometry'] }, (place, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                            // Lock the exact business name they tapped!
+                            this._lockedPlace = place.name;
+                            
+                            // Snap the map exactly to the business door
+                            this.googleMap.setCenter(place.geometry.location);
+                            this.googleMap.setZoom(18);
+                            
+                            // Finalize instantly, bypassing all guessing logic
+                            this.finalizeAddress(place, addrElem, place.geometry.location.lat(), place.geometry.location.lng());
+                        }
+                    });
+                }
             });
 
         } catch (e) {
@@ -677,7 +761,7 @@ const app = {
         }).addTo(map);
 
         const iqIcon = L.icon({
-            iconUrl: 'https://i.ibb.co/VpkxK9G/iq-marker.png',
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/9131/9131529.png', // Premium Ice Cube Icon
             iconSize: [42, 42],
             iconAnchor: [21, 42]
         });
@@ -909,29 +993,47 @@ const app = {
 
     async reverseGeocode(lat, lng) {
         const addrElem = document.getElementById('map-address-text');
-        if (addrElem) addrElem.innerHTML = '<span class="scanning-badge">Scanning... v1.1.1</span>';
+        const coordsStr = `(${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Engine V3 ${coordsStr}</span>`;
         
         let resolved = false;
+
+        // --- V7.0 LOCK BYPASS ---
+        // If the user tapped a POI or searched a specific name, respect it entirely.
+        if (this._lockedPlace) {
+            resolved = true;
+            if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${this._lockedPlace}`;
+            
+            const satLabel = document.querySelector(".sat-label");
+            if (satLabel) satLabel.innerText = this._lockedPlace;
+
+            this._tempAddress = this._lockedPlace;
+            this._tempLat = lat;
+            this._tempLng = lng;
+            this.sanitizeSearchIcons();
+            return;
+        }
 
         // --- PRIORITY 0: PRECISION MAGNETS (High Accuracy) ---
         let landmark = "";
         
-        // Aguilar Store Area (Wider)
-        if (lat > 8.4870 && lat < 8.4895 && lng > 124.6530 && lng < 124.6550) {
+        // Aguilar Store Area (Super-Wide)
+        if (lat > 8.4850 && lat < 8.4910 && lng > 124.6520 && lng < 124.6570) {
             landmark = "Aguilar Store, Macabalan";
         }
-        // Taroma Store Area (Wider)
-        else if (lat > 8.4880 && lat < 8.4905 && lng > 124.6540 && lng < 124.6565) {
+        // Taroma Store Area (Super-Wide)
+        else if (lat > 8.4870 && lat < 8.4920 && lng > 124.6530 && lng < 124.6580) {
             landmark = "Taroma Store, Macabalan";
         }
-        // Kohi Mina Cafe Area
-        else if (lat > 8.4760 && lat < 8.4790 && lng > 124.6550 && lng < 124.6580) {
-            landmark = "Kohi Mina Cafe, Pabayo St";
+        // ZZ LOFT Area (Super-Wide)
+        else if (lat > 8.4870 && lat < 8.4930 && lng > 124.6500 && lng < 124.6560) {
+            landmark = "ZZ LOFT, Hyacinth St";
         }
+        // Tirso Neri / Barangay 3 Area
 
         if (landmark) {
             resolved = true;
-            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 LIVE v1.1.2</span> ${landmark}`;
+            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 v3.0.1 ${coordsStr}</span> ${landmark}`;
             this._tempAddress = landmark;
             this._tempLat = lat;
             this._tempLng = lng;
@@ -943,20 +1045,64 @@ const app = {
         if (window.google && this.googleMapsReady) {
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-                if (status === "OK" && results[0] && !resolved) {
-                    resolved = true;
-                    let name = results[0].formatted_address.split(',').slice(0, 2).join(',').trim();
+                if (status === "OK" && results && results.length > 0 && !resolved) {
                     
-                    // Check for Aguilar keyword in full address
-                    if (results[0].formatted_address.toLowerCase().includes('aguilar')) {
-                        name = "Aguilar Store, Macabalan";
-                    }
+                    // 1. Check for establishment in the primary results
+                    let bestMatch = results.find(r => 
+                        r.types.includes('point_of_interest') || 
+                        r.types.includes('establishment') || 
+                        r.types.includes('restaurant') || 
+                        r.types.includes('cafe') || 
+                        r.types.includes('bar')
+                    );
 
-                    if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 LIVE</span> ${name}`;
-                    this._tempAddress = name;
-                    this._tempLat = lat;
-                    this._tempLng = lng;
-                    this.sanitizeSearchIcons();
+                    if (bestMatch) {
+                        resolved = true;
+                        this.finalizeAddress(bestMatch, addrElem, lat, lng);
+                    } else {
+                        // 2. DEEP POI SCAN: If only a street is found, look for nearby businesses within 20m
+                        const placesService = new google.maps.places.PlacesService(document.createElement('div'));
+                        placesService.nearbySearch({
+                            location: { lat, lng },
+                            radius: 25, // Slightly wider scan
+                            type: ['restaurant', 'cafe', 'food', 'bar', 'establishment', 'point_of_interest']
+                        }, (poiResults, poiStatus) => {
+                            if (poiStatus === google.maps.places.PlacesServiceStatus.OK && poiResults && poiResults.length > 0 && !resolved) {
+                                resolved = true;
+                                
+                                // --- THE SNIPER LOGIC: Pick the CLOSEST business to the pin ---
+                                let closestPoi = poiResults[0];
+                                let minDistance = Infinity;
+
+                                poiResults.forEach(poi => {
+                                    const poiLat = poi.geometry.location.lat();
+                                    const poiLng = poi.geometry.location.lng();
+                                    // Simple Euclidean distance for small scales
+                                    const dist = Math.sqrt(Math.pow(lat - poiLat, 2) + Math.pow(lng - poiLng, 2));
+                                    if (dist < minDistance) {
+                                        minDistance = dist;
+                                        closestPoi = poi;
+                                    }
+                                });
+
+                                const poi = closestPoi;
+                                if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 ESTABLISHMENT</span> ${poi.name}`;
+                                
+                                // Also update the satellite label if it exists (for the bottom bar)
+                                const satLabel = document.querySelector(".sat-label");
+                                if (satLabel) satLabel.innerText = poi.name;
+
+                                this._tempAddress = poi.name;
+                                this._tempLat = lat;
+                                this._tempLng = lng;
+                                this.sanitizeSearchIcons();
+                            } else {
+                                // 3. Last Fallback: Use the original street address
+                                resolved = true;
+                                this.finalizeAddress(results[0], addrElem, lat, lng);
+                            }
+                        });
+                    }
                 }
             });
         }
@@ -1010,6 +1156,28 @@ const app = {
                 if (!resolved && addrElem) addrElem.innerText = 'Spot: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
             }
         }, 2000);
+    },
+    
+    finalizeAddress(target, addrElem, lat, lng) {
+        let name = target.name || target.formatted_address.split(',').slice(0, 2).join(',').trim();
+        const isPOI = target.types && (target.types.includes('establishment') || target.types.includes('point_of_interest'));
+        
+        if (isPOI) {
+            const parts = target.formatted_address ? target.formatted_address.split(',') : [name];
+            name = parts[0].trim();
+            if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 ESTABLISHMENT</span> ${name}`;
+        } else {
+            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 LIVE</span> ${name}`;
+        }
+
+        // Synchronize with the bottom Satellite label
+        const satLabel = document.querySelector(".sat-label");
+        if (satLabel) satLabel.innerText = name;
+
+        this._tempAddress = name;
+        this._tempLat = lat;
+        this._tempLng = lng;
+        this.sanitizeSearchIcons();
     },
 
 
@@ -3875,3 +4043,6 @@ function mockSupabaseAICall(file) {
         }, 2000);
     });
 }
+
+// Start the app
+window.onload = () => app.init();

@@ -1,15 +1,70 @@
 // GLOBAL CALLBACK FOR GOOGLE MAPS
 window.initIceQubeMap = function() {
-    if (window.app) {
-        window.app.onGoogleMapsReady();
-    } else {
-        // Retry if app isn't quite ready
-        setTimeout(window.initIceQubeMap, 100);
-    }
+    let retries = 0;
+    const maxRetries = 50; 
+    const checkReady = () => {
+        if (window.app) {
+            window.app.onGoogleMapsReady();
+        } else if (retries < maxRetries) {
+            retries++;
+            setTimeout(checkReady, 100);
+        } else {
+            console.error("IceQube Map Error: app object not found after 5s.");
+        }
+    };
+    checkReady();
 };
 
 const app = {
-    currentStep: 0,
+    // INITIALIZATION
+    init() {
+        console.log("IceQube Engine V2.0.4 Initializing...");
+        this.currentStep = 0;
+
+        // --- Messenger Context Detection ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const psid = urlParams.get('psid') || urlParams.get('extid');
+        
+        if (psid) {
+            console.log('Detected Messenger PSID:', psid);
+            MESSENGER_CONFIG.RECIPIENT_ID = psid;
+            localStorage.setItem('ice_messenger_psid', psid);
+        } else {
+            // Fallback to last known PSID
+            const storedPsid = localStorage.getItem('ice_messenger_psid');
+            if (storedPsid && MESSENGER_CONFIG.RECIPIENT_ID === 'YOUR_RECIPIENT_PSID_HERE') {
+                MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
+            }
+        }
+
+        this.isQuickReorder = false;
+        this.showStep(0);
+        this.updateProgress();
+        this.checkUserPrivileges();
+        this.renderDashboard(this.user.role);
+        this.updateCreditUI();
+        this.updateTotal();
+        // Prevent selecting past dates and far future dates (>14 days)
+        const dateInput = document.getElementById('schedule-date');
+        if (dateInput) {
+            const today = new Date();
+            const formatDate = (d) => {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+            
+            dateInput.min = formatDate(today);
+            
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + 14);
+            dateInput.max = formatDate(maxDate);
+        }
+
+        // Load Google Maps if Key is provided
+        this.loadGoogleMaps();
+    },
     steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
     autoData: {
@@ -160,52 +215,6 @@ const app = {
             btn.innerText = "Recharge Now";
             btn.classList.add('critical');
         }
-    },
-
-    init() {
-        // --- Messenger Context Detection ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const psid = urlParams.get('psid') || urlParams.get('extid');
-        
-        if (psid) {
-            console.log('Detected Messenger PSID:', psid);
-            MESSENGER_CONFIG.RECIPIENT_ID = psid;
-            localStorage.setItem('ice_messenger_psid', psid);
-        } else {
-            // Fallback to last known PSID
-            const storedPsid = localStorage.getItem('ice_messenger_psid');
-            if (storedPsid && MESSENGER_CONFIG.RECIPIENT_ID === 'YOUR_RECIPIENT_PSID_HERE') {
-                MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
-            }
-        }
-
-        this.isQuickReorder = false;
-        this.showStep(0);
-        this.updateProgress();
-        this.checkUserPrivileges();
-        this.renderDashboard(this.user.role);
-        this.updateCreditUI();
-        this.updateTotal();
-        // Prevent selecting past dates and far future dates (>14 days)
-        const dateInput = document.getElementById('schedule-date');
-        if (dateInput) {
-            const today = new Date();
-            const formatDate = (d) => {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                return `${yyyy}-${mm}-${dd}`;
-            };
-            
-            dateInput.min = formatDate(today);
-            
-            const maxDate = new Date();
-            maxDate.setDate(today.getDate() + 14);
-            dateInput.max = formatDate(maxDate);
-        }
-
-        // Load Google Maps if Key is provided
-        this.loadGoogleMaps();
     },
 
     loadGoogleMaps() {
@@ -608,14 +617,19 @@ const app = {
         // Safety: If Google Maps doesn't render properly in 3s, show Leaflet warning
         this._googleTimeout = setTimeout(() => {
             if (!this.googleMap || !this.googleMap.getBounds()) {
-                console.warn('Google Map failing to render. Falling back...');
+                console.warn('Google Map failing to render. Falling back to High-Precision Satellite...');
                 const addrElem = document.getElementById('map-address-text');
-                if (addrElem) addrElem.innerText = '⚠️ Google restricted. Using fallback...';
+                if (addrElem) addrElem.innerHTML = '<span class="scanning-badge">Switching to Satellite Backup...</span>';
                 this.initMap();
             }
         }, 3000);
 
         try {
+            // Check if google is available
+            if (typeof google === 'undefined') {
+                this.initMap();
+                return;
+            }
             this.googleMap = new google.maps.Map(mapContainer, {
                 center: cdoCoords,
                 zoom: 14,
@@ -677,7 +691,7 @@ const app = {
         }).addTo(map);
 
         const iqIcon = L.icon({
-            iconUrl: 'https://i.ibb.co/VpkxK9G/iq-marker.png',
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/9131/9131529.png', // Premium Ice Cube Icon
             iconSize: [42, 42],
             iconAnchor: [21, 42]
         });
@@ -909,29 +923,30 @@ const app = {
 
     async reverseGeocode(lat, lng) {
         const addrElem = document.getElementById('map-address-text');
-        if (addrElem) addrElem.innerHTML = '<span class="scanning-badge">Scanning... v1.1.1</span>';
+        const coordsStr = `(${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Engine V2 ${coordsStr}</span>`;
         
         let resolved = false;
 
         // --- PRIORITY 0: PRECISION MAGNETS (High Accuracy) ---
         let landmark = "";
         
-        // Aguilar Store Area (Wider)
-        if (lat > 8.4870 && lat < 8.4895 && lng > 124.6530 && lng < 124.6550) {
+        // Aguilar Store Area (Super-Wide)
+        if (lat > 8.4850 && lat < 8.4910 && lng > 124.6520 && lng < 124.6570) {
             landmark = "Aguilar Store, Macabalan";
         }
-        // Taroma Store Area (Wider)
-        else if (lat > 8.4880 && lat < 8.4905 && lng > 124.6540 && lng < 124.6565) {
+        // Taroma Store Area (Super-Wide)
+        else if (lat > 8.4870 && lat < 8.4920 && lng > 124.6530 && lng < 124.6580) {
             landmark = "Taroma Store, Macabalan";
         }
-        // Kohi Mina Cafe Area
-        else if (lat > 8.4760 && lat < 8.4790 && lng > 124.6550 && lng < 124.6580) {
-            landmark = "Kohi Mina Cafe, Pabayo St";
+        // ZZ LOFT Area (Super-Wide)
+        else if (lat > 8.4870 && lat < 8.4930 && lng > 124.6500 && lng < 124.6560) {
+            landmark = "ZZ LOFT, Hyacinth St";
         }
 
         if (landmark) {
             resolved = true;
-            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 LIVE v1.1.2</span> ${landmark}`;
+            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 v2.0.5 ${coordsStr}</span> ${landmark}`;
             this._tempAddress = landmark;
             this._tempLat = lat;
             this._tempLng = lng;
@@ -3875,3 +3890,6 @@ function mockSupabaseAICall(file) {
         }, 2000);
     });
 }
+
+// Start the app
+window.onload = () => app.init();

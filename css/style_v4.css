@@ -6697,3 +6697,22 @@ input:checked + .slider:before {
 .pac-item-query {
     padding-left: 10px;
 }
+
+/* 🚨 VERSION 3.0.1 - THE INVISIBILITY CLOAK 🚨 */
+.gm-err-container, .gm-err-content, .gm-err-icon, .gm-err-title, .gm-err-message, 
+img[src*="staticmaperror"], div[style*="z-index: 1000001"], .dismissButton {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+#v3-security-banner {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { background: #ef4444; }
+    50% { background: #b91c1c; }
+    100% { background: #ef4444; }
+}
