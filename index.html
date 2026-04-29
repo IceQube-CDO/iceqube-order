@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IceQube CDO | Premium Crystal Ice</title>
     <meta name="description" content="Order premium crystal clear ice in Cagayan de Oro. Fast delivery and high-quality ice cubes.">
     <link rel="stylesheet" href="css/style_v10.css?v=10.0.0">
@@ -155,7 +155,7 @@
                                     </div>
                                     <div class="counter-controls">
                                         <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', -1)">−</button>
-                                        <input type="number" id="qty-fullDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '3kg', this.value)">
+                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-fullDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '3kg', this.value)">
                                         <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', 1)">+</button>
                                     </div>
                                 </div>
@@ -172,7 +172,7 @@
                                     </div>
                                     <div class="counter-controls">
                                         <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', -1)">−</button>
-                                        <input type="number" id="qty-fullDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '1kg', this.value)">
+                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-fullDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '1kg', this.value)">
                                         <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', 1)">+</button>
                                     </div>
                                 </div>
@@ -205,7 +205,7 @@
                                     </div>
                                     <div class="counter-controls">
                                         <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', -1)">−</button>
-                                        <input type="number" id="qty-halfDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '3kg', this.value)">
+                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-halfDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '3kg', this.value)">
                                         <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', 1)">+</button>
                                     </div>
                                 </div>
@@ -222,7 +222,7 @@
                                     </div>
                                     <div class="counter-controls">
                                         <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', -1)">−</button>
-                                        <input type="number" id="qty-halfDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '1kg', this.value)">
+                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-halfDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '1kg', this.value)">
                                         <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', 1)">+</button>
                                     </div>
                             </div>

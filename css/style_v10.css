@@ -324,7 +324,7 @@ h1 {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     height: 56px;
     padding: 0 1rem 0 3.25rem !important; /* Space for icon */
-    font-size: 1rem;
+    font-size: 16px;
     width: 100%;
 }
 
@@ -975,6 +975,7 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation;
 }
 
 .counter-btn-small:hover:not(:disabled) {
@@ -998,6 +999,7 @@ h1 {
     color: var(--text-primary);
     font-family: inherit;
     outline: none;
+    touch-action: manipulation;
 }
 
 /* Hide number input spinners */
