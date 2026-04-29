@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
 
+html {
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+}
+
 :root {
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
@@ -33,6 +38,9 @@ body {
     overflow: hidden;
     display: flex;
     justify-content: center;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .app-shell {

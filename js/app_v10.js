@@ -64,6 +64,32 @@ const app = {
 
         // Load Google Maps if Key is provided
         this.loadGoogleMaps();
+
+        // --- PWA Installation Logic ---
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            this.showInstallButtons(true);
+        });
+
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+
+        if (!isStandalone) {
+            this.showInstallButtons(true);
+            if (isIOS) {
+                const btn2 = document.getElementById('btn-install-pwa-account');
+                if (btn2) {
+                    const span = btn2.querySelector('span');
+                    if (span) span.innerText = 'Add to Home Screen';
+                }
+            }
+        }
+
+        window.addEventListener('appinstalled', (evt) => {
+            this.showInstallButtons(false);
+            this.deferredPrompt = null;
+        });
     },
     steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
@@ -124,6 +150,50 @@ const app = {
     map: null,
     mapMarker: null,
     mapInitialized: false,
+    deferredPrompt: null,
+
+    installPWA() {
+        if (this.deferredPrompt) {
+            // Show the install prompt
+            this.deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            this.deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                    this.showInstallButtons(false);
+                } else {
+                    console.log('User dismissed the install prompt');
+                }
+                this.deferredPrompt = null;
+            });
+        } else {
+            // Fallback for iOS or if prompt is not available
+            alert('To add IceQube to your Home Screen:\n\n1. Tap the Share button (square with arrow up) at the bottom of your browser.\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add" in the top right corner.');
+        }
+    },
+
+    showInstallButtons(visible) {
+        const btn2 = document.getElementById('btn-install-pwa-account');
+        const banner = document.getElementById('pwa-install-banner');
+        const display = visible ? 'flex' : 'none';
+        
+        if (btn2) btn2.style.display = display;
+        
+        // Show banner only if it wasn't explicitly closed by user in this session
+        if (banner && visible && !sessionStorage.getItem('pwa-banner-closed')) {
+            banner.style.display = 'flex';
+        } else if (banner && !visible) {
+            banner.style.display = 'none';
+        }
+    },
+
+    closeInstallBanner() {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.style.display = 'none';
+        sessionStorage.setItem('pwa-banner-closed', 'true');
+    },
+
     openPayment() {
         this.togglePanel('billing', true);
     },
@@ -4046,3 +4116,21 @@ function mockSupabaseAICall(file) {
 
 // Start the app
 window.onload = () => app.init();
+
+// FORCED 1:1 SCALE & UNZOOMABLE
+// This ensures that even if browsers ignore the meta viewport tag, 
+// the app remains at a fixed 1:1 scale for a true native app feel.
+document.addEventListener('touchstart', function(event) {
+    if (event.touches.length > 1) {
+        event.preventDefault();
+    }
+}, { passive: false });
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function(event) {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+    }
+    lastTouchEnd = now;
+}, false);

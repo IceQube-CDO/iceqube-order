@@ -3875,3 +3875,21 @@ function mockSupabaseAICall(file) {
         }, 2000);
     });
 }
+
+// FORCED 1:1 SCALE & UNZOOMABLE
+// This ensures that even if browsers ignore the meta viewport tag, 
+// the app remains at a fixed 1:1 scale for a true native app feel.
+document.addEventListener('touchstart', function(event) {
+    if (event.touches.length > 1) {
+        event.preventDefault();
+    }
+}, { passive: false });
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function(event) {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+    }
+    lastTouchEnd = now;
+}, false);
