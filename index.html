@@ -1,13 +1,21 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>IceQube CDO | Premium Crystal Ice</title>
     <meta name="description" content="Order premium crystal clear ice in Cagayan de Oro. Fast delivery and high-quality ice cubes.">
     <link rel="stylesheet" href="css/style_v10.css?v=10.0.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="IceQube CDO">
+    <link rel="apple-touch-icon" href="assets/logo.png">
     
     <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
     <style>
@@ -21,6 +29,10 @@
             font-family: 'Outfit', sans-serif !important;
             display: flex;
             justify-content: center;
+            overscroll-behavior: none !important;
+            touch-action: manipulation !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
         }
         .app-shell {
             width: 100% !important;
@@ -32,6 +44,7 @@
             background: white !important;
             box-shadow: 0 0 100px rgba(0,0,0,0.1) !important;
             z-index: 1000 !important;
+            overscroll-behavior: none !important;
         }
         #app {
             width: 100% !important;
@@ -64,6 +77,54 @@
             opacity: 1 !important;
             visibility: visible !important;
         }
+        .step-content {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .step-header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            z-index: 500;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .step-header h1 {
+            margin: 0 !important;
+            font-size: 1.4rem !important;
+            color: var(--text-primary);
+            font-weight: 700;
+            flex: 1;
+        }
+        .step-header .back-nav-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            border-radius: 50%;
+            transition: background 0.2s ease;
+        }
+        .step-header .back-nav-btn:hover {
+            background: #f1f5f9;
+        }
+        .step-body {
+            padding: 1rem;
+            padding-bottom: 5rem; /* Room for confirm button */
+        }
         .bottom-panel, .side-panel, .bottom-sheet, .panel-overlay, .sheet-overlay {
             visibility: hidden !important;
             opacity: 0 !important;
@@ -81,10 +142,22 @@
         <div class="progress-container">
             <div id="progress-bar" class="progress-bar"></div>
         </div>
+        <!-- PWA Install Banner -->
+        <div id="pwa-install-banner" class="pwa-banner" style="display: none;">
+            <div class="pwa-banner-content">
+                <span class="pwa-icon">📱</span>
+                <div class="pwa-text">
+                    <strong>Install IceQube App</strong>
+                    <small>Fast ordering from your home screen</small>
+                </div>
+            </div>
+            <button class="pwa-install-btn" onclick="app.installPWA()">Install</button>
+            <button class="pwa-close-btn" onclick="app.closeInstallBanner()">×</button>
+        </div>
         <main id="app">
-    <div class="app-container" style="padding-top: 40px; min-height: 100vh; position: relative; z-index: 1;">
+    <div class="app-container" style="padding-top: 4px; min-height: 100vh; position: relative; z-index: 1;">
             <!-- Step 1: START (Hero) -->
-            <section id="step-start" class="step-content active">
+            <section id="step-start" class="step-content active" style="padding: 1rem; padding-top: 1rem;">
                 <img src="./assets/hero.png" alt="Crystal Ice Cubes" class="hero-image">
                 
                 <div class="brand-header">
@@ -120,15 +193,19 @@
 
             <!-- Step 2: QTY (Mixed Orders) -->
             <section id="step-qty" class="step-content">
-                <button class="back-nav" onclick="app.prevStep()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <h1 style="text-align: left; margin: 0.65rem 0 1.5rem 3.5rem; font-size: 1.6rem; color: var(--text-primary); font-weight: 700;">Choose your Ice</h1>
-                <div class="tab-switcher">
-                    <button class="tab-item active" id="tab-full-dice" onclick="app.slideQty('full-dice')">Full Dice 🧊</button>
-                    <button class="tab-item" id="tab-half-dice" onclick="app.slideQty('half-dice')">Half-Dice ❄️</button>
+                <div class="step-header">
+                    <button class="back-nav-btn" onclick="app.prevStep()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h1>Choose your Ice</h1>
                 </div>
-                <p class="subtitle">Select the number of bags for your order.</p>
+
+                <div class="step-body">
+                    <div class="tab-switcher">
+                        <button class="tab-item active" id="tab-full-dice" onclick="app.slideQty('full-dice')">Full Dice 🧊</button>
+                        <button class="tab-item" id="tab-half-dice" onclick="app.slideQty('half-dice')">Half-Dice ❄️</button>
+                    </div>
+                    <p class="subtitle">Select the number of bags for your order.</p>
                 
                 
                 
@@ -223,28 +300,34 @@
                                     <div class="counter-controls">
                                         <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', -1)">−</button>
                                         <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-halfDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '1kg', this.value)">
-                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', 1)">+</button>
                                     </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-                <div class="qty-sticky-footer">
-                    <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled style="margin-top: 1rem;">
-                        Confirm Order (₱0)
-                    </button>
+                    <div class="bulk-promo-box promo-info" style="margin-top: 1.5rem;">
+                        <span class="promo-icon">💡</span>
+                        <p class="bulk-promo-text">Wholesale: 15+ 3kg (₱35) or 40+ 1kg (₱14)</p>
+                    </div>
+
+                    <div class="qty-sticky-footer">
+                        <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled>Confirm Order (₱0)</button>
+                        <button class="btn-link" onclick="app.goToAbout()">What's the difference?</button>
+                    </div>
                 </div>
             </section>
 
-            <!-- Step 4: SCHEDULE -->
+            <!-- Step 3: SCHEDULE -->
             <section id="step-schedule" class="step-content">
-                <button class="back-nav" onclick="app.prevStep()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <h1>When should we deliver?</h1>
-                <p class="subtitle">Choose your preferred timing.</p>
+                <div class="step-header">
+                    <button class="back-nav-btn" onclick="app.prevStep()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h1>When should we deliver?</h1>
+                </div>
+                <div class="step-body">
+                    <p class="subtitle">Choose your preferred timing.</p>
                 <div class="selection-grid">
                     <div id="card-deliver-now" class="card" onclick="app.selectSchedule('Deliver Now', this)">
                         <div>
@@ -330,40 +413,45 @@
                     </div>
                 </div>
 
-                <button id="schedule-next" class="btn-primary" onclick="app.nextStep()" disabled style="margin-top: 2rem; display: none;">
-                    Continue to Logistics
-                </button>
+                    <button id="schedule-next" class="btn-primary" onclick="app.nextStep()" disabled style="margin-top: 2rem; display: none;">
+                        Continue to Logistics
+                    </button>
+                </div>
             </section>
 
             <!-- Step 4: LOGISTICS (Nested Flow) -->
             <section id="step-logistics" class="step-content">
-                <button class="back-nav" onclick="app.prevStep()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <div id="logistics-selection" class="logistics-subview active">
+                <div class="step-header">
+                    <button class="back-nav-btn" onclick="app.prevStep()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
                     <h1>Logistics</h1>
-                    <p class="subtitle">How would you like to receive your order?</p>
-                    <div class="selection-grid">
-                        <div class="card" onclick="app.selectLogistics('Doorstep Delivery', this)">
-                            <div>
-                                <h3>Doorstep Delivery</h3>
-                                <p>Direct to your home or business in CDO.</p>
+                </div>
+                
+                <div class="step-body">
+                    <div id="logistics-selection" class="logistics-subview active">
+                        <p class="subtitle">How would you like to receive your order?</p>
+                        <div class="selection-grid">
+                            <div class="card" onclick="app.selectLogistics('Doorstep Delivery', this)">
+                                <div>
+                                    <h3>Doorstep Delivery</h3>
+                                    <p>Direct to your home or business in CDO.</p>
+                                </div>
+                                <div class="check-icon">✓</div>
                             </div>
-                            <div class="check-icon">✓</div>
-                        </div>
-                        <div class="card" onclick="app.selectLogistics('Self-Pickup in Macabalan', this)">
-                            <div>
-                                <h3>Self-Pickup in Macabalan</h3>
-                                <p>From our facility in Piaping Itum.</p>
+                            <div class="card" onclick="app.selectLogistics('Self-Pickup in Macabalan', this)">
+                                <div>
+                                    <h3>Self-Pickup in Macabalan</h3>
+                                    <p>From our facility in Piaping Itum.</p>
+                                </div>
+                                <div class="check-icon">✓</div>
                             </div>
-                            <div class="check-icon">✓</div>
                         </div>
                     </div>
-                </div>
 
-                <div id="logistics-delivery" class="logistics-subview">
-                    <h1>Delivery Details</h1>
-                    <p class="subtitle">Enter your details for doorstep delivery.</p>
+                    <div id="logistics-delivery" class="logistics-subview">
+                        <h2 style="font-size: 1.2rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.5rem;">Delivery Details</h2>
+                        <p class="subtitle">Enter your details for doorstep delivery.</p>
                     <div class="input-stack" style="margin-top: 2rem;">
                         <!-- Location Input -->
                         <div class="premium-input-group">
@@ -443,7 +531,7 @@
                 </div>
 
                 <div id="logistics-pickup" class="logistics-subview">
-                    <h1>Pickup Info</h1>
+                    <h2 style="font-size: 1.2rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.5rem;">Pickup Info</h2>
                     <p class="subtitle">Our hub details for self-pickup.</p>
                     <div class="pickup-card premium-hub-card">
                         <div class="hub-header-minimal">
@@ -476,16 +564,18 @@
                         Continue to Payment
                     </button>
                 </div>
-
             </section>
 
             <!-- Step 5: PAYMENT -->
             <section id="step-payment" class="step-content">
-                <button class="back-nav" onclick="app.prevStep()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <h1>Payment Method</h1>
-                <p class="subtitle">Choose how you'd like to pay for this order.</p>
+                <div class="step-header">
+                    <button class="back-nav-btn" onclick="app.prevStep()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h1>Payment Method</h1>
+                </div>
+                <div class="step-body">
+                    <p class="subtitle">Choose how you'd like to pay for this order.</p>
                 <div class="selection-grid">
                     <div class="card" onclick="app.selectPayment('GCash', this)">
                         <div style="display: flex; gap: 1rem; align-items: center;">
@@ -566,6 +656,7 @@
                 <button id="btn-finish-order" class="btn-primary" onclick="app.finishOrder()" style="margin-top: 2rem;" disabled>
                     Place Order & Pay
                 </button>
+                </div>
             </section>
 
             <div id="qr-modal" class="modal-overlay">
@@ -696,11 +787,14 @@
 
             <!-- Step 7: AUTOMATE -->
             <section id="step-automate" class="step-content">
-                <button class="back-nav" onclick="app.prevStep()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <h1>Set your Schedule</h1>
-                <p class="subtitle">Choose which days you want IceQube to arrive automatically.</p>
+                <div class="step-header">
+                    <button class="back-nav-btn" onclick="app.prevStep()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h1>Set your Schedule</h1>
+                </div>
+                <div class="step-body">
+                    <p class="subtitle">Choose which days you want IceQube to arrive automatically.</p>
 
                 <div style="background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 1rem; margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
                     <div style="display: flex; align-items: center; color: var(--accent);">
@@ -734,6 +828,7 @@
                 <button id="btn-save-schedule" class="btn-primary" onclick="app.saveDynamicSchedule()" style="margin-top: 1.5rem;" disabled>
                     Save Schedule
                 </button>
+                </div>
             </section>
 
             <!-- Step 8: AUTOMATE SUCCESS -->
@@ -1016,6 +1111,11 @@
                     </div>
                 </div>
 
+                <div style="padding: 1rem 0 2rem 0;">
+                    <button id="btn-install-pwa-account" class="hero-btn" onclick="app.installPWA()" style="width: 100%; margin-top: 1rem;">
+                        <span>Add to Home Screen</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -2203,5 +2303,19 @@
             </div>
         </div>
     </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('Service Worker registered:', reg);
+                }).catch(err => {
+                    console.log('Service Worker registration failed:', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
+Pressing key...Stopping...
+
+Stop Agent
