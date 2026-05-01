@@ -3247,6 +3247,10 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             if (appEl) appEl.classList.add('panel-push');
             document.body.style.overflow = 'hidden'; // Prevent background scroll
 
+            // Hide PWA banner when any panel is open
+            const pwaBanner = document.getElementById('pwa-install-banner');
+            if (pwaBanner) pwaBanner.style.display = 'none';
+
             // Simulate authentication if it's the account panel
             if (panelId === 'account') {
                 const nameElem = document.getElementById('user-full-name');
@@ -3264,6 +3268,12 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             document.querySelectorAll('.bottom-panel, .side-panel').forEach(p => p.classList.remove('active'));
             if (appEl) appEl.classList.remove('panel-push');
             document.body.style.overflow = '';
+
+            // Restore PWA banner only if back on landing page (step 0)
+            const pwaBanner = document.getElementById('pwa-install-banner');
+            if (pwaBanner && this.currentStep === 0 && !sessionStorage.getItem('pwa-banner-closed')) {
+                pwaBanner.style.display = '';
+            }
         }
     },
 
