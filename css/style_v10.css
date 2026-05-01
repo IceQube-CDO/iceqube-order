@@ -1099,7 +1099,9 @@ h1 {
 .counter-input-small {
     font-size: 16px !important; /* Prevents iOS auto-zoom (must be >= 16px) */
     font-weight: 700;
-    width: 44px;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
     height: 44px;
     text-align: center;
     border: 1px solid var(--border);
@@ -1113,7 +1115,9 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    padding: 0 !important;
+    flex-shrink: 0;
+    flex-grow: 0;
 }
 
 /* Hide number input spinners */
