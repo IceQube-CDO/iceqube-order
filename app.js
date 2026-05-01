@@ -469,6 +469,12 @@ const app = {
         
         this.lastStepIndex = index;
         this.updateProgress();
+
+        // Show PWA install banner only on the landing page (step 0)
+        const pwaBanner = document.getElementById('pwa-install-banner');
+        if (pwaBanner) {
+            pwaBanner.style.display = (index === 0 && pwaBanner.dataset.dismissed !== 'true') ? '' : 'none';
+        }
     },
 
     nextStep() {
