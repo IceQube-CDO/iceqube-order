@@ -64,6 +64,7 @@ const app = {
 
         // Load Google Maps if Key is provided
         this.loadGoogleMaps();
+        this.initAdminSecret();
 
         // --- PWA Installation Logic ---
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -90,6 +91,31 @@ const app = {
             this.showInstallButtons(false);
             this.deferredPrompt = null;
         });
+    },
+
+    initAdminSecret() {
+        const logo = document.querySelector('.brand-logo');
+        if (!logo) return;
+
+        let pressTimer;
+        
+        const startPress = (e) => {
+            if (e.type === 'click') return; // Only long-press
+            pressTimer = setTimeout(() => {
+                console.log('🔓 Secret portal activated...');
+                window.location.href = 'admin.html';
+            }, 3000); // 3 seconds long-press
+        };
+
+        const endPress = () => {
+            clearTimeout(pressTimer);
+        };
+
+        logo.addEventListener('mousedown', startPress);
+        logo.addEventListener('touchstart', startPress);
+        logo.addEventListener('mouseup', endPress);
+        logo.addEventListener('mouseleave', endPress);
+        logo.addEventListener('touchend', endPress);
     },
     steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
@@ -2318,7 +2344,7 @@ const app = {
 
             // 5. RUN BACKGROUND TASKS (Sync & Notification)
             // We don't await these so the UI feels snappy
-            this.mockSupabaseUpdate().catch(err => console.error('Sync error:', err));
+            this.supabaseUpdate(orderId).catch(err => console.error('Sync error:', err));
             this.sendConfirmation().catch(err => console.warn('Notification skipped or failed:', err));
             
             // Antigravity: Automated Order Generation with Overdraft Logic
@@ -2355,37 +2381,53 @@ const app = {
     },
 
 
-    async mockSupabaseUpdate() {
-        const isPO = this.orderData.payment === 'Purchase Order';
-        const needsVerification = (this.orderData.payment === 'GCash' || this.orderData.payment === 'Bank Transfer');
-        
-        let paymentStatus = 'pending';
-        if (needsVerification) paymentStatus = 'Pending Verification';
-        if (isPO) paymentStatus = 'Invoiced';
-
-        console.log('Syncing to Supabase table [ice_orders]:', {
-            ...this.orderData,
-            payment_method: this.orderData.payment,
-            payment_status: paymentStatus
-        });
-
-        if (isPO) {
-            console.log(`Syncing to Monthly Ledger for customer: ${this.user.companyName}`, {
-                order_date: new Date().toISOString(),
-                total_amount: this.orderData.total + (this.orderData.deliveryFee || 0),
-                po_number: this.orderData.poNumber
-            });
-
-            // ACTION: Record the transaction in ice_ledgers table for reconciliation
-            console.log('Recording transaction in Supabase table [ice_ledgers]:', {
-                customer_id: this.user.companyName,
-                amount: this.orderData.total + (this.orderData.deliveryFee || 0),
-                reference: this.orderData.poNumber,
-                timestamp: new Date().toISOString()
-            });
+    async supabaseUpdate(orderId) {
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            console.warn('Supabase not configured. Skipping persistence.');
+            return;
         }
 
-        return new Promise(resolve => setTimeout(resolve, 1500));
+        const isPO = this.orderData.payment === 'Purchase Order';
+        let paymentStatus = 'Pending';
+        if (isPO) paymentStatus = 'Invoiced';
+
+        const payload = {
+            order_id: orderId,
+            customer_name: this.user.companyName || 'Guest Customer',
+            contact_number: this.orderData.deliveryDetails.contact,
+            items: this.orderData.qty,
+            total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
+            payment_method: this.orderData.payment,
+            delivery_status: 'Pending',
+            delivery_schedule: this.orderData.schedule.type === 'Deliver Now' ? 'Immediate' : `${this.orderData.schedule.date} ${this.orderData.schedule.time}`,
+            delivery_location: this.orderData.deliveryDetails.location,
+            delivery_lat: this.orderData.deliveryDetails.lat,
+            delivery_lng: this.orderData.deliveryDetails.lng,
+            po_number: this.orderData.poNumber
+        };
+
+        console.log('--- SYNCING TO SUPABASE ---');
+        try {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Supabase Insert Failed');
+            }
+
+            console.log('✅ Order synced successfully to Command Center.');
+        } catch (err) {
+            console.error('❌ Supabase Sync Failed:', err);
+        }
     },
 
     async mockUploadReceipt(file) {

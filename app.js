@@ -206,6 +206,32 @@ const app = {
 
         // Load Google Maps if Key is provided
         this.loadGoogleMaps();
+        this.initAdminSecret();
+    },
+
+    initAdminSecret() {
+        const logo = document.querySelector('.brand-logo');
+        if (!logo) return;
+
+        let pressTimer;
+        
+        const startPress = (e) => {
+            if (e.type === 'click') return; // Only long-press
+            pressTimer = setTimeout(() => {
+                console.log('🔓 Secret portal activated...');
+                window.location.href = 'admin.html';
+            }, 3000); // 3 seconds long-press
+        };
+
+        const endPress = () => {
+            clearTimeout(pressTimer);
+        };
+
+        logo.addEventListener('mousedown', startPress);
+        logo.addEventListener('touchstart', startPress);
+        logo.addEventListener('mouseup', endPress);
+        logo.addEventListener('mouseleave', endPress);
+        logo.addEventListener('touchend', endPress);
     },
 
     loadGoogleMaps() {

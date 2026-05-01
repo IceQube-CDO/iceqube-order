@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IceQube CDO | Command Center</title>
+    <link rel="stylesheet" href="css/style_v10.css?v=10.0.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --admin-bg: #020617;
+            --admin-card: rgba(15, 23, 42, 0.6);
+            --admin-accent: #0ea5e9;
+            --admin-glow: rgba(14, 165, 233, 0.3);
+            --admin-text: #f8fafc;
+        }
+
+        body.admin-mode {
+            background: var(--admin-bg) !important;
+            color: var(--admin-text) !important;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* --- Login Gate --- */
+        #admin-gate {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+        }
+
+        #admin-gate.unlocked {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .gate-content {
+            text-align: center;
+            max-width: 320px;
+            width: 100%;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .gate-logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 15px var(--admin-accent));
+        }
+
+        .gate-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to bottom right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .pin-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .pin-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .pin-dot.filled {
+            background: var(--admin-accent);
+            border-color: var(--admin-accent);
+            box-shadow: 0 0 15px var(--admin-accent);
+        }
+
+        .cc-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+            padding-bottom: 2rem;
+        }
+
+        /* Tablet & iPad Mini Optimization */
+        @media (min-width: 768px) {
+            .cc-container {
+                padding: 2.5rem;
+            }
+            .cc-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+            .cc-header {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2.5rem;
+            }
+            .cc-header .title-group {
+                text-align: left;
+            }
+            /* Make large cards span across columns */
+            .cc-card.wide {
+                grid-column: span 2;
+            }
+            
+            /* PIN Pad refinement for tablet */
+            .gate-content {
+                max-width: 400px;
+                padding: 3rem;
+            }
+        }
+
+        /* Large Tablet / Desktop */
+        @media (min-width: 1024px) {
+            .cc-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .cc-card.wide {
+                grid-column: span 2;
+            }
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .num-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .num-btn:active {
+            background: var(--admin-accent);
+            transform: scale(0.9);
+        }
+
+        /* --- Dashboard Layout --- */
+        #command-center {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+            padding: env(safe-area-inset-top) 1.5rem 1.5rem;
+            overflow-y: auto;
+        }
+
+        .cc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-top: 1rem;
+        }
+
+        .cc-title {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cc-title h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.05em;
+        }
+
+        .cc-title span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--admin-accent);
+            letter-spacing: 0.2em;
+        }
+
+        /* --- Grid Modules --- */
+        .cc-card {
+            background: var(--admin-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cc-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--admin-accent);
+            opacity: 0.5;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: rgba(14, 165, 233, 0.1);
+            color: var(--admin-accent);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+
+        /* --- Order List --- */
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .order-row:last-child {
+            border-bottom: none;
+        }
+
+        .order-info h4 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .order-info p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* --- Animations --- */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 10px var(--admin-glow); }
+            50% { box-shadow: 0 0 25px var(--admin-glow); }
+            100% { box-shadow: 0 0 10px var(--admin-glow); }
+        }
+
+        .live-indicator {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        /* Tabs for Navigation */
+        .cc-tabs {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            width: 100%;
+        }
+        .cc-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            min-height: 48px;
+        }
+        .cc-tab.active {
+            background: var(--admin-accent);
+            color: white;
+            box-shadow: 0 0 15px var(--admin-accent);
+            border-color: transparent;
+        }
+
+        /* Customer Intelligence Styles */
+        .customer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .customer-row:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(5px);
+        }
+        .customer-info h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: white;
+        }
+        .customer-info p {
+            margin: 2px 0 0 0;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .customer-badge {
+            font-size: 0.65rem;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: rgba(0,209,255,0.1);
+            color: var(--admin-accent);
+            border: 1px solid rgba(0,209,255,0.2);
+        }
+        .customer-badge.vip {
+            background: rgba(234,179,8,0.1);
+            color: #eab308;
+            border-color: rgba(234,179,8,0.2);
+        }
+
+        .order-status {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+
+        /* Team & Payroll Styles */
+        .rider-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1rem;
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 0.75rem;
+        }
+        .rider-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .rider-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+        }
+        .status-online { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        .status-busy { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+
+        .payroll-vault {
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: 20px;
+            background: rgba(0,0,0,0.2);
+            transition: all 0.5s ease;
+        }
+        .vault-locked .vault-content {
+            filter: blur(10px);
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        .vault-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .btn-unlock {
+            background: var(--admin-accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--admin-glow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qr-payout-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .qr-card {
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .qr-image {
+            width: 200px;
+            height: 200px;
+            margin: 1.5rem auto;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        /* Map & Weather Styles */
+        #logistics-map {
+            height: 300px;
+            background: #0f172a;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .map-overlay {
+            position: absolute;
+            inset: 0;
+            background: url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/124.74,8.48,11,0/800x300?access_token=YOUR_TOKEN_PLACEHOLDER');
+            background-size: cover;
+            filter: saturate(0.5) brightness(0.8);
+        }
+        .demand-pulse {
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        /* Cashflow Spreadsheet Styles */
+        .cashflow-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            margin-top: 1rem;
+        }
+        .cashflow-table th {
+            text-align: left;
+            padding: 12px 16px;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        .cashflow-table td {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+            color: #f8fafc;
+        }
+        .cashflow-table tr td:first-child {
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px 0 0 12px;
+        }
+        .cashflow-table tr td:last-child {
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0 12px 12px 0;
+        }
+        .type-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .type-in { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .type-out { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        
+        .source-auto { color: #0ea5e9; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; }
+        .source-manual { color: #f59e0b; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; }
+
+        .cashflow-input-row td {
+            background: rgba(14, 165, 233, 0.05);
+            border: 1px dashed rgba(14, 165, 233, 0.3);
+        }
+        .cashflow-input {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        .cashflow-input:focus {
+            outline: none;
+        }
+        .btn-add-row {
+            background: var(--admin-accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-add-row:hover {
+            box-shadow: 0 0 15px var(--admin-glow);
+            transform: translateY(-1px);
+        }
+
+        /* Centered View Logic */
+        .centered-view {
+            max-width: 1100px;
+            margin: 0 auto !important;
+            width: 100%;
+        }
+        .centered-view .cc-card.full-width {
+            grid-column: 1 / -1 !important;
+        }
+        .status-select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            outline: none;
+        }
+        .status-select:focus { border-color: var(--admin-accent); }
+    </style>
+    <style>
+        /* Alert Center Styles */
+        #alert-center {
+            margin-bottom: 1.5rem;
+            display: none; /* Hidden if no alerts */
+            flex-direction: column;
+            gap: 10px;
+        }
+        .system-alert {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid transparent;
+        }
+        .alert-critical {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.2);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.1);
+        }
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.2);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
+        }
+        .alert-icon {
+            font-size: 1.1rem;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Notification Dropdown */
+        .notif-wrapper {
+            position: relative;
+        }
+        .notif-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.65rem;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #020617;
+            font-weight: 800;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        #notif-dropdown {
+            position: absolute;
+            top: calc(100% + 15px);
+            right: 0;
+            width: 320px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            overflow: hidden;
+            animation: fadeInScale 0.2s ease-out;
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .notif-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-weight: 700;
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.02);
+        }
+        .notif-item {
+            padding: 12px 20px;
+            display: flex;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s;
+            cursor: default;
+        }
+        .notif-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+        .notif-icon { font-size: 1.1rem; }
+        .notif-text { font-size: 0.8rem; line-height: 1.4; color: #94a3b8; }
+        .notif-text b { color: #f8fafc; display: block; margin-bottom: 2px; }
+
+        /* Pulsing Tab Notifs */
+        .tab-notif {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: none;
+            box-shadow: 0 0 8px #ef4444;
+            animation: pulseNotif 2s infinite;
+        }
+        @keyframes pulseNotif {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .cc-tab { position: relative; }
+    </style>
+</head>
+<body class="admin-mode">
+    <!-- Secure Gate (Disabled for now) -->
+    <div id="admin-gate" style="display: none;">
+        <div class="gate-content">
+            <img src="assets/logo.png" alt="IceQube" class="gate-logo">
+            <div class="gate-title">COMMAND CENTER</div>
+            <p style="font-size: 0.8rem; color: #64748b; margin: 0;">Authorized Personnel Only</p>
+            
+            <div class="pin-container" id="pin-display">
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+            </div>
+
+            <div class="numpad">
+                <div class="num-btn" onclick="admin.addPin('1')">1</div>
+                <div class="num-btn" onclick="admin.addPin('2')">2</div>
+                <div class="num-btn" onclick="admin.addPin('3')">3</div>
+                <div class="num-btn" onclick="admin.addPin('4')">4</div>
+                <div class="num-btn" onclick="admin.addPin('5')">5</div>
+                <div class="num-btn" onclick="admin.addPin('6')">6</div>
+                <div class="num-btn" onclick="admin.addPin('7')">7</div>
+                <div class="num-btn" onclick="admin.addPin('8')">8</div>
+                <div class="num-btn" onclick="admin.addPin('9')">9</div>
+                <div></div>
+                <div class="num-btn" onclick="admin.addPin('0')">0</div>
+                <div class="num-btn" onclick="admin.clearPin()">✕</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <main id="command-center" style="display: flex;">
+        <header class="cc-header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img src="assets/logo.png" alt="IceQube" style="height: 45px; filter: drop-shadow(0 0 12px var(--admin-accent));">
+                <div class="cc-title">
+                    <span>IceQube CDO • System Online</span>
+                    <h1>CONTROL ROOM</h1>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <div class="status-badge"><span class="live-indicator"></span> Live Operations</div>
+                
+                <div class="notif-wrapper">
+                    <button id="notif-bell" onclick="admin.toggleNotifs(event)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    </button>
+                    <div id="notif-badge" class="notif-badge">0</div>
+                    
+                    <!-- Dropdown -->
+                    <div id="notif-dropdown">
+                        <div class="notif-header">System Intelligence</div>
+                        <div id="notif-list">
+                            <!-- Items Injected -->
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="location.reload()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Large alert-center removed from layout flow -->
+        <div id="alert-center" style="display: none;"></div>
+
+        <div class="cc-grid" id="ops-view">
+            <div class="cc-tabs">
+                <div class="cc-tab active" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <!-- Revenue Metric -->
+            <div class="cc-card">
+                <div class="metric-label">Today's Revenue</div>
+                <div class="metric-value">₱12,450.00</div>
+                <div class="metric-trend up">+15% vs yesterday</div>
+            </div>
+
+            <!-- Metric Card: Bags Sold -->
+            <div class="cc-card">
+                <div class="metric-label">Bags Sold (Today)</div>
+                <div class="metric-value">312</div>
+                <div class="metric-trend">Operating at 85% capacity</div>
+            </div>
+
+            <!-- Weather & Demand Predictor (Top Row) -->
+            <div class="cc-card">
+                <div class="metric-label">Weather & Demand Forecast</div>
+                <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size: 2rem;">☀️</div>
+                    <div>
+                        <div style="font-size: 1.2rem; font-weight: 800;">34°C</div>
+                        <div style="color: #94a3b8; font-size: 0.7rem;">Cagayan de Oro</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    <div style="display: flex; align-items: center; color: #ef4444; font-weight: bold; font-size: 0.75rem;">
+                        <span class="demand-pulse"></span>
+                        HIGH DEMAND
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logistics Map (Next Row) -->
+            <div class="cc-card wide">
+                <div class="metric-label" style="display: flex; justify-content: space-between;">
+                    Live Logistics Map (CDO)
+                    <span style="color: #22c55e; font-size: 0.7rem;">● 4 Riders Online</span>
+                </div>
+                <div id="logistics-map" style="margin-top: 1rem;">
+                    <div class="map-overlay"></div>
+                    <div style="position: absolute; top: 40%; left: 30%; width: 10px; height: 10px; background: #0ea5e9; border-radius: 50%; box-shadow: 0 0 15px #0ea5e9;"></div>
+                    <div style="position: absolute; top: 60%; left: 50%; width: 10px; height: 10px; background: #0ea5e9; border-radius: 50%; box-shadow: 0 0 15px #0ea5e9;"></div>
+                    <div style="position: absolute; top: 20%; left: 70%; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 15px #ef4444; animation: pulse 1s infinite;"></div>
+                    <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 8px; font-size: 0.65rem; color: white;">
+                        📍 Macabalan • 📍 Uptown • 📍 Divisoria
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Monitoring -->
+            <div class="cc-card">
+                <div class="metric-label">Inventory Monitoring</div>
+                <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-size: 0.8rem;">Full Dice (3kg)</span>
+                            <span style="font-weight: bold;">850 Bags</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 85%; height: 100%; background: var(--admin-accent); box-shadow: 0 0 10px var(--admin-accent);"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-size: 0.8rem;">Half-Dice (3kg)</span>
+                            <span style="font-weight: bold; color: #ef4444;">120 Bags</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 12%; height: 100%; background: #ef4444; box-shadow: 0 0 10px #ef4444;"></div>
+                        </div>
+                        <p style="font-size: 0.65rem; color: #ef4444; margin: 4px 0 0 0;">⚠️ Low stock: Re-run machine soon.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Queue -->
+            <div class="cc-card wide">
+                <div class="metric-label">Payment Verification Queue</div>
+                <div id="receipt-list" style="margin-top: 1rem;">
+                    <div class="order-row">
+                        <div class="order-info">
+                            <h4>Robinsons Place</h4>
+                            <p>₱15,200.00 • 10:24 AM</p>
+                        </div>
+                        <button class="status-badge" style="cursor: pointer;">Review</button>
+                    </div>
+                    <div class="order-row">
+                        <div class="order-info">
+                            <h4>Loft Living CDO</h4>
+                            <p>₱2,450.00 • 11:15 AM</p>
+                        </div>
+                        <button class="status-badge" style="cursor: pointer;">Review</button>
+                    </div>
+                    <!-- More rows... -->
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="cc-card" style="grid-column: span 2;">
+                <div class="metric-label">Live Operation Feed</div>
+                <div id="operation-feed" style="margin-top: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+                    <div style="margin-bottom: 8px; color: #94a3b8;"><span style="color: #0ea5e9;">[11:45:02]</span> ORDER #IQ-8815 DISPATCHED TO RIDER #4</div>
+                    <div style="margin-bottom: 8px; color: #94a3b8;"><span style="color: #0ea5e9;">[11:42:10]</span> PAYMENT RECEIVED FROM CUSTOMER: LOFT LIVING</div>
+                    <div style="margin-bottom: 8px; color: #94a3b8;"><span style="color: #0ea5e9;">[11:38:55]</span> NEW ORDER PLACED: 15 BAGS HALF-DICE</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDER QUEUE VIEW (NEW) -->
+        <div class="cc-grid centered-view" id="orders-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab active" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <div class="cc-card full-width">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Daily Order Ledger
+                    <span id="order-count-badge" style="background: var(--admin-accent); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">0 Orders</span>
+                </div>
+                <div class="table-container">
+                    <table class="cashflow-table">
+                        <thead>
+                            <tr>
+                                <th>TIME</th>
+                                <th>ORDER ID</th>
+                                <th>CUSTOMER</th>
+                                <th>ITEMS</th>
+                                <th>TOTAL</th>
+                                <th>PAYMENT</th>
+                                <th>RIDER</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-queue-body">
+                            <!-- Orders Injected Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CUSTOMER INTELLIGENCE VIEW -->
+        <div class="cc-grid" id="customer-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab active" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <div class="cc-card wide">
+                <div class="metric-label">Customer Directory</div>
+                <div style="margin-top: 1rem;">
+                    <input type="text" placeholder="Search customer records..." style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; margin-bottom: 1.5rem;">
+                    
+                    <div class="customer-row">
+                        <div class="customer-info">
+                            <h4>Loft Living CDO</h4>
+                            <p>Premium Partner • Macabalan, CDO</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="customer-badge vip">ELITE</div>
+                            <p style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 5px;">42 Orders Total</p>
+                        </div>
+                    </div>
+
+                    <div class="customer-row">
+                        <div class="customer-info">
+                            <h4>Fat Monk Coffee</h4>
+                            <p>Standard Account • Uptown CDO</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="customer-badge">VERIFIED</div>
+                            <p style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 5px;">12 Orders Total</p>
+                        </div>
+                    </div>
+
+                    <div class="customer-row">
+                        <div class="customer-info">
+                            <h4>The Backyard Grill</h4>
+                            <p>Standard Account • Kauswagan, CDO</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="customer-badge">VERIFIED</div>
+                            <p style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 5px;">8 Orders Total</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Analytics -->
+            <div class="cc-card">
+                <div class="metric-label">Customer Retention</div>
+                <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.6);">Retention Rate</span>
+                        <span style="font-weight: bold; color: #22c55e;">82%</span>
+                    </div>
+                    <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                        <div style="width: 82%; height: 100%; background: #22c55e;"></div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
+                        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.6);">New Signups (MTD)</span>
+                        <span style="font-weight: bold;">+24</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Customer Activity -->
+            <div class="cc-card wide">
+                <div class="metric-label">All-Time History (Last 30 Days)</div>
+                <div class="feed-list" style="margin-top: 1.5rem;">
+                    <div class="order-row">
+                        <div class="order-info">
+                            <h4>Order #IQ-9750</h4>
+                            <p>Loft Living CDO • ₱2,550.00</p>
+                        </div>
+                        <div class="order-status">Delivered</div>
+                    </div>
+                    <div class="order-row">
+                        <div class="order-info">
+                            <h4>Order #IQ-9742</h4>
+                            <p>Fat Monk Coffee • ₱680.00</p>
+                        </div>
+                        <div class="order-status">Delivered</div>
+                    </div>
+                    <div class="order-row">
+                        <div class="order-info">
+                            <h4>Order #IQ-9738</h4>
+                            <p>Loft Living CDO • ₱1,400.00</p>
+                        </div>
+                        <div class="order-status">Delivered</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Complaints & Resolutions -->
+            <div class="cc-card wide">
+                <div class="metric-label" style="display: flex; justify-content: space-between;">
+                    Complaints & Resolutions
+                    <span style="color: #ef4444; font-size: 0.7rem;">● 2 Active Issues</span>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
+                    <div class="rider-card" style="padding: 1.25rem; border-left: 4px solid #ef4444; flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span style="font-weight: 800; font-size: 0.95rem;">Loft Living CDO</span>
+                            <span style="font-size: 0.7rem; color: #94a3b8;">Today, 10:45 AM</span>
+                        </div>
+                        <p style="margin: 10px 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">"Recieved 3 bags with small holes/leaks in the last batch. Please check sealing machine."</p>
+                        <div style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; margin-top: 5px; border: 1px solid rgba(14, 165, 233, 0.2);">
+                            <div style="font-size: 0.65rem; color: #0ea5e9; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Staff Response:</div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">"Apologies for the inconvenience. 5 free replacement bags have been dispatched with your current order."</div>
+                        </div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button class="status-badge" style="background: #22c55e; color: white; border: none; cursor: pointer;">Resolve Issue</button>
+                            <button class="status-badge" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer;">Full History</button>
+                        </div>
+                    </div>
+
+                    <div class="rider-card" style="padding: 1.25rem; border-left: 4px solid #f59e0b; flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span style="font-weight: 800; font-size: 0.95rem;">Fat Monk Coffee</span>
+                            <span style="font-size: 0.7rem; color: #94a3b8;">Yesterday</span>
+                        </div>
+                        <p style="margin: 10px 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4;">"Delivery was late by 15 mins due to traffic. Some melting observed."</p>
+                        <div style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; margin-top: 5px; border: 1px solid rgba(14, 165, 233, 0.2);">
+                            <div style="font-size: 0.65rem; color: #0ea5e9; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Staff Response:</div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">"Discount applied to the next 3 deliveries to compensate."</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEAM & PAYROLL VIEW -->
+        <div class="cc-grid" id="team-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab active" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <!-- Team Status Card -->
+            <div class="cc-card wide">
+                <div class="metric-label">Active Team Directory</div>
+                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+                    <div class="rider-card">
+                        <div class="rider-avatar">JB</div>
+                        <div class="rider-info">
+                            <h4 style="margin: 0; font-size: 1rem;">Juan B. (Rider)</h4>
+                            <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">📞 0917 123 4567</p>
+                            <small style="color: #22c55e;">Status: Delivering #IQ-9750</small>
+                        </div>
+                        <button class="status-badge" style="margin-left: auto; cursor: pointer;" onclick="admin.showRiderQR('Juan B.', '0917 123 4567')">Payout QR</button>
+                    </div>
+                    <div class="rider-card">
+                        <div class="rider-avatar">RM</div>
+                        <div class="rider-info">
+                            <h4 style="margin: 0; font-size: 1rem;">Ricky M. (Rider)</h4>
+                            <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">📞 0918 999 8888</p>
+                            <small style="color: #94a3b8;">Status: Idle at Plant</small>
+                        </div>
+                        <button class="status-badge" style="margin-left: auto; cursor: pointer;" onclick="admin.showRiderQR('Ricky M.', '0918 999 8888')">Payout QR</button>
+                    </div>
+                    <div class="rider-card">
+                        <div class="rider-avatar">DL</div>
+                        <div class="rider-info">
+                            <h4 style="margin: 0; font-size: 1rem;">Dindo L. (Plant Op)</h4>
+                            <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">📞 0915 444 3322</p>
+                            <small style="color: #94a3b8;">Status: Idle at Plant</small>
+                        </div>
+                        <button class="status-badge" style="margin-left: auto; cursor: pointer;" onclick="admin.showRiderQR('Dindo L.', '0915 444 3322')">Payout QR</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payroll Vault -->
+            <div class="cc-card wide">
+                <div class="metric-label">Payroll & Salary Vault</div>
+                <div id="salary-vault" class="payroll-vault vault-locked" style="margin-top: 1rem;">
+                    <div class="vault-overlay" id="vault-lock">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" style="margin-bottom: 1rem;">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <p style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-bottom: 1.5rem;">Salary data is encrypted</p>
+                        <button class="btn-unlock" onclick="admin.unlockVault()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L22 22"/></svg>
+                            Unlock Vault
+                        </button>
+                    </div>
+
+                    <div class="vault-content" style="width: 100%;">
+                        <div class="order-row" style="font-weight: bold; border-bottom: 2px solid rgba(255,255,255,0.1);">
+                            <div style="flex: 1;">Employee</div>
+                            <div style="flex: 1; text-align: center;">Deliveries</div>
+                            <div style="flex: 1; text-align: right;">Weekly Pay</div>
+                        </div>
+                        <div class="order-row">
+                            <div style="flex: 1;">Juan B.</div>
+                            <div style="flex: 1; text-align: center;">48</div>
+                            <div style="flex: 1; text-align: right; color: #22c55e;">₱4,800.00</div>
+                        </div>
+                        <div class="order-row">
+                            <div style="flex: 1;">Ricky M.</div>
+                            <div style="flex: 1; text-align: center;">32</div>
+                            <div style="flex: 1; text-align: right; color: #22c55e;">₱3,200.00</div>
+                        </div>
+                        <div class="order-row">
+                            <div style="flex: 1;">Dindo L.</div>
+                            <div style="flex: 1; text-align: center;">41</div>
+                            <div style="flex: 1; text-align: right; color: #22c55e;">₱4,100.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Summary -->
+            <div class="cc-card">
+                <div class="metric-label">Attendance (This Week)</div>
+                <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.6);">Perfect Attendance</span>
+                        <span style="font-weight: bold;">3/3</span>
+                    </div>
+                    <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                        <div style="width: 100%; height: 100%; background: var(--admin-accent);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ASSETS & UTILITIES VIEW -->
+        <div class="cc-grid" id="assets-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab active" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <!-- Equipment Status -->
+            <div class="cc-card wide">
+                <div class="metric-label">Industrial Equipment Status</div>
+                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="rider-card" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <h4 style="margin: 0;">Ice Machine #1</h4>
+                            <div class="rider-status-dot status-online"></div>
+                        </div>
+                        <small style="color: #64748b; margin-top: 5px;">Temp: -18°C • Optimal</small>
+                    </div>
+                    <div class="rider-card" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <h4 style="margin: 0;">Ice Machine #2</h4>
+                            <div class="rider-status-dot status-online"></div>
+                        </div>
+                        <small style="color: #64748b; margin-top: 5px;">Temp: -20°C • Optimal</small>
+                    </div>
+                    <div class="rider-card" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <h4 style="margin: 0;">Walk-in Freezer</h4>
+                            <div class="rider-status-dot status-busy"></div>
+                        </div>
+                        <small style="color: #f59e0b; margin-top: 5px;">Defrost Cycle Active</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Utility Tracker -->
+            <div class="cc-card">
+                <div class="metric-label">Monthly Utilities (MTD)</div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem;">Electricity (CEPALCO)</span>
+                        <span style="font-weight: bold;">₱18,450</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem;">Water (COWD)</span>
+                        <span style="font-weight: bold;">₱4,200</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem;">Internet (PLDT)</span>
+                        <span style="font-weight: bold;">₱2,899</span>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem; color: #94a3b8;">Total Utilities</span>
+                        <span style="font-weight: 800; color: var(--admin-accent);">₱25,549</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Utilities (MTD) and projection... -->
+        </div>
+
+        <!-- CONSUMABLES VIEW -->
+        <div class="cc-grid" id="consumables-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab active" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <div class="cc-card wide">
+                <div class="metric-label">Packaging Supplies</div>
+                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px;">
+                            <span>Plastic Bags (3kg)</span>
+                            <span style="font-weight: bold;">4,200 / 10,000</span>
+                        </div>
+                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 42%; height: 100%; background: #22c55e;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px;">
+                            <span>Plastic Bags (1kg)</span>
+                            <span style="font-weight: bold;">1,150 / 5,000</span>
+                        </div>
+                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 23%; height: 100%; background: #ef4444;"></div>
+                        </div>
+                        <p style="font-size: 0.65rem; color: #ef4444; margin-top: 5px;">⚠️ Critical Low Stock</p>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px;">
+                            <span>Sealing Rolls</span>
+                            <span style="font-weight: bold;">8 / 20</span>
+                        </div>
+                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 40%; height: 100%; background: #f59e0b;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cc-card">
+                <div class="metric-label">Water Filtration Supplies</div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                    <div class="rider-card">
+                        <div class="rider-info">
+                            <h4 style="margin: 0; font-size: 0.9rem;">PP Sediment Filter</h4>
+                            <small style="color: #64748b;">Remaining Life: 12 days</small>
+                        </div>
+                        <div style="margin-left: auto; text-align: right;">
+                            <div style="color: #f59e0b; font-weight: bold; font-size: 0.8rem;">REPLACE SOON</div>
+                        </div>
+                    </div>
+                    <div class="rider-card">
+                        <div class="rider-info">
+                            <h4 style="margin: 0; font-size: 0.9rem;">Carbon Block Filter</h4>
+                            <small style="color: #64748b;">Remaining Life: 45 days</small>
+                        </div>
+                        <div style="margin-left: auto; text-align: right;">
+                            <div style="color: #22c55e; font-weight: bold; font-size: 0.8rem;">OK</div>
+                        </div>
+                    </div>
+                    <div class="rider-card">
+                        <div class="rider-info">
+                            <h4 style="margin: 0; font-size: 0.9rem;">UV Sterilizer Lamp</h4>
+                            <small style="color: #64748b;">Installed: 4 months ago</small>
+                        </div>
+                        <div style="margin-left: auto; text-align: right;">
+                            <div style="color: #22c55e; font-weight: bold; font-size: 0.8rem;">OK</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cc-card">
+                <div class="metric-label">Cleaning & Maintenance</div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem;">Food Grade Sanitizer</span>
+                        <span style="font-weight: bold;">4.5 Liters</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem;">Machine Descaler</span>
+                        <span style="font-weight: bold;">2 Bottles</span>
+                    </div>
+                    <button class="status-badge" style="width: 100%; margin-top: 10px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white;">Log Restock</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINANCE & P&L VIEW -->
+        <div class="cc-grid" id="finance-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab active" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <!-- Executive Summary Card -->
+            <div class="cc-card wide" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(37, 99, 235, 0.1)); border: 1px solid rgba(14, 165, 233, 0.2);">
+                <div class="metric-label" style="color: #0ea5e9;">Daily Net Profit (P&L)</div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 1rem;">
+                    <div>
+                        <div class="metric-value">₱12,450.00</div>
+                        <p style="font-size: 0.75rem; color: #22c55e; margin: 4px 0 0 0;">↑ 14% vs Yesterday</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin: 0;">Operational Margin</p>
+                        <p style="font-size: 1.2rem; font-weight: 800; color: #22c55e;">62.4%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cash Distribution -->
+            <div class="cc-card">
+                <div class="metric-label">Cash-on-Hand Distribution</div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 10px; height: 10px; border-radius: 2px; background: #22c55e;"></div>
+                            <span style="font-size: 0.85rem;">GCash Wallet</span>
+                        </div>
+                        <span style="font-weight: bold;">₱8,400</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 10px; height: 10px; border-radius: 2px; background: #f59e0b;"></div>
+                            <span style="font-size: 0.85rem;">Rider Cash (Remittance)</span>
+                        </div>
+                        <span style="font-weight: bold;">₱3,250</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 10px; height: 10px; border-radius: 2px; background: #0ea5e9;"></div>
+                            <span style="font-size: 0.85rem;">Bank Transfer</span>
+                        </div>
+                        <span style="font-weight: bold;">₱1,800</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense Breakdown -->
+            <div class="cc-card">
+                <div class="metric-label">Operational Expenses (Daily)</div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                            <span>Rider Payouts</span>
+                            <span>₱4,200</span>
+                        </div>
+                        <div style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 65%; height: 100%; background: #ef4444;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                            <span>Utility Cost (Est.)</span>
+                            <span>₱850</span>
+                        </div>
+                        <div style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div style="width: 15%; height: 100%; background: #ef4444;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Projection -->
+            <div class="cc-card wide">
+                <div class="metric-label">Monthly Net Forecast</div>
+                <div style="margin-top: 2rem; position: relative; height: 100px; display: flex; align-items: flex-end; gap: 8px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <!-- Mini Graph Simulation -->
+                    <div style="flex: 1; background: rgba(14, 165, 233, 0.2); height: 40%; border-radius: 4px 4px 0 0;"></div>
+                    <div style="flex: 1; background: rgba(14, 165, 233, 0.2); height: 55%; border-radius: 4px 4px 0 0;"></div>
+                    <div style="flex: 1; background: rgba(14, 165, 233, 0.2); height: 45%; border-radius: 4px 4px 0 0;"></div>
+                    <div style="flex: 1; background: rgba(14, 165, 233, 0.2); height: 70%; border-radius: 4px 4px 0 0;"></div>
+                    <div style="flex: 1; background: rgba(14, 165, 233, 0.2); height: 60%; border-radius: 4px 4px 0 0;"></div>
+                    <div style="flex: 1; background: var(--admin-accent); height: 90%; border-radius: 4px 4px 0 0; box-shadow: 0 0 15px var(--admin-glow);"></div>
+                    <div style="flex: 1; background: rgba(255,255,255,0.05); height: 80%; border-radius: 4px 4px 0 0;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
+                    <span style="font-size: 0.7rem; color: #94a3b8;">Projected Monthly Net</span>
+                    <span style="font-weight: 800; color: #22c55e;">₱284,500.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CASHFLOW VIEW -->
+        <div class="cc-grid centered-view" id="cashflow-view" style="display: none;">
+            <div class="cc-tabs">
+                <div class="cc-tab" onclick="admin.switchView('ops')">Live Operations<div class="tab-notif" id="dot-ops"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('cashflow')">Cashflow<div class="tab-notif" id="dot-cashflow"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('orders')">Order Queue<div class="tab-notif" id="dot-orders"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('customers')">Customer Intelligence<div class="tab-notif" id="dot-customers"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('team')">Team & Payroll<div class="tab-notif" id="dot-team"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
+                <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            </div>
+
+            <!-- Summary Row -->
+            <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                <div class="cc-card">
+                    <div class="metric-label">Total Inflow</div>
+                    <div class="metric-value" style="color: #22c55e;" id="cashflow-in">₱0.00</div>
+                </div>
+                <div class="cc-card">
+                    <div class="metric-label">Total Outflow</div>
+                    <div class="metric-value" style="color: #ef4444;" id="cashflow-out">₱0.00</div>
+                </div>
+                <div class="cc-card">
+                    <div class="metric-label">Net Cashflow (Today)</div>
+                    <div class="metric-value" id="cashflow-net">₱0.00</div>
+                </div>
+            </div>
+
+            <!-- Spreadsheet Table -->
+            <div class="cc-card full-width">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Cashflow Spreadsheet
+                    <div style="display: flex; gap: 10px;">
+                        <button class="status-badge" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="admin.exportCashflow()">Export CSV</button>
+                    </div>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table class="cashflow-table">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th style="text-align: right;">Amount</th>
+                                <th style="text-align: center;">Source</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cashflow-body">
+                            <!-- Rows will be injected by JS -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="cashflow-input-row">
+                                <td><input type="text" id="manual-date" class="cashflow-input" placeholder="Just now" disabled></td>
+                                <td>
+                                    <select id="manual-category" onchange="admin.handleCategoryChange()" style="width: 100%; background: none; border: none; color: white; outline: none; font-size: 0.75rem; cursor: pointer;">
+                                        <option value="Sales">Sales</option>
+                                        <option value="Salary">Salary & Wages</option>
+                                        <option value="Rider Payout">Rider Payout</option>
+                                        <option value="Utilities">Utilities (Power/Water)</option>
+                                        <option value="Packaging">Packaging & Supplies</option>
+                                        <option value="Maintenance">Maintenance & Repair</option>
+                                        <option value="Fuel">Fuel & Logistics</option>
+                                        <option value="Marketing">Marketing & Promo</option>
+                                        <option value="Refund">Refund/Adjustment</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" id="manual-desc" class="cashflow-input" placeholder="Enter description..."></td>
+                                <td>
+                                    <select id="manual-type" class="cashflow-input" style="background: #0f172a; border-radius: 4px;">
+                                        <option value="IN">IN</option>
+                                        <option value="OUT">OUT</option>
+                                    </select>
+                                </td>
+                                <td><input type="number" id="manual-amount" class="cashflow-input" placeholder="0.00" style="text-align: right;"></td>
+                                <td style="text-align: center;"><span class="source-manual">MANUAL</span></td>
+                                <td><button class="btn-add-row" onclick="admin.addManualEntry()">ADD</button></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Rider Payout Modal -->
+    <div id="payout-modal" class="qr-payout-modal" onclick="this.style.display='none'">
+        <div class="qr-card" onclick="event.stopPropagation()">
+            <h2 id="modal-rider-name" style="margin: 0;">Rider Name</h2>
+            <p id="modal-rider-phone" style="color: #64748b; margin-top: 5px;">0917 XXX XXXX</p>
+            
+            <div class="qr-image">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=GCash_Rider_Payout_Placeholder" alt="GCash QR" style="width: 100%; height: 100%;">
+            </div>
+            
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">Scan this QR code using GCash to send salary or delivery charge payouts.</p>
+            
+            <button class="btn-unlock" style="width: 100%; margin-top: 2rem;" onclick="document.getElementById('payout-modal').style.display='none'">
+                Done
+            </button>
+        </div>
+    </div>
+
+    <script src="js/admin.js?v=1.0.2"></script>
+</body>
+</html>
