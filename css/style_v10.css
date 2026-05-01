@@ -5,6 +5,15 @@ html {
     text-size-adjust: none;
 }
 
+/* ── iOS Auto-Zoom Prevention ── */
+/* iOS Safari zooms in on inputs with font-size < 16px.
+   Force 16px on all interactive elements to prevent this. */
+input, select, textarea {
+    font-size: 16px !important;
+    touch-action: manipulation;
+    -webkit-touch-action: manipulation;
+}
+
 :root {
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
@@ -1088,7 +1097,7 @@ h1 {
 }
 
 .counter-input-small {
-    font-size: 1.25rem;
+    font-size: 16px !important; /* Prevents iOS auto-zoom (must be >= 16px) */
     font-weight: 700;
     width: 44px;
     height: 44px;
@@ -1100,6 +1109,7 @@ h1 {
     font-family: inherit;
     outline: none;
     touch-action: manipulation;
+    -webkit-touch-action: manipulation;
     display: flex;
     align-items: center;
     justify-content: center;

@@ -36,6 +36,15 @@
             touch-action: manipulation;
             -webkit-text-size-adjust: 100%;
             overscroll-behavior: none;
+            -ms-touch-action: manipulation;
+        }
+        /* Force 16px on ALL inputs to prevent iOS auto-zoom */
+        input, select, textarea, .counter-input-small {
+            font-size: 16px !important;
+            touch-action: manipulation;
+        }
+        input:focus, select:focus, textarea:focus {
+            font-size: 16px !important;
         }
         .app-shell {
             width: 100%;
@@ -2316,6 +2325,61 @@
                 });
             });
         }
+    </script>
+    <script>
+    /* ── Anti-Zoom Lock for iOS / Messenger In-App Browser ── */
+    (function() {
+        'use strict';
+
+        // 1. Block pinch-to-zoom gestures (Safari)
+        document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+
+        // 2. Block double-tap zoom
+        var lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            var now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // 3. Dynamically re-enforce viewport meta on input focus
+        // Some in-app browsers (Messenger, LINE) override the meta tag;
+        // this resets it every time an input gains focus.
+        var vpMeta = document.querySelector('meta[name="viewport"]');
+        var vpContent = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content';
+
+        function lockViewport() {
+            if (vpMeta) {
+                vpMeta.setAttribute('content', vpContent);
+            }
+        }
+
+        // Re-lock on every focus & blur
+        document.addEventListener('focusin', lockViewport, true);
+        document.addEventListener('focusout', lockViewport, true);
+
+        // Also intercept the 'touchstart' on inputs to force scale before keyboard appears
+        document.addEventListener('touchstart', function(e) {
+            var tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+                lockViewport();
+            }
+        }, { passive: true });
+
+        // 4. Reset scale on page visibility change (e.g. returning from another app)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                lockViewport();
+            }
+        });
+
+        // Initial lock
+        lockViewport();
+    })();
     </script>
 </body>
 </html>
