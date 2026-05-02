@@ -9,20 +9,64 @@ const admin = {
     correctPin: '2026', 
     manualEntries: JSON.parse(localStorage.getItem('iceqube_manual_cashflow') || '[]'),
     consumables: JSON.parse(localStorage.getItem('iceqube_consumables') || JSON.stringify({
-        bags3kg: { current: 4200, max: 10000, unit: '' },
-        bags1kg: { current: 1150, max: 5000, unit: '' },
-        sealing: { current: 8, max: 20, unit: '' },
-        sanitizer: { current: 4.5, max: 10, unit: 'Liters' },
-        descaler: { current: 2, max: 5, unit: 'Bottles' }
+        packaging: [
+            { id: 'bags3kg', name: '3kg Bag', current: 4200, max: 10000, unit: 'pcs' },
+            { id: 'bags1kg', name: '1kg Bag', current: 1150, max: 5000, unit: 'pcs' },
+            { id: 'ecobag', name: 'Delivery Ecobag', current: 45, max: 100, unit: 'pcs' }
+        ],
+        cleaning: [
+            { id: 'sanitizer', name: 'Food Grade Sanitizer', current: 4.5, max: 10, unit: 'Liters' },
+            { id: 'descaler', name: 'Machine Descaler', current: 2, max: 5, unit: 'Bottles' }
+        ]
     })),
     maintenanceLogs: JSON.parse(localStorage.getItem('iceqube_maintenance_logs') || '[]'),
+    assets: JSON.parse(localStorage.getItem('iceqube_assets') || JSON.stringify([
+        { id: 'm1', name: 'Ice Machine #1', type: 'Machine', status: 'online', metric: 'Temp: -18°C • Optimal', price: 250000, dateAcquired: '2025-01-15', usefulLifeMonths: 60 },
+        { id: 'm2', name: 'Ice Machine #2', type: 'Machine', status: 'online', metric: 'Temp: -20°C • Optimal', price: 250000, dateAcquired: '2025-02-10', usefulLifeMonths: 60 },
+        { id: 'f1', name: 'Walk-in Freezer', type: 'Freezer', status: 'busy', metric: 'Defrost Cycle Active', price: 180000, dateAcquired: '2025-01-20', usefulLifeMonths: 84 }
+    ])),
+    utilities: JSON.parse(localStorage.getItem('iceqube_utilities') || JSON.stringify({
+        electricity: 18450,
+        water: 4200,
+        internet: 2899
+    })),
+    utilityStatus: JSON.parse(localStorage.getItem('iceqube_utility_status') || JSON.stringify({
+        cepalco: false,
+        cowd: false,
+        pldt: true,
+        rent: true
+    })),
+    rental: JSON.parse(localStorage.getItem('iceqube_rental') || '15000'),
+    cashflowFilter: 'daily', 
 
     init() {
         console.log('--- COMMAND CENTER INITIALIZED (Bypass Mode) ---');
+        
+        // Data Migration/Validation for Consumables
+        if (!this.consumables.packaging || !this.consumables.cleaning) {
+            console.log('Migrating old consumables structure...');
+            this.consumables = {
+                packaging: [
+                    { id: 'bags3kg', name: '3kg Bag', current: 4200, max: 10000, unit: 'pcs' },
+                    { id: 'bags1kg', name: '1kg Bag', current: 1150, max: 5000, unit: 'pcs' },
+                    { id: 'ecobag', name: 'Delivery Ecobag', current: 45, max: 100, unit: 'pcs' }
+                ],
+                cleaning: [
+                    { id: 'sanitizer', name: 'Food Grade Sanitizer', current: 4.5, max: 10, unit: 'Liters' },
+                    { id: 'descaler', name: 'Machine Descaler', current: 2, max: 5, unit: 'Bottles' }
+                ]
+            };
+            localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+        }
+
         this.updateAlertCenter([]);
         this.startDataSync();
         this.updateConsumablesUI();
         this.updateMaintenanceUI();
+        this.updateAssetsUI();
+        this.updateUtilitiesUI();
+        this.updateRentalUI();
+        this.checkMonthlyReset();
     },
 
     addPin(num) {
@@ -60,6 +104,17 @@ const admin = {
             this.pin = '';
             this.updatePinDisplay();
         }
+    },
+
+    openUpdateModal(binId, current, max) {
+        const modal = document.getElementById('update-bin-modal');
+        const input = document.getElementById('new-stock-val');
+        const title = document.getElementById('modal-title');
+        
+        this.activeBinId = binId;
+        title.innerText = `Update ${binId}`;
+        input.value = current;
+        modal.style.display = 'flex';
     },
 
     vibrateError() {
@@ -141,7 +196,7 @@ const admin = {
         const delivered = orders.filter(o => o.delivery_status === 'Delivered').length;
         
         const revenue = orders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
-        const revenueEl = document.querySelector('.metric-value');
+        const revenueEl = document.getElementById('ops-revenue') || document.querySelector('.metric-value');
         if (revenueEl) revenueEl.innerText = `₱${revenue.toLocaleString()}`;
         
         // 3. Bags Calculation
@@ -153,8 +208,13 @@ const admin = {
                 bags += (fd['3kg'] || 0) + (fd['1kg'] || 0) + (hd['3kg'] || 0) + (hd['1kg'] || 0);
             }
         });
-        const metricValues = document.querySelectorAll('.cc-card .metric-value');
-        if (metricValues.length >= 2) metricValues[1].innerText = bags;
+        const bagsEl = document.getElementById('ops-bags');
+        if (bagsEl) {
+            bagsEl.innerText = bags;
+        } else {
+            const metricValues = document.querySelectorAll('.cc-card .metric-value');
+            if (metricValues.length >= 2) metricValues[1].innerText = bags;
+        }
 
         // 4. Status Counters
         const statusValues = document.querySelectorAll('.status-item .status-value');
@@ -200,7 +260,10 @@ const admin = {
                 order_id: 'IQ-9750',
                 created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
                 customer_name: 'Loft Living CDO',
+                delivery_address: 'Macabalan, Cagayan de Oro City',
                 total_price: 2550,
+                delivery_fee: 50,
+                priority_fee: 20,
                 payment_method: 'GCash',
                 delivery_status: 'Dispatched',
                 rider: 'John',
@@ -211,7 +274,10 @@ const admin = {
                 order_id: 'IQ-9751',
                 created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
                 customer_name: 'Fat Monk Coffee',
+                delivery_address: 'Uptown CDO, Xavier Estates',
                 total_price: 850,
+                delivery_fee: 80,
+                priority_fee: 0,
                 payment_method: 'Cash',
                 delivery_status: 'Pending',
                 rider: 'Unassigned',
@@ -222,7 +288,10 @@ const admin = {
                 order_id: 'IQ-9752',
                 created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
                 customer_name: 'Zion Business Center',
+                delivery_address: 'Divisoria, RN Pelaez Blvd',
                 total_price: 1250,
+                delivery_fee: 40,
+                priority_fee: 0,
                 payment_method: 'GCash',
                 delivery_status: 'Delivered',
                 rider: 'Mark',
@@ -273,15 +342,116 @@ const admin = {
         
         Object.keys(views).forEach(key => {
             if (views[key]) {
-                views[key].style.display = (key === viewId) ? 'grid' : 'none';
+                if (key === viewId) {
+                    views[key].style.display = views[key].classList.contains('cc-flex') ? 'flex' : 'grid';
+                } else {
+                    views[key].style.display = 'none';
+                }
             }
         });
         
-        if (viewId === 'assets') this.updateMaintenanceUI();
+        if (viewId === 'assets') {
+            this.updateMaintenanceUI();
+            this.updateAssetsUI();
+            this.updateUtilitiesUI();
+            this.updateRentalUI();
+        }
         if (viewId === 'consumables') this.updateConsumablesUI();
+        if (viewId === 'finance') this.loadPnL('mtd');
         
         this.animateCards();
     },
+
+    loadPnL(period) {
+        console.log(`📊 Loading P&L for period: ${period}`);
+        
+        // Update active button state
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.id === `btn-${period}`) btn.classList.add('active');
+        });
+
+        // Calculate real depreciation from assets
+        const monthlyDep = this.assets.reduce((sum, a) => sum + ((a.price || 0) / (a.usefulLifeMonths || 60)), 0);
+        const ytdMonths = new Date().getMonth() + 1;
+        const totalUtils = this.utilities.electricity + this.utilities.water + this.utilities.internet;
+        const totalOpEx = totalUtils + (this.rental || 0);
+
+        // Mock data for different periods (Realistically this would be an API call)
+        const data = {
+            mtd: {
+                revenue: 124500,
+                cogs: 18500,
+                opex: 45200,
+                depreciation: monthlyDep,
+                riderPayouts: 32000,
+                utilities: totalOpEx
+            },
+            last_month: {
+                revenue: 385000,
+                cogs: 52000,
+                opex: 125000,
+                depreciation: monthlyDep,
+                riderPayouts: 85000,
+                utilities: totalOpEx * 0.95 // slight variance
+            },
+            ytd: {
+                revenue: 1450000,
+                cogs: 210000,
+                opex: 520000,
+                depreciation: monthlyDep * ytdMonths,
+                riderPayouts: 380000,
+                utilities: totalOpEx * ytdMonths
+            }
+        };
+
+        const p = data[period] || data.mtd;
+        
+        // Calculations
+        const grossProfit = p.revenue - p.cogs;
+        const ebitda = grossProfit - p.opex;
+        const netProfit = ebitda - p.depreciation;
+        const margin = ((netProfit / p.revenue) * 100).toFixed(1);
+
+        // Update UI
+        const heroProfit = document.getElementById('hero-net-profit');
+        if (heroProfit) heroProfit.innerText = `₱${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        
+        const marginEl = document.getElementById('operational-margin');
+        if (marginEl) marginEl.innerText = `Margin: ${margin}%`;
+        
+        const updateText = (id, val, isNeg = false) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = (isNeg ? '-₱' : '₱') + val.toLocaleString(undefined, {minimumFractionDigits: 2});
+        };
+
+        updateText('pnl-revenue', p.revenue);
+        updateText('pnl-cogs', p.cogs, true);
+        updateText('pnl-gross-profit', grossProfit);
+        updateText('pnl-opex', p.opex, true);
+        updateText('pnl-ebitda', ebitda);
+        updateText('pnl-depreciation', p.depreciation, true);
+        updateText('pnl-final-net', netProfit);
+
+        // Expense Distribution
+        updateText('exp-rider', p.riderPayouts);
+        updateText('exp-utilities', p.utilities);
+        updateText('exp-cogs', p.cogs);
+        updateText('exp-depreciation', p.depreciation);
+
+        // Progress Bars
+        const totalExp = p.riderPayouts + p.utilities + p.cogs + p.depreciation;
+        const updateBar = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.style.width = `${(val / totalExp * 100)}%`;
+        };
+
+        updateBar('bar-rider', p.riderPayouts);
+        updateBar('bar-utilities', p.utilities);
+        updateBar('bar-cogs', p.cogs);
+        updateBar('bar-depreciation', p.depreciation);
+    },
+
 
     unlockVault() {
         console.log('🔐 Authenticating Vault Access...');
@@ -348,12 +518,26 @@ const admin = {
         // 3. Sort by Time (Descending)
         allEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        // 4. Calculate Totals
+        // 4. Apply Time Bracket Filtering
+        const now = new Date();
+        const filteredEntries = allEntries.filter(entry => {
+            const entryDate = new Date(entry.timestamp);
+            if (this.cashflowFilter === 'daily') {
+                return entryDate.toDateString() === now.toDateString();
+            } else if (this.cashflowFilter === 'monthly') {
+                return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+            } else if (this.cashflowFilter === 'ytd') {
+                return entryDate.getFullYear() === now.getFullYear();
+            }
+            return true;
+        });
+
+        // 5. Calculate Totals
         let totalIn = 0;
         let totalOut = 0;
         
-        // 5. Render Rows
-        tbody.innerHTML = allEntries.map(entry => {
+        // 6. Render Rows
+        tbody.innerHTML = filteredEntries.map(entry => {
             const amount = entry.amount || 0;
             if (entry.type === 'IN') totalIn += amount;
             else totalOut += amount;
@@ -379,13 +563,37 @@ const admin = {
             `;
         }).join('');
 
-        // 6. Update Summary Bar
+        if (filteredEntries.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">No entries found for this ${this.cashflowFilter} period.</td></tr>`;
+        }
+
+        // 7. Update Summary Bar
         document.getElementById('cashflow-in').innerText = `₱${totalIn.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         document.getElementById('cashflow-out').innerText = `₱${totalOut.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         const net = totalIn - totalOut;
         const netEl = document.getElementById('cashflow-net');
         netEl.innerText = `₱${net.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         netEl.style.color = net >= 0 ? '#22c55e' : '#ef4444';
+
+        // Update Summary Label
+        const labelEl = document.getElementById('cashflow-net-label');
+        if (labelEl) {
+            const labels = { daily: 'Today', monthly: 'This Month', ytd: 'Year to Date' };
+            labelEl.innerText = `Net Cashflow (${labels[this.cashflowFilter]})`;
+        }
+    },
+
+    setCashflowFilter(filter) {
+        this.cashflowFilter = filter;
+        
+        // Update UI buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.id === `filter-${filter}`) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+
+        // Re-render
+        this.fetchRealStats();
     },
 
     addManualEntry() {
@@ -450,7 +658,7 @@ const admin = {
         if (!pendingBody || !ledgerBody) return;
 
         // Force mock data if no live orders are present today
-        let allOrders = (orders && orders.length > 0) ? orders : [
+        let allOrders = (orders && orders.length > 0) ? [...orders] : [
             {
                 id: 'mock-1',
                 order_id: 'IQ-9750',
@@ -494,6 +702,9 @@ const admin = {
                 items: { fullDice: { '1kg': 20 } }
             }
         ];
+
+        // Sort by time: Soonest (Earliest created) at the top
+        allOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
         const pendingOrders = allOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance');
         const ledgerOrders = allOrders.filter(o => o.delivery_status !== 'Pending' && o.delivery_status !== 'Awaiting Acceptance');
@@ -540,19 +751,27 @@ const admin = {
         ledgerBody.innerHTML = ledgerOrders.map(o => {
             const timeStr = new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const itemsStr = this.formatOrderItems(o);
+            const addr = o.delivery_address && o.delivery_address !== 'N/A' ? o.delivery_address : 'Pickup / Store';
 
             return `
                 <tr>
                     <td>${timeStr}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">#${o.order_id}</td>
                     <td><b>${o.customer_name}</b></td>
-                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
+                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${parseFloat(o.total_price).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono'; color: #f59e0b;">₱${(o.priority_fee || 0).toLocaleString()}</td>
-                    <td><span style="color: #94a3b8; font-size: 0.85rem;">👤 ${o.rider || 'Unassigned'}</span></td>
-                    <td><span class="status-badge" style="opacity: 0.8;">${o.delivery_status}</span></td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono'; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono'; color: #f59e0b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="rider-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">${(o.rider || 'U')[0]}</div>
+                            <span style="font-size: 0.8rem; color: #cbd5e1;">${o.rider || 'Unassigned'}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-${(o.delivery_status || 'pending').toLowerCase()}" style="font-size: 0.65rem;">${o.delivery_status}</span>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -579,6 +798,7 @@ const admin = {
             console.error('Update Failed:', err);
         }
     },
+
 
     formatOrderItems(o) {
         if (!o.items) return '';
@@ -769,7 +989,11 @@ const admin = {
         }
     },
 
-    showRestockModal() {
+    showRestockModal(preselectedId) {
+        if (preselectedId) {
+            document.getElementById('restock-item').value = preselectedId;
+            this.handleRestockItemChange();
+        }
         document.getElementById('restock-modal').style.display = 'flex';
     },
 
@@ -778,21 +1002,54 @@ const admin = {
     },
 
     submitRestock() {
-        const itemId = document.getElementById('restock-item').value;
+        const itemVal = document.getElementById('restock-item').value;
         const qty = parseFloat(document.getElementById('restock-qty').value);
         const cost = parseFloat(document.getElementById('restock-cost').value);
         const note = document.getElementById('restock-note').value;
+        const isAdjustment = document.getElementById('restock-adjustment').checked;
 
-        if (isNaN(qty) || qty <= 0) {
+        if (isNaN(qty) || qty < 0) {
             alert('Please enter a valid quantity.');
             return;
         }
 
-        // 1. Update Consumables State
-        if (this.consumables[itemId]) {
-            this.consumables[itemId].current += qty;
-            // Cap at max? Maybe not, maybe max is just for the progress bar
-            // this.consumables[itemId].current = Math.min(this.consumables[itemId].current, this.consumables[itemId].max);
+        let targetItem;
+        let itemName;
+
+        if (itemVal === 'CUSTOM') {
+            const newName = document.getElementById('custom-item-name').value;
+            const newMax = parseFloat(document.getElementById('custom-item-max').value) || 1000;
+            const newUnit = document.getElementById('custom-item-unit').value;
+            const newCat = document.getElementById('custom-item-cat').value;
+
+            if (!newName) {
+                alert('Please enter a name for the custom item.');
+                return;
+            }
+
+            targetItem = {
+                id: 'custom-' + Date.now(),
+                name: newName,
+                current: qty,
+                max: newMax,
+                unit: newUnit
+            };
+            this.consumables[newCat].push(targetItem);
+            itemName = newName;
+        } else {
+            // Find existing item
+            for (let cat in this.consumables) {
+                targetItem = this.consumables[cat].find(i => i.id === itemVal);
+                if (targetItem) break;
+            }
+            if (targetItem) {
+                if (isAdjustment) {
+                    targetItem.current = qty;
+                } else {
+                    targetItem.current += qty;
+                }
+                itemName = targetItem.name;
+            }
         }
 
         // 2. Save Consumables
@@ -803,7 +1060,7 @@ const admin = {
             const entry = {
                 timestamp: new Date().toISOString(),
                 category: 'Packaging',
-                description: `Restock: ${document.getElementById('restock-item').options[document.getElementById('restock-item').selectedIndex].text}${note ? ' (' + note + ')' : ''}`,
+                description: `${isAdjustment ? 'Inventory Adjustment' : 'Restock'}: ${itemName}${note ? ' (' + note + ')' : ''}`,
                 type: 'OUT',
                 amount: cost,
                 source: 'MANUAL'
@@ -821,40 +1078,146 @@ const admin = {
         document.getElementById('restock-qty').value = '';
         document.getElementById('restock-cost').value = '';
         document.getElementById('restock-note').value = '';
+        document.getElementById('custom-item-name').value = '';
+        document.getElementById('custom-item-fields').style.display = 'none';
+        document.getElementById('restock-adjustment').checked = false;
+        this.handleAdjustmentToggle();
         
-        alert('Restock logged successfully!');
+        alert(isAdjustment ? 'Inventory adjusted successfully!' : 'Restock logged successfully!');
     },
 
+    deleteConsumable() {
+        const itemVal = document.getElementById('restock-item').value;
+        if (itemVal === 'CUSTOM') return;
+
+        if (!confirm('Are you sure you want to permanently remove this item from inventory?')) return;
+
+        for (let cat in this.consumables) {
+            const index = this.consumables[cat].findIndex(i => i.id === itemVal);
+            if (index !== -1) {
+                this.consumables[cat].splice(index, 1);
+                break;
+            }
+        }
+
+        localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+        this.updateConsumablesUI();
+        this.closeRestockModal();
+        alert('Item removed successfully.');
+    },
+
+
     updateConsumablesUI() {
-        Object.keys(this.consumables).forEach(key => {
-            const data = this.consumables[key];
-            const stockEl = document.getElementById(`stock-${key}`);
-            const barEl = document.getElementById(`bar-${key}`);
-            const warnEl = document.getElementById(`warn-${key}`);
+        const packagingList = document.getElementById('packaging-list');
+        const cleaningList = document.getElementById('cleaning-list');
+        const dropdown = document.getElementById('restock-item');
+        
+        if (!packagingList || !cleaningList) return;
 
-            if (stockEl) {
-                if (data.unit) {
-                    stockEl.innerText = `${data.current} ${data.unit}`;
-                } else {
-                    stockEl.innerText = `${data.current.toLocaleString()} / ${data.max.toLocaleString()}`;
+        // 1. Render Lists
+        const renderItem = (item, isPackaging = false) => {
+            const percent = Math.min((item.current / item.max) * 100, 100);
+            const color = percent < 15 ? '#ef4444' : (percent < 40 ? '#f59e0b' : '#22c55e');
+            const warnHtml = percent < 15 ? `<p style="font-size: 0.65rem; color: #ef4444; margin-top: 5px;">⚠️ Low</p>` : '';
+            
+            if (isPackaging) {
+                // Bin-style rendering for packaging (Label below)
+                return `
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0;">
+                        <div class="dynamic-bin" onclick="admin.showRestockModal('${item.id}')" title="Click to Restock">
+                            <div class="bin-fill" style="height: ${percent}%; background: ${color};"></div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #f8fafc; white-space: nowrap; margin-bottom: 4px;">${item.name}</div>
+                            <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.3;">
+                                <span style="color: #f8fafc; font-weight: 900; font-size: 1.2rem;">${item.current.toLocaleString()}</span><br>
+                                <span style="font-size: 0.75rem; opacity: 0.8;">pcs left of ${item.max.toLocaleString()}</span>
+                            </div>
+                            ${warnHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div id="item-${item.id}" class="consumable-item-row" onclick="admin.showRestockModal('${item.id}')" style="cursor: pointer; padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s ease;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px;">
+                        <span style="font-weight: 600;">${item.name}</span>
+                        <span style="font-weight: bold; color: var(--admin-accent);">${item.unit ? item.current + ' ' + item.unit : item.current.toLocaleString() + ' / ' + item.max.toLocaleString()}</span>
+                    </div>
+                    <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                        <div style="width: ${percent}%; height: 100%; background: ${color};"></div>
+                    </div>
+                    ${warnHtml}
+                </div>
+            `;
+        };
+
+        packagingList.innerHTML = this.consumables.packaging.map(item => renderItem(item, true)).join('');
+        cleaningList.innerHTML = this.consumables.cleaning.map(item => renderItem(item, false)).join('');
+
+        // 2. Update Dropdown Options (optional, but good for custom items)
+        if (dropdown) {
+            let optionsHtml = '';
+            optionsHtml += '<optgroup label="Packaging">';
+            this.consumables.packaging.forEach(item => {
+                optionsHtml += `<option value="${item.id}">${item.name}</option>`;
+            });
+            optionsHtml += '</optgroup>';
+            optionsHtml += '<optgroup label="Cleaning">';
+            this.consumables.cleaning.forEach(item => {
+                optionsHtml += `<option value="${item.id}">${item.name}</option>`;
+            });
+            optionsHtml += '</optgroup>';
+            optionsHtml += '<option value="CUSTOM">--- Add New Custom Item ---</option>';
+            dropdown.innerHTML = optionsHtml;
+        }
+    },
+
+    handleRestockItemChange() {
+        const itemVal = document.getElementById('restock-item').value;
+        const customFields = document.getElementById('custom-item-fields');
+        const deleteBtn = document.getElementById('delete-consumable-btn');
+
+        if (customFields) {
+            customFields.style.display = itemVal === 'CUSTOM' ? 'block' : 'none';
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.style.display = itemVal === 'CUSTOM' ? 'none' : 'block';
+        }
+        
+        // If adjustment is ON, update the qty field with current stock
+        if (document.getElementById('restock-adjustment').checked) {
+            this.handleAdjustmentToggle();
+        }
+    },
+
+
+    handleAdjustmentToggle() {
+        const isAdj = document.getElementById('restock-adjustment').checked;
+        const qtyLabel = document.getElementById('qty-label');
+        const qtyInput = document.getElementById('restock-qty');
+        const itemVal = document.getElementById('restock-item').value;
+        
+        if (isAdj) {
+            qtyLabel.innerText = 'New Current Stock (Verified)';
+            qtyLabel.style.color = '#0ea5e9';
+            
+            // Pre-fill with current stock
+            if (itemVal !== 'CUSTOM') {
+                let targetItem;
+                for (let cat in this.consumables) {
+                    targetItem = this.consumables[cat].find(i => i.id === itemVal);
+                    if (targetItem) break;
                 }
+                if (targetItem) qtyInput.value = targetItem.current;
             }
-
-            if (barEl) {
-                const percent = Math.min((data.current / data.max) * 100, 100);
-                barEl.style.width = `${percent}%`;
-                
-                // Color logic
-                if (percent < 15) barEl.style.background = '#ef4444';
-                else if (percent < 40) barEl.style.background = '#f59e0b';
-                else barEl.style.background = '#22c55e';
-            }
-
-            if (warnEl) {
-                const percent = (data.current / data.max) * 100;
-                warnEl.style.display = percent < 15 ? 'block' : 'none';
-            }
-        });
+        } else {
+            qtyLabel.innerText = 'Quantity Added';
+            qtyLabel.style.color = '#94a3b8';
+            qtyInput.value = '';
+        }
     },
 
     showMaintenanceModal() {
@@ -941,6 +1304,255 @@ const admin = {
                 </tr>
             `;
         }).join('');
+    },
+
+    updateAssetsUI() {
+        const list = document.getElementById('equipment-list');
+        const maintSelect = document.getElementById('maint-asset');
+        if (!list) return;
+
+        list.innerHTML = this.assets.map(asset => `
+            <div class="rider-card" style="flex-direction: column; align-items: flex-start; position: relative;">
+                <button onclick="admin.deleteAsset('${asset.id}')" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: #ef4444; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; font-size: 0.8rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">✕</button>
+                <div style="display: flex; justify-content: space-between; width: 100%; padding-right: 15px;">
+                    <h4 style="margin: 0;">${asset.name}</h4>
+                    <div class="rider-status-dot status-${asset.status}"></div>
+                </div>
+                <small style="color: ${asset.status === 'busy' ? '#f59e0b' : (asset.status === 'offline' ? '#ef4444' : '#64748b')}; margin-top: 5px;">${asset.metric}</small>
+            </div>
+        `).join('');
+
+        // Update maintenance modal dropdown
+        if (maintSelect) {
+            const currentVal = maintSelect.value;
+            maintSelect.innerHTML = this.assets.map(a => `<option value="${a.name}">${a.name}</option>`).join('') + 
+                `<option value="Water Filtration System">Water Filtration System</option>
+                 <option value="Delivery Vehicle (L300)">Delivery Vehicle (L300)</option>
+                 <option value="Delivery Motorcycle #1">Delivery Motorcycle #1</option>`;
+            maintSelect.value = currentVal || (this.assets[0] ? this.assets[0].name : '');
+        }
+    },
+
+    deleteAsset(id) {
+        if (!confirm('Are you sure you want to remove this asset? This will also affect P&L depreciation.')) return;
+        
+        this.assets = this.assets.filter(a => a.id !== id);
+        localStorage.setItem('iceqube_assets', JSON.stringify(this.assets));
+        
+        this.updateAssetsUI();
+        if (document.getElementById('finance-view').style.display !== 'none') {
+            this.loadPnL(document.querySelector('.time-btn.active')?.id.replace('btn-', '') || 'mtd');
+        }
+        
+        alert('Asset removed successfully.');
+    },
+
+    showAddAssetModal() {
+        document.getElementById('add-asset-modal').style.display = 'flex';
+    },
+
+    closeAddAssetModal() {
+        document.getElementById('add-asset-modal').style.display = 'none';
+    },
+
+    submitAddAsset() {
+        const name = document.getElementById('asset-name').value;
+        const type = document.getElementById('asset-type').value;
+        const status = document.getElementById('asset-status').value;
+        const metric = document.getElementById('asset-metric').value;
+        const price = parseFloat(document.getElementById('asset-price').value) || 0;
+        const dateAcquired = document.getElementById('asset-date').value || new Date().toISOString().split('T')[0];
+        const usefulLifeMonths = parseInt(document.getElementById('asset-life').value) || 60;
+
+        if (!name) {
+            alert('Please enter an asset name.');
+            return;
+        }
+
+        const newAsset = {
+            id: 'asset-' + Date.now(),
+            name,
+            type,
+            status,
+            metric: metric || 'Status Nominal',
+            price,
+            dateAcquired,
+            usefulLifeMonths
+        };
+
+        this.assets.push(newAsset);
+        localStorage.setItem('iceqube_assets', JSON.stringify(this.assets));
+        
+        this.updateAssetsUI();
+        this.closeAddAssetModal();
+        
+        // Clear inputs
+        document.getElementById('asset-name').value = '';
+        document.getElementById('asset-metric').value = '';
+        document.getElementById('asset-price').value = '';
+        document.getElementById('asset-date').value = '';
+                document.getElementById('asset-life').value = '';
+        
+        alert('Asset added successfully!');
+    },
+
+    updateUtilitiesUI() {
+        const ce = document.getElementById('bill-cepalco');
+        const cw = document.getElementById('bill-cowd');
+        const cp = document.getElementById('bill-pldt');
+        if (!ce) return;
+
+        ce.value = this.utilities.electricity;
+        cw.value = this.utilities.water;
+        cp.value = this.utilities.internet;
+
+        // Set status buttons
+        Object.keys(this.utilityStatus).forEach(key => {
+            const btn = document.getElementById(`status-${key}`);
+            if (btn) {
+                const isPaid = this.utilityStatus[key];
+                btn.className = `status-btn ${isPaid ? 'paid' : 'unpaid'}`;
+                btn.innerText = isPaid ? 'PAID' : 'UNPAID';
+            }
+        });
+
+        this.calculateTotalUtilities();
+    },
+
+    calculateTotalUtilities() {
+        const cepalco = parseFloat(document.getElementById('bill-cepalco')?.value) || 0;
+        const cowd = parseFloat(document.getElementById('bill-cowd')?.value) || 0;
+        const pldt = parseFloat(document.getElementById('bill-pldt')?.value) || 0;
+        
+        this.utilities.electricity = cepalco;
+        this.utilities.water = cowd;
+        this.utilities.internet = pldt;
+        localStorage.setItem('iceqube_utilities', JSON.stringify(this.utilities));
+
+        const total = cepalco + cowd + pldt;
+        const el = document.getElementById('total-utilities');
+        if (el) el.innerText = `₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+        
+        // Refresh Finance if open
+        if (document.getElementById('finance-view').style.display !== 'none') {
+            this.loadPnL(document.querySelector('.time-btn.active')?.id.replace('btn-', '') || 'mtd');
+        }
+    },
+
+    togglePaymentStatus(utilityId) {
+        const btn = document.getElementById(`status-${utilityId}`);
+        const amount = document.getElementById(`bill-${utilityId}`) ? document.getElementById(`bill-${utilityId}`).value : (utilityId === 'rent' ? this.rental : 0);
+
+        if (btn.classList.contains('unpaid')) {
+            // Switch to PAID
+            this.utilityStatus[utilityId] = true;
+            btn.classList.remove('unpaid');
+            btn.classList.add('paid');
+            btn.innerText = 'PAID';
+            
+            // Logic to push to cashflow
+            console.log(`[SYSTEM] ₱${amount} paid for ${utilityId}. Pushing to Cashflow.`);
+            
+            // Optional: If you want to automatically log this to the cashflow ledger:
+            /*
+            this.cashflow.unshift({
+                date: new Date().toLocaleDateString(),
+                desc: `Monthly ${utilityId.toUpperCase()} Payment`,
+                amount: -parseFloat(amount),
+                type: 'expense'
+            });
+            localStorage.setItem('iceqube_cashflow', JSON.stringify(this.cashflow));
+            */
+        } else {
+            // Revert to UNPAID
+            this.utilityStatus[utilityId] = false;
+            btn.classList.remove('paid');
+            btn.classList.add('unpaid');
+            btn.innerText = 'UNPAID';
+            
+            console.log(`[SYSTEM] Reverting ${utilityId} to Unpaid.`);
+        }
+        localStorage.setItem('iceqube_utility_status', JSON.stringify(this.utilityStatus));
+    },
+
+    checkMonthlyReset() {
+        const today = new Date();
+        const currentMonth = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+        
+        // Update the UI Header
+        const el = document.getElementById('current-billing-month');
+        if (el) el.innerText = currentMonth;
+
+        // Check if it's the 1st of the month
+        if (today.getDate() === 1) {
+            const lastReset = localStorage.getItem('iceqube_last_reset');
+            if (lastReset !== currentMonth) {
+                // Reset inputs to 0.00 for the new billing cycle
+                this.utilities = { electricity: 0, water: 0, internet: 0 };
+                this.utilityStatus = { cepalco: false, cowd: false, pldt: false, rent: false };
+                
+                localStorage.setItem('iceqube_utilities', JSON.stringify(this.utilities));
+                localStorage.setItem('iceqube_utility_status', JSON.stringify(this.utilityStatus));
+                localStorage.setItem('iceqube_last_reset', currentMonth);
+                
+                this.updateUtilitiesUI();
+                console.log("[SYSTEM] Day 1 Reset Executed. Awaiting new bills.");
+            }
+        }
+    },
+
+    updateRentalUI() {
+        const rentInput = document.getElementById('bill-rent');
+        if (rentInput) {
+            rentInput.value = this.rental || 0;
+        }
+        // Status handled in updateUtilitiesUI loop but can be redundant here
+        const btn = document.getElementById('status-rent');
+        if (btn) {
+            const isPaid = this.utilityStatus.rent;
+            btn.className = `status-btn ${isPaid ? 'paid' : 'unpaid'}`;
+            btn.innerText = isPaid ? 'PAID' : 'UNPAID';
+        }
+    },
+
+    updateRentDisplay() {
+        const val = parseFloat(document.getElementById('bill-rent').value) || 0;
+        this.rental = val;
+        localStorage.setItem('iceqube_rental', JSON.stringify(this.rental));
+
+        // Refresh Finance if open
+        if (document.getElementById('finance-view').style.display !== 'none') {
+            this.loadPnL(document.querySelector('.time-btn.active')?.id.replace('btn-', '') || 'mtd');
+        }
+    },
+
+    showUtilityModal() {
+        // Redundant with inline inputs but keeping for legacy or future complex edits
+        this.updateUtilitiesUI();
+    },
+
+    showRentalModal() {
+        // Redundant with inline inputs
+        this.updateRentalUI();
+    },
+    closeRentalModal() {
+        document.getElementById('rental-modal').style.display = 'none';
+    },
+
+    submitRental() {
+        const val = parseFloat(document.getElementById('input-rental-val').value) || 0;
+        this.rental = val;
+        localStorage.setItem('iceqube_rental', JSON.stringify(this.rental));
+
+        this.updateRentalUI();
+        this.closeRentalModal();
+
+        // Refresh Finance if open
+        if (document.getElementById('finance-view').style.display !== 'none') {
+            this.loadPnL(document.querySelector('.time-btn.active')?.id.replace('btn-', '') || 'mtd');
+        }
+
+        alert('Warehouse rent updated successfully!');
     }
 };
 
@@ -957,3 +1569,64 @@ style.textContent = `
 document.head.appendChild(style);
 
 document.addEventListener('DOMContentLoaded', () => admin.init());
+
+// Drawer Controls
+function openCustomerDrawer(customerId) {
+    // In a real app, you would fetch the customer data from Supabase using customerId here
+    // and populate the HTML fields dynamically before opening the drawer.
+    
+    // Update content based on customer (mock logic)
+    document.getElementById('drawer-customer-name').innerText = customerId;
+    if (customerId === 'Loft Living CDO') {
+        document.getElementById('drawer-customer-address').innerText = 'Premium Partner • Macabalan, CDO';
+        document.getElementById('drawer-contact-person').innerText = 'Ian';
+        document.getElementById('drawer-phone').innerText = '+63 917 123 4567';
+        document.getElementById('elite-toggle').checked = true;
+        document.getElementById('drawer-clv').innerText = '₱385,200';
+        document.getElementById('drawer-frequency').innerText = 'Every 1.8 days';
+        document.getElementById('drawer-churn-alert').style.display = 'none';
+    } else if (customerId === 'Fat Monk Coffee') {
+        document.getElementById('drawer-customer-address').innerText = 'Standard Account • Uptown CDO';
+        document.getElementById('drawer-contact-person').innerText = 'Sarah';
+        document.getElementById('drawer-phone').innerText = '+63 918 555 1234';
+        document.getElementById('elite-toggle').checked = false;
+        document.getElementById('drawer-clv').innerText = '₱142,500';
+        document.getElementById('drawer-frequency').innerText = 'Every 3.1 days';
+        document.getElementById('drawer-churn-alert').style.display = 'none';
+    } else if (customerId === 'The Backyard Grill') {
+        document.getElementById('drawer-customer-address').innerText = 'Standard Account • Kauswagan, CDO';
+        document.getElementById('drawer-contact-person').innerText = 'Chef Mike';
+        document.getElementById('drawer-phone').innerText = '+63 915 777 8888';
+        document.getElementById('elite-toggle').checked = false;
+        document.getElementById('drawer-clv').innerText = '₱42,800';
+        document.getElementById('drawer-frequency').innerText = 'Every 5.2 days (Slowing)';
+        document.getElementById('drawer-churn-alert').style.display = 'flex';
+    }
+
+    document.getElementById('customer-drawer-overlay').style.display = 'block';
+    // Small timeout ensures the display block renders before the CSS transition fires
+    setTimeout(() => {
+        document.getElementById('customer-drawer').classList.add('open');
+    }, 10);
+}
+
+function closeCustomerDrawer() {
+    document.getElementById('customer-drawer').classList.remove('open');
+    // Wait for slide animation to finish before hiding overlay
+    setTimeout(() => {
+        document.getElementById('customer-drawer-overlay').style.display = 'none';
+    }, 300);
+}
+
+// Elite Toggle Logic
+function toggleEliteStatus() {
+    const isElite = document.getElementById('elite-toggle').checked;
+    const customerName = document.getElementById('drawer-customer-name').innerText;
+    
+    if (isElite) {
+        console.log(`[SYSTEM] Upgrading ${customerName} to ELITE TIER.`);
+        // Here you would trigger an API call to Supabase to update the customer's tier
+    } else {
+        console.log(`[SYSTEM] Downgrading ${customerName} to STANDARD TIER.`);
+    }
+}
