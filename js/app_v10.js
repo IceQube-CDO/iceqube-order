@@ -1765,7 +1765,8 @@ const app = {
         const summaryDiv = document.getElementById('delivery-summary');
         const placeOrderBtn = document.getElementById('btn-payment-delivery');
 
-        const isContactValid = contact.length === 11 && contact.startsWith('09');
+        const digits = contact.replace(/\D/g, '');
+        const isContactValid = digits.length === 11 && digits.startsWith('09');
 
         if ((!pinLink.trim() && !lat) || !isContactValid) {
             summaryDiv.style.display = 'none';
@@ -1921,6 +1922,37 @@ const app = {
             };
         }
         
+        // Populate the Payment Summary container added in index.html
+        const summaryList = document.getElementById('payment-items-list');
+        if (summaryList) {
+            let html = '';
+            const fd = this.orderData.qty.fullDice;
+            const hd = this.orderData.qty.halfDice;
+            
+            if (fd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['3kg']}x Full-Dice (3kg)</span><span>₱${fd['3kg'] * (this.orderData.bulkState3kg ? 35 : 40)}</span></div>`;
+            if (fd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['1kg']}x Full-Dice (1kg)</span><span>₱${fd['1kg'] * (this.orderData.bulkState1kg ? 14 : 15)}</span></div>`;
+            if (hd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['3kg']}x Half-Dice (3kg)</span><span>₱${hd['3kg'] * (this.orderData.bulkState3kg ? 35 : 40)}</span></div>`;
+            if (hd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['1kg']}x Half-Dice (1kg)</span><span>₱${hd['1kg'] * (this.orderData.bulkState1kg ? 14 : 15)}</span></div>`;
+            
+            summaryList.innerHTML = html || '<p style="opacity:0.6;font-size:0.8rem;">No items selected</p>';
+        }
+
+        const subtotalEl = document.getElementById('payment-subtotal');
+        if (subtotalEl) subtotalEl.innerText = `₱${this.orderData.total}`;
+
+        const deliveryEl = document.getElementById('payment-delivery-fee');
+        if (deliveryEl) {
+            deliveryEl.innerText = this.orderData.logistics === 'Doorstep Delivery' ? 
+                (this.orderData.isManualReview ? 'TBD' : `₱${this.orderData.deliveryFee}`) : '₱0';
+        }
+
+        const totalEl = document.getElementById('payment-total');
+        let totalVal = this.orderData.total;
+        if (this.orderData.logistics === 'Doorstep Delivery' && !this.orderData.isManualReview) {
+            totalVal += this.orderData.deliveryFee;
+        }
+        if (totalEl) totalEl.innerText = `₱${totalVal}${this.orderData.isManualReview ? ' + TBD' : ''}`;
+
         let displayTotalStr = `₱${this.orderData.total}`;
         if (this.orderData.logistics === 'Doorstep Delivery') {
             if (this.orderData.isManualReview) {

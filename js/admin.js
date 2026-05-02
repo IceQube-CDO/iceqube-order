@@ -1,12 +1,28 @@
+// Ensure SUPABASE_CONFIG exists (may not be loaded on admin.html)
+if (typeof SUPABASE_CONFIG === 'undefined') {
+    var SUPABASE_CONFIG = { URL: '', ANON_KEY: '' };
+}
+
 const admin = {
+    _syncIntervalId: null,
     pin: '',
     correctPin: '2026', 
     manualEntries: JSON.parse(localStorage.getItem('iceqube_manual_cashflow') || '[]'),
+    consumables: JSON.parse(localStorage.getItem('iceqube_consumables') || JSON.stringify({
+        bags3kg: { current: 4200, max: 10000, unit: '' },
+        bags1kg: { current: 1150, max: 5000, unit: '' },
+        sealing: { current: 8, max: 20, unit: '' },
+        sanitizer: { current: 4.5, max: 10, unit: 'Liters' },
+        descaler: { current: 2, max: 5, unit: 'Bottles' }
+    })),
+    maintenanceLogs: JSON.parse(localStorage.getItem('iceqube_maintenance_logs') || '[]'),
 
     init() {
         console.log('--- COMMAND CENTER INITIALIZED (Bypass Mode) ---');
         this.updateAlertCenter([]);
         this.startDataSync();
+        this.updateConsumablesUI();
+        this.updateMaintenanceUI();
     },
 
     addPin(num) {
@@ -78,8 +94,9 @@ const admin = {
         // Initial fetch
         await this.fetchRealStats();
         
-        // Auto-refresh every 30 seconds
-        setInterval(() => this.fetchRealStats(), 30000);
+        // Auto-refresh every 30 seconds (prevent stacking intervals)
+        if (this._syncIntervalId) clearInterval(this._syncIntervalId);
+        this._syncIntervalId = setInterval(() => this.fetchRealStats(), 30000);
         
         // Add entrance animation
         this.animateCards();
@@ -88,8 +105,27 @@ const admin = {
     async fetchRealStats() {
         if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             console.log('Using mock data: Supabase not configured.');
-        console.log("🛠️ DEVELOPMENT MODE: Using Mock Data (Live Sync Disabled)");
-        this.renderMockStats();
+            console.log("🛠️ DEVELOPMENT MODE: Using Mock Data (Live Sync Disabled)");
+            this.renderMockStats();
+            return;
+        }
+
+        // TODO: Real Supabase fetch logic here
+        console.log('Fetching from Supabase...');
+        try {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc`, {
+                headers: {
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                }
+            });
+            if (!response.ok) throw new Error('Fetch failed');
+            const orders = await response.json();
+            this.updateDashboardUI(orders);
+        } catch (err) {
+            console.warn('Live fetch failed, falling back to mock:', err);
+            this.renderMockStats();
+        }
     },
 
     updateDashboardUI(orders) {
@@ -100,7 +136,7 @@ const admin = {
         this.updateOrderQueue(orders);
 
         // 2. Stats Calculation
-        const pending = orders.filter(o => o.delivery_status === 'Pending').length;
+        const pending = orders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
         const dispatched = orders.filter(o => o.delivery_status === 'Dispatched').length;
         const delivered = orders.filter(o => o.delivery_status === 'Delivered').length;
         
@@ -240,6 +276,9 @@ const admin = {
                 views[key].style.display = (key === viewId) ? 'grid' : 'none';
             }
         });
+        
+        if (viewId === 'assets') this.updateMaintenanceUI();
+        if (viewId === 'consumables') this.updateConsumablesUI();
         
         this.animateCards();
     },
@@ -403,18 +442,24 @@ const admin = {
     },
 
     updateOrderQueue(orders) {
-        const tbody = document.getElementById('order-queue-body');
-        const badge = document.getElementById('order-count-badge');
-        if (!tbody) return;
+        const pendingBody = document.getElementById('pending-dispatch-body');
+        const ledgerBody = document.getElementById('order-ledger-body');
+        const pendingBadge = document.getElementById('pending-count-badge');
+        const ledgerBadge = document.getElementById('ledger-count-badge');
+        
+        if (!pendingBody || !ledgerBody) return;
 
         // Force mock data if no live orders are present today
-        let displayOrders = (orders && orders.length > 0) ? orders : [
+        let allOrders = (orders && orders.length > 0) ? orders : [
             {
                 id: 'mock-1',
                 order_id: 'IQ-9750',
                 created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
                 customer_name: 'Loft Living CDO',
+                delivery_address: 'Macabalan, Cagayan de Oro City',
                 total_price: 2550,
+                delivery_fee: 50,
+                priority_fee: 20,
                 payment_method: 'GCash',
                 delivery_status: 'Dispatched',
                 rider: 'John',
@@ -425,59 +470,152 @@ const admin = {
                 order_id: 'IQ-9751',
                 created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
                 customer_name: 'Fat Monk Coffee',
+                delivery_address: 'Uptown CDO, Xavier Estates',
                 total_price: 850,
+                delivery_fee: 80,
+                priority_fee: 0,
                 payment_method: 'Cash',
                 delivery_status: 'Pending',
                 rider: 'Unassigned',
                 items: { halfDice: { '3kg': 5 } }
+            },
+            {
+                id: 'mock-3',
+                order_id: 'IQ-9752',
+                created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+                customer_name: 'Zion Business Center',
+                delivery_address: 'Divisoria, RN Pelaez Blvd',
+                total_price: 1250,
+                delivery_fee: 40,
+                priority_fee: 0,
+                payment_method: 'GCash',
+                delivery_status: 'Delivered',
+                rider: 'Mark',
+                items: { fullDice: { '1kg': 20 } }
             }
         ];
 
-        badge.innerText = `${displayOrders.length} Orders`;
+        const pendingOrders = allOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance');
+        const ledgerOrders = allOrders.filter(o => o.delivery_status !== 'Pending' && o.delivery_status !== 'Awaiting Acceptance');
+
+        pendingBadge.innerText = `${pendingOrders.length} Pending`;
+        ledgerBadge.innerText = `${ledgerOrders.length} Orders`;
+        
         const ridersList = ['Unassigned', 'John', 'Mark', 'Dave', 'Rico'];
 
-        console.log("🚀 ORDER QUEUE RENDERED with", displayOrders.length, "rows.");
-
-        tbody.innerHTML = displayOrders.map(o => {
+        // Render Pending Table
+        pendingBody.innerHTML = pendingOrders.map(o => {
             const timeStr = new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            // Format Items
-            let itemsStr = '';
-            if (o.items) {
-                const fd = o.items.fullDice || {};
-                const hd = o.items.halfDice || {};
-                const parts = [];
-                if (fd['3kg']) parts.push(`${fd['3kg']}×3kg (F)`);
-                if (fd['1kg']) parts.push(`${fd['1kg']}×1kg (F)`);
-                if (hd['3kg']) parts.push(`${hd['3kg']}×3kg (H)`);
-                if (hd['1kg']) parts.push(`${hd['1kg']}×1kg (H)`);
-                itemsStr = parts.join(', ');
-            }
+            const itemsStr = this.formatOrderItems(o);
+            const isAwaiting = o.delivery_status === 'Awaiting Acceptance';
+
+            return `
+                <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
+                    <td>${timeStr}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">#${o.order_id}</td>
+                    <td><b>${o.customer_name}</b></td>
+                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
+                    <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
+                    <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
+                    <td>
+                        <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
+                               onchange="admin.updatePriorityFee('${o.id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
+                    </td>
+                    <td>
+                        <select class="status-select" onchange="admin.assignRider('${o.id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
+                            ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td style="text-align: right;">
+                        ${isAwaiting ? 
+                            `<span class="status-badge status-awaiting">Awaiting Rider...</span>` : 
+                            `<button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id}', '${o.rider}', '${o.order_id}')">Dispatch</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // Render Ledger Table (Uneditable)
+        ledgerBody.innerHTML = ledgerOrders.map(o => {
+            const timeStr = new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const itemsStr = this.formatOrderItems(o);
 
             return `
                 <tr>
                     <td>${timeStr}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">#${o.order_id}</td>
                     <td><b>${o.customer_name}</b></td>
-                    <td style="font-size: 0.75rem; color: #94a3b8;">${itemsStr}</td>
+                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
+                    <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${parseFloat(o.total_price).toLocaleString()}</td>
-                    <td><span class="source-auto">${o.payment_method}</span></td>
-                    <td>
-                        <select class="status-select" onchange="admin.assignRider('${o.id}', this.value)">
-                            ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td>
-                        <select class="status-select" onchange="admin.updateOrderStatus('${o.id}', this.value)">
-                            <option value="Pending" ${o.delivery_status === 'Pending' ? 'selected' : ''}>Pending</option>
-                            <option value="Dispatched" ${o.delivery_status === 'Dispatched' ? 'selected' : ''}>Dispatched</option>
-                            <option value="Delivered" ${o.delivery_status === 'Delivered' ? 'selected' : ''}>Delivered</option>
-                            <option value="Cancelled" ${o.delivery_status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
-                        </select>
-                    </td>
+                    <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono'; color: #f59e0b;">₱${(o.priority_fee || 0).toLocaleString()}</td>
+                    <td><span style="color: #94a3b8; font-size: 0.85rem;">👤 ${o.rider || 'Unassigned'}</span></td>
+                    <td><span class="status-badge" style="opacity: 0.8;">${o.delivery_status}</span></td>
                 </tr>
             `;
         }).join('');
+    },
+
+    async updatePriorityFee(id, fee) {
+        if (id.startsWith('mock')) {
+            console.log(`Mock Priority Fee updated for ${id}: ₱${fee}`);
+            return;
+        }
+        
+        try {
+            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ priority_fee: parseFloat(fee) })
+            });
+            console.log('✅ Priority Fee Updated');
+        } catch (err) {
+            console.error('Update Failed:', err);
+        }
+    },
+
+    formatOrderItems(o) {
+        if (!o.items) return '';
+        const fd = o.items.fullDice || {};
+        const hd = o.items.halfDice || {};
+        const parts = [];
+        if (fd['3kg']) parts.push(`${fd['3kg']}×3kg (F)`);
+        if (fd['1kg']) parts.push(`${fd['1kg']}×1kg (F)`);
+        if (hd['3kg']) parts.push(`${hd['3kg']}×3kg (H)`);
+        if (hd['1kg']) parts.push(`${hd['1kg']}×1kg (H)`);
+        return parts.join(', ');
+    },
+
+    async dispatchOrder(id, rider, orderId) {
+        if (rider === 'Unassigned') {
+            alert('Please assign a rider before dispatching.');
+            return;
+        }
+
+        console.log(`🚀 Dispatching Order ${orderId} to ${rider}...`);
+        
+        // 1. Simulate SMS Sending
+        console.log(`📱 SMS SENT: "IceQube Order ${orderId} assigned to you. Please check your app to Accept/Decline."`);
+        
+        // 2. Update status to 'Awaiting Acceptance'
+        if (id.startsWith('mock')) {
+            alert(`Order ${orderId} sent to ${rider}'s dashboard!`);
+            // For mock demo, we'll just update status locally if it were a real state
+            return;
+        }
+
+        try {
+            await this.updateOrderStatus(id, 'Awaiting Acceptance');
+            alert(`Order ${orderId} dispatched! Notification sent to ${rider}.`);
+        } catch (err) {
+            console.error('Dispatch failed:', err);
+        }
     },
 
     async assignRider(id, riderName) {
@@ -629,6 +767,180 @@ const admin = {
         } else {
             notifList.innerHTML = '<div style="padding: 30px; text-align: center; color: #64748b; font-size: 0.8rem;">No active alerts. All systems nominal.</div>';
         }
+    },
+
+    showRestockModal() {
+        document.getElementById('restock-modal').style.display = 'flex';
+    },
+
+    closeRestockModal() {
+        document.getElementById('restock-modal').style.display = 'none';
+    },
+
+    submitRestock() {
+        const itemId = document.getElementById('restock-item').value;
+        const qty = parseFloat(document.getElementById('restock-qty').value);
+        const cost = parseFloat(document.getElementById('restock-cost').value);
+        const note = document.getElementById('restock-note').value;
+
+        if (isNaN(qty) || qty <= 0) {
+            alert('Please enter a valid quantity.');
+            return;
+        }
+
+        // 1. Update Consumables State
+        if (this.consumables[itemId]) {
+            this.consumables[itemId].current += qty;
+            // Cap at max? Maybe not, maybe max is just for the progress bar
+            // this.consumables[itemId].current = Math.min(this.consumables[itemId].current, this.consumables[itemId].max);
+        }
+
+        // 2. Save Consumables
+        localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+
+        // 3. Record Cashflow if cost provided
+        if (!isNaN(cost) && cost > 0) {
+            const entry = {
+                timestamp: new Date().toISOString(),
+                category: 'Packaging',
+                description: `Restock: ${document.getElementById('restock-item').options[document.getElementById('restock-item').selectedIndex].text}${note ? ' (' + note + ')' : ''}`,
+                type: 'OUT',
+                amount: cost,
+                source: 'MANUAL'
+            };
+            this.manualEntries.push(entry);
+            this.saveManualEntries();
+        }
+
+        // 4. Update UI
+        this.updateConsumablesUI();
+        this.fetchRealStats(); // This updates cashflow view
+        
+        // 5. Cleanup
+        this.closeRestockModal();
+        document.getElementById('restock-qty').value = '';
+        document.getElementById('restock-cost').value = '';
+        document.getElementById('restock-note').value = '';
+        
+        alert('Restock logged successfully!');
+    },
+
+    updateConsumablesUI() {
+        Object.keys(this.consumables).forEach(key => {
+            const data = this.consumables[key];
+            const stockEl = document.getElementById(`stock-${key}`);
+            const barEl = document.getElementById(`bar-${key}`);
+            const warnEl = document.getElementById(`warn-${key}`);
+
+            if (stockEl) {
+                if (data.unit) {
+                    stockEl.innerText = `${data.current} ${data.unit}`;
+                } else {
+                    stockEl.innerText = `${data.current.toLocaleString()} / ${data.max.toLocaleString()}`;
+                }
+            }
+
+            if (barEl) {
+                const percent = Math.min((data.current / data.max) * 100, 100);
+                barEl.style.width = `${percent}%`;
+                
+                // Color logic
+                if (percent < 15) barEl.style.background = '#ef4444';
+                else if (percent < 40) barEl.style.background = '#f59e0b';
+                else barEl.style.background = '#22c55e';
+            }
+
+            if (warnEl) {
+                const percent = (data.current / data.max) * 100;
+                warnEl.style.display = percent < 15 ? 'block' : 'none';
+            }
+        });
+    },
+
+    showMaintenanceModal() {
+        document.getElementById('maintenance-modal').style.display = 'flex';
+    },
+
+    closeMaintenanceModal() {
+        document.getElementById('maintenance-modal').style.display = 'none';
+    },
+
+    submitMaintenance() {
+        const asset = document.getElementById('maint-asset').value;
+        const task = document.getElementById('maint-task').value;
+        const cost = parseFloat(document.getElementById('maint-cost').value);
+        const nextDate = document.getElementById('maint-next').value;
+        const note = document.getElementById('maint-note').value;
+
+        if (!asset || !task) {
+            alert('Please select an asset and task.');
+            return;
+        }
+
+        const log = {
+            timestamp: new Date().toISOString(),
+            asset,
+            task,
+            cost: cost || 0,
+            nextDate: nextDate || 'TBD',
+            note
+        };
+
+        // 1. Save Log
+        this.maintenanceLogs.push(log);
+        localStorage.setItem('iceqube_maintenance_logs', JSON.stringify(this.maintenanceLogs));
+
+        // 2. Record Cashflow if cost > 0
+        if (cost > 0) {
+            const entry = {
+                timestamp: new Date().toISOString(),
+                category: 'Maintenance',
+                description: `${task}: ${asset}${note ? ' (' + note + ')' : ''}`,
+                type: 'OUT',
+                amount: cost,
+                source: 'MANUAL'
+            };
+            this.manualEntries.push(entry);
+            this.saveManualEntries();
+        }
+
+        // 3. Update UI
+        this.updateMaintenanceUI();
+        this.fetchRealStats(); // Update cashflow view
+
+        // 4. Cleanup
+        this.closeMaintenanceModal();
+        document.getElementById('maint-cost').value = '';
+        document.getElementById('maint-next').value = '';
+        document.getElementById('maint-note').value = '';
+
+        alert('Maintenance log saved successfully!');
+    },
+
+    updateMaintenanceUI() {
+        const tbody = document.getElementById('maintenance-log-body');
+        if (!tbody) return;
+
+        if (this.maintenanceLogs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 30px;">No maintenance logs recorded yet.</td></tr>';
+            return;
+        }
+
+        // Sort by date (descending)
+        const sortedLogs = [...this.maintenanceLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        tbody.innerHTML = sortedLogs.map(log => {
+            const dateStr = new Date(log.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+            return `
+                <tr>
+                    <td>${dateStr}</td>
+                    <td><b>${log.asset}</b></td>
+                    <td><span class="status-badge" style="background: rgba(255,255,255,0.05); color: #f8fafc; border: 1px solid rgba(255,255,255,0.1);">${log.task}</span></td>
+                    <td style="font-family: 'JetBrains Mono';">₱${log.cost.toLocaleString()}</td>
+                    <td style="color: #94a3b8; font-size: 0.85rem;">${log.nextDate !== 'TBD' ? new Date(log.nextDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'TBD'}</td>
+                </tr>
+            `;
+        }).join('');
     }
 };
 

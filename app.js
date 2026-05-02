@@ -1474,11 +1474,12 @@ const app = {
         const pinLink = document.getElementById('delivery-maps').value;
         const lat = this.orderData.deliveryDetails.lat;
         const lng = this.orderData.deliveryDetails.lng;
-        const contact = document.getElementById('delivery-contact').value;
         const summaryDiv = document.getElementById('delivery-summary');
         const placeOrderBtn = document.getElementById('btn-payment-delivery');
 
-        const isContactValid = contact.length === 11 && contact.startsWith('09');
+        const rawContact = document.getElementById('delivery-contact').value;
+        const cleanContact = rawContact.replace(/\s+/g, '');
+        const isContactValid = cleanContact.length === 11 && cleanContact.startsWith('09');
         const locationText = document.getElementById('delivery-location').value.trim();
 
         if (!locationText || ((!pinLink.trim() && !lat) || !isContactValid)) {
@@ -1523,6 +1524,39 @@ const app = {
         this.orderData.deliveryFee = fee + trafficBonus;
         this.orderData.isManualReview = isManualReview;
         this.orderData.deliveryZone = zone;
+
+        // Populate detailed items list
+        let itemsHtml = '';
+        const types = { 'fullDice': 'Full Dice', 'halfDice': 'Half Dice' };
+        
+        // Helper to calculate line item price based on current bulk states
+        const getLinePrice = (key, size, q) => {
+            if (size === '3kg') {
+                if (this.orderData.bulkState3kg) return q * 35;
+                if (this.orderData.bonusState3kg) {
+                    // This is the tricky 14->15 bag case. 
+                    // In this view, we just show the standard price as it's a detail list.
+                    return q * 40; 
+                }
+                return q * 40;
+            } else {
+                if (this.orderData.bulkState1kg) return q * 14;
+                return q * 15;
+            }
+        };
+
+        for (const [key, label] of Object.entries(types)) {
+            ['3kg', '1kg'].forEach(size => {
+                const q = this.orderData.qty[key][size];
+                if (q > 0) {
+                    itemsHtml += `<div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.95rem;">
+                        <span style="font-weight: 500;">${q} × ${size} ${label}</span>
+                        <span style="color: var(--text-secondary);">₱${getLinePrice(key, size, q)}</span>
+                    </div>`;
+                }
+            });
+        }
+        document.getElementById('summary-items-list').innerHTML = itemsHtml || '<p style="font-size: 0.9rem; opacity: 0.6;">No items selected</p>';
 
         summaryDiv.style.display = 'block';
         document.getElementById('summary-subtotal').innerText = `₱${this.orderData.total}`;
@@ -1636,13 +1670,40 @@ const app = {
         }
         
         let displayTotalStr = `₱${this.orderData.total}`;
+        let feeStr = `₱${this.orderData.deliveryFee || 0}`;
+        
         if (this.orderData.logistics === 'Doorstep Delivery') {
             if (this.orderData.isManualReview) {
                 displayTotalStr = `₱${this.orderData.total} + TBD`;
+                feeStr = 'TBD';
             } else {
                 displayTotalStr = `₱${this.orderData.total + this.orderData.deliveryFee}`;
             }
+        } else {
+            feeStr = '₱0 (Pickup)';
         }
+
+        // Populate Payment Step Summary
+        document.getElementById('payment-subtotal').innerText = `₱${this.orderData.total}`;
+        document.getElementById('payment-delivery-fee').innerText = feeStr;
+        document.getElementById('payment-total').innerText = displayTotalStr;
+        
+        // Items list for payment step
+        let itemsHtml = '';
+        const types = { 'fullDice': 'Full Dice', 'halfDice': 'Half Dice' };
+        for (const [key, label] of Object.entries(types)) {
+            ['3kg', '1kg'].forEach(size => {
+                const q = this.orderData.qty[key][size];
+                if (q > 0) {
+                    itemsHtml += `<div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.9rem;">
+                        <span>${q} × ${size} ${label}</span>
+                        <span>₱${(size === '3kg') ? (this.orderData.bulkState3kg ? q*35 : q*40) : (this.orderData.bulkState1kg ? q*14 : q*15)}</span>
+                    </div>`;
+                }
+            });
+        }
+        document.getElementById('payment-items-list').innerHTML = itemsHtml || 'No items';
+
         document.getElementById('btn-finish-order').innerText = `Place Order & Pay ${displayTotalStr}`;
         
         this.nextStep();

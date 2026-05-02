@@ -177,7 +177,7 @@
         }
         .step-body {
             padding: 1rem;
-            padding-bottom: 5rem; /* Room for confirm button */
+            padding-bottom: 3rem; /* Room for confirm button */
             max-width: 100%;
             overflow-x: hidden;
         }
@@ -360,20 +360,15 @@
                                     <div class="counter-controls">
                                         <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', -1)">−</button>
                                         <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-halfDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '1kg', this.value)">
+                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', 1)">+</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bulk-promo-box promo-info" style="margin-top: 1.5rem;">
-                        <span class="promo-icon">💡</span>
-                        <p class="bulk-promo-text">Wholesale: 15+ 3kg (₱35) or 40+ 1kg (₱14)</p>
-                    </div>
-
                     <div class="qty-sticky-footer">
                         <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled>Confirm Order (₱0)</button>
-                        <button class="btn-link" onclick="app.goToAbout()">What's the difference?</button>
                     </div>
                 </div>
             </section>
@@ -510,9 +505,9 @@
                     </div>
 
                     <div id="logistics-delivery" class="logistics-subview">
-                        <h2 style="font-size: 1.2rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.5rem;">Delivery Details</h2>
-                        <p class="subtitle">Enter your details for doorstep delivery.</p>
-                    <div class="input-stack" style="margin-top: 2rem;">
+                        <h2 style="font-size: 1.2rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.25rem;">Delivery Details</h2>
+                        <p class="subtitle" style="margin-bottom: 0.25rem;">Enter your details for doorstep delivery.</p>
+                    <div class="input-stack" style="margin-top: 0.75rem;">
                         <!-- Location Input -->
                         <div class="premium-input-group">
                             <div class="input-icon-left">
@@ -558,8 +553,11 @@
                         </div>
                     </div>
 
-                    <div id="delivery-summary" style="display: none; margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
-                        <h3 style="margin-bottom: 0.75rem;">Order Summary</h3>
+                    <div id="delivery-summary" style="display: none; margin-top: 0.75rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 0.75rem;">Order Details</h3>
+                        <div id="summary-items-list" style="margin-bottom: 1rem; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.75rem;">
+                            <!-- Populated by JS -->
+                        </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span style="opacity: 0.8;">Subtotal:</span>
                             <span id="summary-subtotal" style="font-weight: 600;">₱0</span>
@@ -578,7 +576,7 @@
                         </div>
                     </div>
 
-                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.goToPayment()" style="margin-top: 2rem;" disabled>
+                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.goToPayment()" style="margin-top: 1rem;" disabled>
                         Continue to Payment
                     </button>
                 </div>
@@ -703,6 +701,25 @@
 
                     <div id="cod-verified-msg" style="display: none; color: #166534; font-weight: 600; margin-top: 0.5rem; font-size: 0.875rem;">
                         ✅ Number Verified. Order is being prepared.
+                    </div>
+                </div>
+
+                <div id="payment-summary" style="margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: var(--bg-secondary);">
+                    <h3 style="margin-bottom: 0.75rem;">Order Details</h3>
+                    <div id="payment-items-list" style="margin-bottom: 1rem; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.75rem;">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                        <span style="opacity: 0.8;">Subtotal:</span>
+                        <span id="payment-subtotal" style="font-weight: 600;">₱0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                        <span style="opacity: 0.8;">Delivery Fee:</span>
+                        <span id="payment-delivery-fee" style="font-weight: 600;">₱0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                        <span style="font-weight: 600;">Total Amount:</span>
+                        <span id="payment-total" style="font-weight: bold; font-size: 1.1rem; color: var(--accent);">₱0</span>
                     </div>
                 </div>
 
@@ -926,7 +943,7 @@
         </div>
     </main>
 
-    <div id="map-overlay" class="modal-overlay map-overlay-fullscreen" style="background: rgba(241, 245, 249, 0.98);">
+    <div id="map-overlay" class="modal-overlay map-overlay-fullscreen">
         <div class="map-overlay-content premium-hub-layout">
             <div class="map-header-minimal">
                 <button class="btn-back-icon" onclick="app.closeMapOverlay()">
@@ -936,10 +953,13 @@
                     <h2 style="font-size: 1.1rem; margin-bottom: 0; font-weight: 800; letter-spacing: -0.01em;">Select Location</h2>
                     <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Pin your delivery point precisely</p>
                 </div>
+                <button class="btn-locate-minimal" onclick="app.openExternalGoogleMaps()" title="Open in Google Maps">
+                    <img src="https://www.google.com/images/branding/product/2x/maps_96dp.png" alt="Google Maps" style="width: 22px; height: 22px;">
+                </button>
                 <button class="btn-locate-minimal" onclick="app.geolocateUser()" title="Use My Location">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
                 </button>
-                <button id="map-type-toggle" class="btn-locate-minimal" onclick="app.toggleMapType()" title="Satellite View" style="margin-right: 0; right: 10px;">
+                <button id="map-type-toggle" class="btn-locate-minimal" onclick="app.toggleMapType()" title="Satellite View" style="margin-right: 0;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 </button>
             </div>
@@ -969,10 +989,7 @@
                 </div>
                 
                 <div class="map-actions-grid">
-                    <button id="btn-confirm-map" class="btn-primary hub-btn" onclick="app.confirmMapLocation()">Confirm This Location</button>
-                    <button class="btn-google-maps-minimal" onclick="app.openExternalGoogleMaps()" title="Open in Google Maps">
-                        <img src="https://www.google.com/images/branding/product/2x/maps_96dp.png" alt="Google Maps" style="width: 20px; height: 20px;">
-                    </button>
+                    <button id="btn-confirm-map" class="btn-primary hub-btn" onclick="app.confirmMapLocation()" style="width: 100%;">Confirm This Location</button>
                 </div>
             </div>
         </div>

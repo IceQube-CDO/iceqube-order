@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IceQube CDO | Rider App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --rider-bg: #020617;
+            --rider-card: rgba(15, 23, 42, 0.8);
+            --rider-accent: #22c55e;
+            --rider-error: #ef4444;
+            --rider-text: #f8fafc;
+        }
+
+        body {
+            background: var(--rider-bg);
+            color: var(--rider-text);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            height: 32px;
+        }
+
+        .container {
+            padding: 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--rider-accent);
+            box-shadow: 0 0 10px var(--rider-accent);
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--rider-card);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .card-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .order-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0ea5e9;
+            margin-bottom: 0.5rem;
+        }
+
+        .customer-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .customer-addr {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .items-list {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            font-size: 0.95rem;
+        }
+
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--rider-accent);
+            margin-bottom: 1.5rem;
+        }
+
+        /* --- Buttons --- */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 16px;
+            border: none;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-accept {
+            background: var(--rider-accent);
+            color: white;
+            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2);
+        }
+
+        .btn-decline {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--rider-error);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-delivered {
+            background: #0ea5e9;
+            color: white;
+            width: 100%;
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* --- Empty State --- */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #475569;
+            padding: 2rem;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* --- Map Simulation --- */
+        .map-box {
+            height: 120px;
+            background: #0f172a;
+            border-radius: 16px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            font-size: 0.8rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-box::after {
+            content: '📍';
+            font-size: 2rem;
+            filter: drop-shadow(0 0 10px #0ea5e9);
+        }
+
+        /* --- Pulse Animation --- */
+        .incoming-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+            background-size: 200% 100%;
+            animation: flow 2s linear infinite;
+        }
+
+        @keyframes flow {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        /* Login Overlay */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--rider-bg);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .rider-select {
+            width: 100%;
+            max-width: 300px;
+            background: var(--rider-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 1rem;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-overlay">
+        <img src="assets/logo.png" alt="IceQube" style="height: 60px; margin-bottom: 2rem;">
+        <h1 style="margin: 0 0 2rem 0; font-size: 1.5rem; text-align: center;">Rider Dashboard</h1>
+        <p style="color: #64748b; margin-bottom: 1rem;">Select your name to login:</p>
+        <select id="rider-name-select" class="rider-select">
+            <option value="John">John</option>
+            <option value="Mark">Mark</option>
+            <option value="Dave">Dave</option>
+            <option value="Rico">Rico</option>
+        </select>
+        <button class="btn btn-accept" style="max-width: 300px; width: 100%;" onclick="login()">Enter Dashboard</button>
+    </div>
+
+    <header>
+        <img src="assets/logo.png" alt="IceQube" class="logo">
+        <div id="rider-status" class="status-header">
+            <span class="status-dot"></span>
+            <span id="display-rider-name">Rider Name</span>
+        </div>
+    </header    <div class="container" id="main-content">
+        <!-- INCOMING ORDER -->
+        <div id="incoming-order" style="display: none;">
+            <div class="card" style="border: 2px solid #f59e0b; box-shadow: 0 0 30px rgba(245, 158, 11, 0.15);">
+                <div class="incoming-glow"></div>
+                <span class="card-label" style="color: #f59e0b;">⚡ New Delivery Request</span>
+                <div class="order-id">#IQ-9751</div>
+                <div class="customer-name">Fat Monk Coffee</div>
+                <div class="customer-addr">📍 Uptown CDO, Xavier Estates</div>
+                
+                <div class="items-list">
+                    5×3kg Half-Dice (H)
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">
+                    <span>Delivery Fee:</span>
+                    <span>₱80.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; color: #f59e0b; font-weight: 700;">
+                    <span>Priority Tip:</span>
+                    <span>₱20.00</span>
+                </div>
+
+                <div class="price-tag">Total: ₱950.00</div>
+
+                <div class="btn-group">
+                    <button class="btn btn-decline" onclick="declineOrder()">Decline</button>
+                    <button class="btn btn-accept" onclick="acceptOrder()">Accept Order</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIVE DELIVERY -->
+        <div id="active-delivery" style="display: none;">
+            <div class="card">
+                <span class="card-label">📍 Active Delivery</span>
+                <div class="map-box">
+                    <!-- Map simulation -->
+                    <div style="position: absolute; inset: 0; background: url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/124.74,8.48,13,0/400x120?access_token=YOUR_TOKEN'); background-size: cover; opacity: 0.4;"></div>
+                </div>
+                
+                <div class="order-id" id="active-id">#IQ-9750</div>
+                <div class="customer-name" id="active-customer">Loft Living CDO</div>
+                <div class="customer-addr" id="active-addr">📍 Macabalan, Cagayan de Oro City</div>
+
+                <div class="items-list" id="active-items">
+                    10×3kg Full-Dice (F)
+                </div>
+
+                <div id="fee-breakdown" style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">
+                        <span>Items Total:</span>
+                        <span id="active-items-price">₱2,550.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">
+                        <span>Delivery Fee:</span>
+                        <span id="active-delivery-fee">₱50.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #f59e0b; font-weight: 700;">
+                        <span>Priority Tip:</span>
+                        <span id="active-priority-fee">₱20.00</span>
+                    </div>
+                </div>
+
+                <div class="price-tag" id="active-price">Collect: ₱2,620.00</div>
+
+                <button class="btn btn-delivered" onclick="completeOrder()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    Mark as Delivered
+                </button>
+            </div>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div id="empty-state" class="empty-state">
+            <div class="empty-icon">🛵</div>
+            <h3>Waiting for Orders</h3>
+            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Stay online to receive new delivery assignments from the Control Room.</p>
+        </div>
+    </div>
+
+    <script>
+        let currentRider = '';
+        
+        function login() {
+            currentRider = document.getElementById('rider-name-select').value;
+            document.getElementById('display-rider-name').innerText = currentRider;
+            document.getElementById('login-overlay').style.display = 'none';
+            
+            // Simulate incoming order for demo purposes
+            if (currentRider === 'John') {
+                setTimeout(() => {
+                    document.getElementById('empty-state').style.display = 'none';
+                    document.getElementById('incoming-order').style.display = 'block';
+                }, 1000);
+            }
+        }
+
+        function acceptOrder() {
+            document.getElementById('incoming-order').style.display = 'none';
+            document.getElementById('active-delivery').style.display = 'block';
+            
+            // Update Active Order Details
+            document.getElementById('active-id').innerText = '#IQ-9751';
+            document.getElementById('active-customer').innerText = 'Fat Monk Coffee';
+            document.getElementById('active-addr').innerText = '📍 Uptown CDO, Xavier Estates';
+            document.getElementById('active-items').innerText = '5×3kg Half-Dice (H)';
+            
+            document.getElementById('active-items-price').innerText = '₱850.00';
+            document.getElementById('active-delivery-fee').innerText = '₱80.00';
+            document.getElementById('active-priority-fee').innerText = '₱20.00';
+            document.getElementById('active-price').innerText = 'Collect: ₱950.00';
+
+            console.log("📡 Order Accepted by " + currentRider);
+        }ted by " + currentRider);
+            // In real app, this would PATCH status to 'Dispatched' in Supabase
+        }
+
+        function declineOrder() {
+            document.getElementById('incoming-order').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'flex';
+            console.log("📡 Order Declined by " + currentRider);
+            // In real app, this would PATCH rider to 'Unassigned' and status to 'Pending'
+        }
+
+        function completeOrder() {
+            if (confirm("Confirm delivery completed?")) {
+                document.getElementById('active-delivery').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'flex';
+                alert("Delivery Completed! Great job.");
+                console.log("📡 Order Delivered by " + currentRider);
+                // In real app, this would PATCH status to 'Delivered'
+            }
+        }
+    </script>
+</body>
+</html>
