@@ -4,50 +4,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IceQube CDO | Rider App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --rider-bg: #020617;
-            --rider-card: rgba(15, 23, 42, 0.8);
-            --rider-accent: #22c55e;
-            --rider-error: #ef4444;
-            --rider-text: #f8fafc;
+            /* DARK MODE (Default) */
+            --rider-bg: #0f172a;
+            --rider-card: #1e293b;
+            --rider-accent: #38bdf8;
+            --rider-text: #f1f5f9;
+            --rider-text-main: #ffffff;
+            --rider-label: #94a3b8;
+            --rider-blue: #0284c7;
+            --rider-red: #ef4444;
+            --rider-green: #22c55e;
+            --rider-surface: rgba(0,0,0,0.2);
+            --rider-border: rgba(255,255,255,0.05);
+            --rider-card-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            --surface-gradient: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(56, 189, 248, 0.05) 100%);
+            --tab-active-bg: rgba(56, 189, 248, 0.15);
+        }
+
+        /* LIGHT THEME (Class-based override or Auto) */
+        :root.light-theme {
+            --rider-bg: #f8fafc;
+            --rider-card: #ffffff;
+            --rider-accent: #0284c7;
+            --rider-text: #0f172a;
+            --rider-text-main: #0f172a;
+            --rider-label: #64748b;
+            --rider-blue: #0284c7;
+            --rider-red: #dc2626;
+            --rider-green: #16a34a;
+            --rider-surface: #f1f5f9;
+            --rider-border: #e2e8f0;
+            --rider-card-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            --surface-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(2, 132, 199, 0.02) 100%);
+            --tab-active-bg: #ffffff;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root:not(.dark-theme) {
+                --rider-bg: #f8fafc;
+                --rider-card: #ffffff;
+                --rider-accent: #0284c7;
+                --rider-text: #0f172a;
+                --rider-text-main: #0f172a;
+                --rider-label: #64748b;
+                --rider-blue: #0284c7;
+                --rider-red: #dc2626;
+                --rider-green: #16a34a;
+                --rider-surface: #f1f5f9;
+                --rider-border: #e2e8f0;
+                --rider-card-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+                --surface-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(2, 132, 199, 0.02) 100%);
+                --tab-active-bg: #ffffff;
+            }
+        }
+
+        html {
+            background: var(--rider-bg);
         }
 
         body {
             background: var(--rider-bg);
             color: var(--rider-text);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            margin: 0 auto;
             padding: 0;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            max-width: 480px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            position: relative;
+            overflow-x: hidden;
         }
 
         header {
-            padding: 1.5rem;
+            padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
         .logo {
-            height: 32px;
-        }
-
-        .container {
-            padding: 1.5rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
+            height: 28px;
+            filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.5));
         }
 
         .status-header {
@@ -58,20 +107,153 @@
             color: #94a3b8;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--rider-text-main);
+            transition: .4s;
             border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--rider-accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Dashboard Earnings Carousel */
+        .earnings-carousel-container {
+            width: 100%;
+            overflow-x: auto;
+            display: flex;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE/Edge */
+            background: linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .earnings-carousel-container::-webkit-scrollbar { display: none; } /* Safari/Chrome */
+
+        .earnings-panel {
+            min-width: 100%;
+            scroll-snap-align: start;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            position: relative;
+        }
+        .earnings-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .earnings-amount {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--rider-accent);
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+        
+        .carousel-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        .dot.active {
             background: var(--rider-accent);
-            box-shadow: 0 0 10px var(--rider-accent);
+            width: 12px;
+            border-radius: 4px;
+        }
+
+        /* Tabs */
+        .rider-tabs {
+            display: flex;
+            background: var(--rider-surface);
+            padding: 0.5rem;
+            margin: 1rem 1.5rem 0;
+            border-radius: 12px;
+            border: 1px solid var(--rider-border);
+            gap: 5px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Outfit', sans-serif;
+        }
+        .tab-btn.active {
+            background: var(--tab-active-bg);
+            color: var(--rider-accent);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .container {
+            padding: 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .tab-content.active {
+            display: flex;
         }
 
         /* --- Cards --- */
         .card {
             background: var(--rider-card);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--rider-border);
+            box-shadow: var(--rider-card-shadow);
             position: relative;
             overflow: hidden;
             animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -82,50 +264,145 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
+        .card-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
         .card-label {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: #64748b;
-            margin-bottom: 1rem;
-            display: block;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-badge {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--rider-accent);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        
+        .time-badge.alarm {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--rider-error);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            animation: pulse-alarm 2s infinite;
+        }
+
+        @keyframes pulse-alarm {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         .order-id {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #0ea5e9;
-            margin-bottom: 0.5rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--rider-label);
+            margin-bottom: 2px;
+            letter-spacing: 0.05em;
         }
 
         .customer-name {
-            font-size: 1.25rem;
-            font-weight: 700;
+            font-size: 1.6rem;
+            font-weight: 800;
             margin-bottom: 0.25rem;
+            color: var(--rider-text-main);
+            line-height: 1.2;
         }
 
         .customer-addr {
             font-size: 0.9rem;
-            color: #94a3b8;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            color: var(--rider-label);
+            margin-bottom: 1rem;
         }
 
+        .contact-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-btn {
+            background: rgba(56, 189, 248, 0.05);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: var(--rider-text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .contact-btn:hover { background: rgba(56, 189, 248, 0.15); }
+        .contact-btn.map { background: rgba(56, 189, 248, 0.15); color: var(--rider-accent); border-color: rgba(56, 189, 248, 0.4); }
+
         .items-list {
-            margin: 1.5rem 0;
-            padding: 1rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            font-size: 0.95rem;
+            padding: 1.25rem;
+            background: var(--surface-gradient);
+            border-radius: 16px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .items-list::after {
+            content: "ICE ORDER";
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background: var(--rider-accent);
+            color: #0f172a;
+            font-size: 0.65rem;
+            font-weight: 900;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .payment-method {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #1e293b;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .price-tag {
             font-size: 1.5rem;
             font-weight: 800;
             color: var(--rider-accent);
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
             margin-bottom: 1.5rem;
         }
 
@@ -138,39 +415,102 @@
         .btn {
             flex: 1;
             padding: 1rem;
-            border-radius: 16px;
+            border-radius: 12px;
             border: none;
             font-weight: 800;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            font-family: 'Outfit', sans-serif;
         }
 
         .btn-accept {
             background: var(--rider-accent);
-            color: white;
-            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2);
+            color: #0f172a;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
         }
 
         .btn-decline {
             background: rgba(239, 68, 68, 0.1);
             color: var(--rider-error);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
         .btn-delivered {
-            background: #0ea5e9;
+            background: var(--rider-blue);
             color: white;
             width: 100%;
-            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+            position: relative;
         }
 
         .btn:active {
             transform: scale(0.95);
+        }
+
+        /* --- Queue List --- */
+        .queue-header {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .queue-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .queue-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0; width: 4px;
+            background: var(--rider-accent);
+        }
+        .queue-card.urgent::before {
+            background: #ef4444;
+        }
+        .queue-card:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: rgba(56, 189, 248, 0.4);
+            transform: translateY(-2px);
+        }
+        .queue-customer {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 6px;
+        }
+        .queue-info {
+            font-size: 0.85rem;
+            color: var(--rider-label);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .queue-payout {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--rider-accent);
+            text-align: right;
         }
 
         /* --- Empty State --- */
@@ -181,36 +521,15 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            color: #475569;
+            color: #64748b;
             padding: 2rem;
+            min-height: 50vh;
         }
 
         .empty-icon {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.3;
-        }
-
-        /* --- Map Simulation --- */
-        .map-box {
-            height: 120px;
-            background: #0f172a;
-            border-radius: 16px;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #334155;
-            font-size: 0.8rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .map-box::after {
-            content: '📍';
-            font-size: 2rem;
-            filter: drop-shadow(0 0 10px #0ea5e9);
         }
 
         /* --- Pulse Animation --- */
@@ -220,7 +539,7 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+            background: linear-gradient(90deg, #0ea5e9, #38bdf8, #0ea5e9);
             background-size: 200% 100%;
             animation: flow 2s linear infinite;
         }
@@ -232,7 +551,7 @@
 
         /* Login Overlay */
         #login-overlay {
-            position: fixed;
+            position: absolute;
             inset: 0;
             background: var(--rider-bg);
             z-index: 1000;
@@ -246,171 +565,1250 @@
         .rider-select {
             width: 100%;
             max-width: 300px;
-            background: var(--rider-card);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.3);
             color: white;
             padding: 1rem;
-            border-radius: 16px;
+            border-radius: 12px;
             font-size: 1.1rem;
             margin-bottom: 1.5rem;
             outline: none;
+            font-family: 'Outfit', sans-serif;
         }
+
+        .rider-select option {
+            color: #0f172a;
+        }
+
+        /* Geotagging overlay */
+        #geotag-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 10;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(56, 189, 248, 0.2);
+            border-left-color: var(--rider-accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Drawer Styles */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .bottom-drawer {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translate(-50%, 100%);
+            width: 100%;
+            max-width: 480px;
+            background: var(--rider-card);
+            border-top: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 24px 24px 0 0;
+            padding: 2rem 1.5rem 1.5rem;
+            box-sizing: border-box;
+            z-index: 201;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .bottom-drawer.active {
+            transform: translate(-50%, 0);
+        }
+
+        .drawer-handle {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+
+        .drawer-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #94a3b8;
+            font-size: 1.25rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .drawer-close:hover { background: rgba(255,255,255,0.2); }
+
+        .input-field {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'Outfit', sans-serif;
+            box-sizing: border-box;
+        }
+        
+        .input-field::placeholder {
+            color: #64748b;
+        }
+
+        .file-upload {
+            border: 2px dashed rgba(56, 189, 248, 0.4);
+            padding: 1.5rem;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .file-upload:hover {
+            background: rgba(56, 189, 248, 0.1);
+        }
+
     </style>
 </head>
 <body>
-    <div id="login-overlay">
-        <img src="assets/logo.png" alt="IceQube" style="height: 60px; margin-bottom: 2rem;">
-        <h1 style="margin: 0 0 2rem 0; font-size: 1.5rem; text-align: center;">Rider Dashboard</h1>
-        <p style="color: #64748b; margin-bottom: 1rem;">Select your name to login:</p>
-        <select id="rider-name-select" class="rider-select">
-            <option value="John">John</option>
-            <option value="Mark">Mark</option>
-            <option value="Dave">Dave</option>
-            <option value="Rico">Rico</option>
-        </select>
-        <button class="btn btn-accept" style="max-width: 300px; width: 100%;" onclick="login()">Enter Dashboard</button>
+    <svg width="0" height="0" style="position: absolute;">
+        <defs>
+            <filter id="remove-white" color-interpolation-filters="sRGB">
+                <feColorMatrix type="matrix" values="1 0 0 0 0
+                                                     0 1 0 0 0
+                                                     0 0 1 0 0
+                                                     -1 -1 2 1 -1" />
+            </filter>
+        </defs>
+    </svg>
+
+    <div id="login-overlay" style="background: linear-gradient(180deg, #0f172a 0%, #020617 100%);">
+        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 3rem;">
+            <img src="./assets/logo.png" alt="IceQube Logo" style="height: 64px; margin-bottom: 1.5rem; filter: url(#remove-white); opacity: 0.95;">
+            <span style="color: white; font-weight: 800; font-size: 2.2rem; letter-spacing: -0.5px;">IceQube <span style="color: var(--rider-accent);">CDO</span></span>
+        </div>
+        
+        <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(56, 189, 248, 0.2); padding: 2.5rem 2rem; border-radius: 24px; width: 100%; max-width: 360px; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div>
+                <h1 style="margin: 0 0 0.5rem 0; font-size: 1.4rem; text-align: center; color: white; font-weight: 700;">Rider Portal</h1>
+                <p style="color: #94a3b8; margin: 0; text-align: center; font-size: 0.9rem;">Log in to access dispatch controls.</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="color: #cbd5e1; font-size: 0.85rem; font-weight: 600;">Rider ID or Mobile Number</label>
+                <input type="text" id="rider-id-input" placeholder="e.g. IQ-7042" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); padding: 1rem; border-radius: 12px; color: white; font-size: 1rem; font-family: inherit; width: 100%; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--rider-accent)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+            </div>
+            
+            <button class="btn btn-accept" style="width: 100%; max-width: 100%; flex: none; height: 54px; font-size: 1.1rem; margin-top: 0.5rem;" onclick="login()">Secure Login</button>
+        </div>
+        
+        <div style="margin-top: 3rem; color: #64748b; font-size: 0.8rem; text-align: center; line-height: 1.5;">
+            Authorized personnel only.<br>IceQube CDO Logistics System v2.0
+        </div>
+    </div>
+
+    <!-- Payout Drawer -->
+    <div id="payout-overlay" class="drawer-overlay" onclick="closePayoutDrawer()"></div>
+    <div id="payout-drawer" class="bottom-drawer">
+        <div class="drawer-handle"></div>
+        <button class="drawer-close" onclick="closePayoutDrawer()">&times;</button>
+        <h2 style="margin: 0 0 1rem 0; font-size: 1.25rem; color: white;">Payout Details</h2>
+        
+        <div id="drawer-deliveries-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 1rem; padding-right: 5px;">
+            <!-- Dynamically populated delivery items -->
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; text-align: left; border: 1px solid rgba(56, 189, 248, 0.1);">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; font-weight: 700;">Earnings Breakdown</div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #cbd5e1; margin-bottom: 4px;">
+                <span id="drawer-deliveries-text">0 Deliveries</span>
+                <span id="drawer-deliveries-fee">₱0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--rider-accent); margin-bottom: 8px;">
+                <span>Total Priority Tips</span>
+                <span id="drawer-tips-fee">₱0.00</span>
+            </div>
+            <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; color: white;">
+                <span>Total Balance</span>
+                <span id="drawer-total">₱0.00</span>
+            </div>
+        </div>
+
+        <!-- Payout Warning -->
+        <div id="payout-setup-warning" style="display: none; text-align: center; padding: 1rem;">
+            <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem;">GCash details missing. Please complete your profile first.</p>
+            <button class="btn btn-accept" style="width: 100%;" onclick="openProfileDrawer(); closePayoutDrawer();">Complete Profile</button>
+        </div>
+
+        <!-- Payout Confirmation -->
+        <div id="payout-request" style="display: none;">
+            <button class="btn btn-accept" style="width: 100%; padding: 1.25rem;" onclick="confirmPayout()">Request Transfer</button>
+        </div>
+
+        <div id="payout-history-section" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 1rem; font-weight: 700; display: flex; justify-content: space-between;">
+                <span>Recent Payouts</span>
+                <span style="font-size: 0.7rem; color: var(--rider-accent); cursor: pointer;" onclick="alert('Full history coming soon.')">View All</span>
+            </div>
+            <div id="payout-history-list">
+                <!-- Payout history items will appear here -->
+                <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 1rem; background: rgba(0,0,0,0.1); border-radius: 8px;">No recent payout requests.</div>
+            </div>
+            <!-- SIMULATION HELPER -->
+            <button id="sim-pay-btn" style="display: none; width: 100%; margin-top: 1rem; background: rgba(56, 189, 248, 0.1); border: 1px dashed var(--rider-accent); color: var(--rider-accent); padding: 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;" onclick="simulateAdminApproval()">
+                🛠️ DEBUG: Simulate Admin Pay
+            </button>
+        </div>
+    </div>
+    </div>
+
+    <!-- Rider Profile Drawer -->
+    <div id="profile-overlay" class="drawer-overlay" onclick="closeProfileDrawer()"></div>
+    <div id="profile-drawer" class="bottom-drawer">
+        <div class="drawer-handle"></div>
+        <button class="drawer-close" onclick="closeProfileDrawer()">&times;</button>
+        <h2 style="margin: 0 0 1rem 0; font-size: 1.25rem; color: white;">Personal Data</h2>
+
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div id="profile-pic-container" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--rider-accent); cursor: pointer;" onclick="document.getElementById('profile-pic-upload').click()">
+                <span id="profile-pic-placeholder" style="font-size: 2rem;">👤</span>
+                <img id="profile-pic-img" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+            </div>
+            <input type="file" id="profile-pic-upload" style="display: none;" accept="image/*" onchange="profilePicUploaded(this)">
+            <div style="font-size: 0.8rem; color: #94a3b8;">Tap to upload photo</div>
+        </div>
+
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 600;">Full Legal Name *</label>
+        <input type="text" id="profile-fullname" class="input-field" placeholder="e.g. Juan Dela Cruz" style="margin-bottom: 1.5rem;">
+
+        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">ID Verification</span>
+                <span id="id-status-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">Pending</span>
+            </div>
+            <div class="file-upload" id="id-upload-btn" onclick="document.getElementById('id-upload').click()" style="padding: 1rem; margin-bottom: 0;">
+                📷 Upload Valid ID
+                <input type="file" id="id-upload" style="display: none;" accept="image/*" onchange="idUploaded(this)">
+            </div>
+        </div>
+
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 600;">Current Address *</label>
+        <textarea id="profile-address" class="input-field" placeholder="e.g. 123 Xavier Estates, CDO" rows="2" style="margin-bottom: 1.5rem; resize: none; font-family: inherit;"></textarea>
+
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 600;">SMS Number *</label>
+        <input type="text" id="profile-sms" class="input-field" placeholder="e.g. 0917 111 2222" style="margin-bottom: 1.5rem;">
+
+        <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1.5rem; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem; color: white; margin: 0 0 1rem 0;">Payout Method</h3>
+            <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 600;">GCash Mobile Number *</label>
+            <input type="text" id="gcash-number" class="input-field" placeholder="e.g. 0917 123 4567" style="margin-bottom: 1rem;">
+            
+            <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 600;">Upload GCash QR Code *</label>
+            <div class="file-upload" onclick="document.getElementById('qr-upload').click()" style="padding: 1rem;">
+                📷 Tap to upload QR Image
+                <input type="file" id="qr-upload" style="display: none;" accept="image/*" onchange="qrUploaded(this)">
+            </div>
+            <div id="qr-preview" style="display:none; color: var(--rider-accent); font-size: 0.8rem; margin-bottom: 1rem; font-weight: 600;">✔️ QR Code Uploaded Successfully</div>
+        </div>
+
+        <button class="btn btn-delivered" onclick="saveProfileDetails()">Save Personal Data</button>
     </div>
 
     <header>
-        <img src="assets/logo.png" alt="IceQube" class="logo">
-        <div id="rider-status" class="status-header">
-            <span class="status-dot"></span>
-            <span id="display-rider-name">Rider Name</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="./assets/logo.png" alt="IceQube Logo" style="height: 24px; filter: url(#remove-white); opacity: 0.95;">
+            <span style="color: white; font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px;">IceQube <span style="color: var(--rider-accent);">CDO</span></span>
         </div>
-    </header    <div class="container" id="main-content">
-        <!-- INCOMING ORDER -->
-        <div id="incoming-order" style="display: none;">
-            <div class="card" style="border: 2px solid #f59e0b; box-shadow: 0 0 30px rgba(245, 158, 11, 0.15);">
-                <div class="incoming-glow"></div>
-                <span class="card-label" style="color: #f59e0b;">⚡ New Delivery Request</span>
-                <div class="order-id">#IQ-9751</div>
-                <div class="customer-name">Fat Monk Coffee</div>
-                <div class="customer-addr">📍 Uptown CDO, Xavier Estates</div>
-                
-                <div class="items-list">
-                    5×3kg Half-Dice (H)
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button onclick="toggleTheme()" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 6px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Toggle Day/Night Mode">
+                <span id="theme-icon" style="font-size: 1.1rem;">🌗</span>
+            </button>
+            <div class="notification-icon" style="position: relative; cursor: pointer;" onclick="alert('No new announcements.')">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span style="position: absolute; top: -2px; right: 2px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 2px solid var(--rider-bg);"></span>
+            </div>
+            
+            <div class="status-header" style="cursor: pointer;" onclick="openProfileDrawer()">
+                <div id="header-avatar" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(56, 189, 248, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; margin-right: 8px; overflow: hidden;">👤</div>
+                <span id="display-rider-name" style="font-weight: 600; color: white; margin-right: 8px;">Rider</span>
+                <label class="switch" onclick="event.stopPropagation()">
+                    <input type="checkbox" id="status-toggle" onchange="toggleStatus()" checked>
+                    <span class="slider"></span>
+                </label>
+                <span id="status-text" style="color: var(--rider-accent); font-weight: 600; font-size: 0.8rem; margin-left: 4px;">ACTIVE</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="earnings-carousel-container" id="earnings-carousel" onscroll="updateCarouselDots()">
+        <!-- SLIDE 1: ACTIVE EARNINGS -->
+        <div class="earnings-panel">
+            <div style="width: 100%;">
+                <!-- DUAL HEADER (Always Visible) -->
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                    <span style="font-size: 0.75rem; font-weight: 900; color: var(--rider-accent); letter-spacing: 0.1em;">WALLET</span>
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #475569; letter-spacing: 0.1em; opacity: 0.6;">LATEST PAYOUT</span>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">
-                    <span>Delivery Fee:</span>
-                    <span>₱80.00</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; color: #f59e0b; font-weight: 700;">
-                    <span>Priority Tip:</span>
-                    <span>₱20.00</span>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                    <div>
+                        <div class="earnings-amount" id="payout-amount">₱0.00</div>
+                        <button class="btn btn-accept" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.6rem; border-radius: 8px;" onclick="openPayoutDrawer()">Request Payout</button>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="earnings-label">Deliveries</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: white;" id="deliveries-count">0</div>
+                    </div>
                 </div>
 
-                <div class="price-tag">Total: ₱950.00</div>
-
-                <div class="btn-group">
-                    <button class="btn btn-decline" onclick="declineOrder()">Decline</button>
-                    <button class="btn btn-accept" onclick="acceptOrder()">Accept Order</button>
+                <!-- PASSIVE STATUS BAR -->
+                <div id="persistent-payout-status" style="display: none; margin-top: 1rem; background: rgba(255,255,255,0.02); border-radius: 10px; padding: 6px 10px; border: 1px dashed rgba(255,255,255,0.1); cursor: pointer; opacity: 0.5;" onclick="openPayoutDrawer()">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.7rem; color: #64748b; font-weight: 500;">Recent: <span id="persistent-status-amount" style="color: #94a3b8;">₱0.00</span></span>
+                        <div id="persistent-status-badge" style="font-size: 0.55rem; font-weight: 800; color: #475569; text-transform: uppercase;">Processing</div>
+                    </div>
                 </div>
+            </div>
+
+            <div class="carousel-indicator">
+                <div class="dot active"></div>
+                <div class="dot"></div>
             </div>
         </div>
 
-        <!-- ACTIVE DELIVERY -->
-        <div id="active-delivery" style="display: none;">
-            <div class="card">
-                <span class="card-label">📍 Active Delivery</span>
-                <div class="map-box">
-                    <!-- Map simulation -->
-                    <div style="position: absolute; inset: 0; background: url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/124.74,8.48,13,0/400x120?access_token=YOUR_TOKEN'); background-size: cover; opacity: 0.4;"></div>
+        <!-- SLIDE 2: ACTIVE STATUS -->
+        <div class="earnings-panel" style="background: linear-gradient(135deg, #0f172a 0%, #111827 100%);">
+            <div style="width: 100%;">
+                <!-- DUAL HEADER (Slide 2 Sync) -->
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #475569; letter-spacing: 0.1em; opacity: 0.6;">WALLET</span>
+                    <span style="font-size: 0.75rem; font-weight: 900; color: var(--rider-accent); letter-spacing: 0.1em;">LATEST PAYOUT</span>
+                </div>
+
+                <div id="carousel-payout-list" style="padding: 12px; background: rgba(56, 189, 248, 0.03); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.05);">
+                    <div style="color: #475569; font-size: 0.9rem; text-align: center; padding: 0.5rem 0;">No history.</div>
+                </div>
+            </div>
+            <div class="carousel-indicator">
+                <div class="dot"></div>
+                <div class="dot active"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rider-tabs">
+        <button class="tab-btn active" onclick="switchTab('live')">Live Orders</button>
+        <button class="tab-btn" onclick="switchTab('advance')">Advance Bookings <span id="advance-badge" style="background:#ef4444; color:white; border-radius:10px; padding:2px 6px; font-size:0.7rem; margin-left:4px;">1</span></button>
+    </div>
+
+    <div class="container" id="main-content">
+        
+        <!-- LIVE ORDERS TAB -->
+        <div id="tab-live" class="tab-content active">
+            
+            <!-- EMPTY STATE -->
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">🛵</div>
+                <h3>Waiting for Orders</h3>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem;" id="empty-state-text">Stay online to receive new delivery assignments.</p>
+            </div>
+
+            <!-- DISPATCH QUEUE -->
+            <div id="dispatch-queue" style="display: none;">
+                <div class="queue-header">
+                    <span>Pending Dispatches</span>
+                    <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;">5</span>
                 </div>
                 
-                <div class="order-id" id="active-id">#IQ-9750</div>
-                <div class="customer-name" id="active-customer">Loft Living CDO</div>
-                <div class="customer-addr" id="active-addr">📍 Macabalan, Cagayan de Oro City</div>
+                <div class="queue-list-container" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
+                    <div class="queue-card urgent" onclick="openOrderDetails('IQ-9751')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Fat Monk Coffee</div>
+                            <div class="queue-info">
+                                <span style="color: #ef4444; font-weight: 700;">● Due: 12:30 PM</span>
+                                <span>• 5 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱100</div>
+                    </div>
 
-                <div class="items-list" id="active-items">
-                    10×3kg Full-Dice (F)
+                    <div class="queue-card" onclick="openOrderDetails('IQ-9752')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Coffee Project</div>
+                            <div class="queue-info">
+                                <span style="color: #f59e0b; font-weight: 700;">● Due: 12:45 PM</span>
+                                <span>• 2 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱80</div>
+                    </div>
+
+                    <div class="queue-card" onclick="openOrderDetails('IQ-9753')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Milktea Co.</div>
+                            <div class="queue-info">
+                                <span style="color: #38bdf8; font-weight: 700;">● Due: 1:00 PM</span>
+                                <span>• 10 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱150</div>
+                    </div>
+
+                    <div class="queue-card" onclick="openOrderDetails('IQ-9754')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Seda Hotel</div>
+                            <div class="queue-info">
+                                <span style="color: #38bdf8; font-weight: 700;">● Due: 2:30 PM</span>
+                                <span>• 20 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱250</div>
+                    </div>
+
+                    <div class="queue-card" onclick="openOrderDetails('IQ-9755')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Cucina Higala</div>
+                            <div class="queue-info">
+                                <span style="color: #38bdf8; font-weight: 700;">● Due: 3:00 PM</span>
+                                <span>• 3 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱90</div>
+                    </div>
                 </div>
+            </div>
 
-                <div id="fee-breakdown" style="margin-bottom: 1.5rem;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">
-                        <span>Items Total:</span>
-                        <span id="active-items-price">₱2,550.00</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px;">
-                        <span>Delivery Fee:</span>
-                        <span id="active-delivery-fee">₱50.00</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #f59e0b; font-weight: 700;">
-                        <span>Priority Tip:</span>
-                        <span id="active-priority-fee">₱20.00</span>
-                    </div>
-                </div>
-
-                <div class="price-tag" id="active-price">Collect: ₱2,620.00</div>
-
-                <button class="btn btn-delivered" onclick="completeOrder()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                    Mark as Delivered
+            <!-- INCOMING ORDER -->
+            <div id="incoming-order" style="display: none;">
+                <button onclick="backToQueue()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #94a3b8; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; padding: 6px 12px; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg> Back to Queue
                 </button>
+                <div class="card" style="border: 2px solid var(--rider-accent); box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);">
+                    <div class="incoming-glow"></div>
+                    <div class="card-header-flex">
+                        <span class="card-label" style="color: var(--rider-accent);">⚡ New Dispatch Call</span>
+                        <div class="time-badge">🕒 Just Now</div>
+                    </div>
+                    
+                    <div class="order-id">#IQ-9751</div>
+                    <div class="customer-name">Fat Monk Coffee</div>
+                    <div class="customer-addr" style="margin-bottom: 0.5rem;">📍 Uptown CDO, Xavier Estates</div>
+                    
+                    <div style="background: var(--rider-surface); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; border-left: 2px solid var(--rider-accent);">
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Receiver:</span> John Doe</div>
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Contact:</span> 0917 123 4567</div>
+                        <div style="color: #f59e0b;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Note:</span> Leave at the lobby desk.</div>
+                    </div>
+                    
+                    <div class="contact-group">
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=IceQube+Macabalan+Hub&destination=8.4526,124.6293" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a href="tel:+639171234567" class="contact-btn">📞 Call</a>
+                        <a href="sms:+639171234567" class="contact-btn">📱 SMS</a>
+                        <a href="https://m.me/fatmonkcoffee" target="_blank" class="contact-btn">💬 Messenger</a>
+                    </div>
+
+                    <div class="payment-method">💳 GCash</div>
+
+                    <div class="items-list">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">5 bags -</span>
+                            <span style="color: var(--rider-accent);">3kg Half-Dice (H)</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--rider-label);">
+                        <span>Delivery Fee:</span>
+                        <span>₱80.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--rider-accent); font-weight: 700;">
+                        <span>Priority Tip:</span>
+                        <span>₱20.00</span>
+                    </div>
+
+                    <div class="price-tag">Payout: ₱100.00</div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-decline" onclick="declineOrder()">Decline</button>
+                        <button class="btn btn-accept" onclick="acceptOrder()">Accept Order</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTIVE DELIVERY -->
+            <div id="active-delivery" style="display: none;">
+                <div class="card">
+                    <div id="geotag-overlay">
+                        <div class="spinner"></div>
+                        <div style="color: var(--rider-text-main); font-weight: 600;">Verifying Location...</div>
+                        <div style="color: var(--rider-label); font-size: 0.8rem; margin-top: 4px;">Fetching GPS coordinates</div>
+                    </div>
+
+                    <div class="card-header-flex">
+                        <span class="card-label">📍 Active Delivery</span>
+                        <div class="time-badge">🕒 Dispatched 10:45 AM</div>
+                    </div>
+                    
+                    <div class="order-id" id="active-id">#IQ-9751</div>
+                    <div class="customer-name" id="active-customer">Fat Monk Coffee</div>
+                    <div class="customer-addr" id="active-addr" style="margin-bottom: 0.5rem;">📍 Uptown CDO, Xavier Estates</div>
+
+                    <div style="background: var(--rider-surface); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; border-left: 2px solid var(--rider-accent);">
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Receiver:</span> John Doe</div>
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Contact:</span> 0917 123 4567</div>
+                        <div style="color: #f59e0b;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Note:</span> Leave at the lobby desk.</div>
+                    </div>
+
+                    <div class="contact-group">
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=IceQube+Macabalan+Hub&destination=8.4526,124.6293" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a href="tel:+639171234567" class="contact-btn">📞 Call</a>
+                        <a href="sms:+639171234567" class="contact-btn">📱 SMS</a>
+                        <a href="https://m.me/fatmonkcoffee" target="_blank" class="contact-btn">💬 Messenger</a>
+                    </div>
+
+                    <div class="payment-method">💳 GCash (Paid)</div>
+
+                    <div class="items-list" id="active-items">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">5 bags -</span>
+                            <span style="color: var(--rider-accent);">3kg Half-Dice (H)</span>
+                        </div>
+                    </div>
+
+                    <div id="fee-breakdown" style="margin-bottom: 1.5rem; background: var(--rider-surface); padding: 1rem; border-radius: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-label); margin-bottom: 4px;">
+                            <span>Items Total:</span>
+                            <span id="active-items-price">₱850.00</span>
+                        </div>
+                        <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 8px 0;"></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-label); margin-bottom: 4px;">
+                            <span>Delivery Fee (Your Payout):</span>
+                            <span id="active-delivery-fee">₱80.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-accent); font-weight: 700;">
+                            <span>Priority Tip (Your Payout):</span>
+                            <span id="active-priority-fee">₱20.00</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+                        <div style="color: var(--rider-label); font-size: 0.9rem;">To Collect:</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--rider-text-main);">₱0.00</div>
+                        <!-- RECENT PAYOUTS DASHBOARD -->
+        <div id="dashboard-payout-history" style="display: none; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+            <div style="font-size: 0.8rem; color: var(--rider-label); text-transform: uppercase; font-weight: 700; margin-bottom: 1rem; letter-spacing: 0.05em;">Latest Payout Status</div>
+            <div id="dashboard-payout-list">
+                <!-- Latest payout item will appear here -->
             </div>
         </div>
 
-        <!-- EMPTY STATE -->
-        <div id="empty-state" class="empty-state">
-            <div class="empty-icon">🛵</div>
-            <h3>Waiting for Orders</h3>
-            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Stay online to receive new delivery assignments from the Control Room.</p>
+    </div>
+
+                    <button class="btn btn-delivered" onclick="openCamera()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right: 4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        Take POD Photo & Confirm
+                    </button>
+                </div>
+            </div>
         </div>
+
+        <!-- ADVANCE BOOKINGS TAB -->
+        <div id="tab-advance" class="tab-content">
+            
+            <!-- ADVANCE QUEUE -->
+            <div id="advance-queue">
+                <div class="queue-header">
+                    <span>Scheduled Bookings</span>
+                    <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;">4</span>
+                </div>
+                
+                <div class="queue-list-container" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
+                    <div class="queue-card urgent" onclick="openAdvanceDetails('IQ-9760')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Event Center CDO</div>
+                            <div class="queue-info">
+                                <span style="color: #ef4444; font-weight: 700;">● 2:00 PM Today</span>
+                                <span>• 21 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱250</div>
+                    </div>
+
+                    <div class="queue-card" onclick="openAdvanceDetails('IQ-9761')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">N Hotel</div>
+                            <div class="queue-info">
+                                <span style="color: #f59e0b; font-weight: 700;">● 4:00 PM Today</span>
+                                <span>• 10 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱180</div>
+                    </div>
+
+                    <div class="queue-card" onclick="openAdvanceDetails('IQ-9762')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Smac's Bar</div>
+                            <div class="queue-info">
+                                <span style="color: #38bdf8; font-weight: 700;">● 6:30 PM Today</span>
+                                <span>• 15 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱200</div>
+                    </div>
+
+                    <div class="queue-card" onclick="openAdvanceDetails('IQ-9763')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">Xavier Gym</div>
+                            <div class="queue-info">
+                                <span style="color: #38bdf8; font-weight: 700;">● 8:00 AM Tomorrow</span>
+                                <span>• 30 Items</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱400</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADVANCE ORDER DETAIL -->
+            <div id="advance-order" style="display: none;">
+                <button onclick="backToAdvanceQueue()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #94a3b8; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; padding: 6px 12px; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg> Back to Schedule
+                </button>
+                <div class="card" style="border: 2px solid var(--rider-accent); box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);">
+                    <div class="card-header-flex">
+                        <span class="card-label">📅 Scheduled Delivery</span>
+                        <div class="time-badge alarm">⏰ 2:00 PM Today</div>
+                    </div>
+                    
+                    <div class="order-id">#IQ-9760</div>
+                    <div class="customer-name">Event Center CDO</div>
+                    <div class="customer-addr" style="margin-bottom: 1rem;">📍 Limketkai Center</div>
+
+                    <div class="contact-group" style="margin-bottom: 1.5rem;">
+                        <a href="https://www.google.com/maps/dir/?api=1&origin=IceQube+Macabalan+Hub&destination=8.4831,124.6517" target="_blank" class="contact-btn map" style="flex: 1; justify-content: center; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2);">🗺️ View Map & Route</a>
+                    </div>
+                    
+                    <div class="payment-method">💵 Cash on Delivery</div>
+
+                    <div class="items-list" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">20 bags -</span>
+                            <span style="color: var(--rider-accent);">3kg Full-Dice (F)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">1-</span>
+                            <span style="color: var(--rider-accent);">Ice Tub (Rental)</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--rider-label);">
+                        <span>Estimated Payout:</span>
+                        <span style="color: var(--rider-accent); font-weight: 700;">₱250.00</span>
+                    </div>
+
+                    <div id="advance-actions-IQ9760">
+                        <button class="btn btn-accept" style="width: 100%;" onclick="claimAdvanceOrder('IQ9760')">
+                            Claim Order
+                        </button>
+                        <p style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 8px;">Claiming secures this slot in your schedule.</p>
+                    </div>
+                    <div id="reserved-actions-IQ9760" style="display: none;">
+                        <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem;">
+                            ✔️ Order Reserved
+                        </div>
+                        <button class="btn" style="background: rgba(255,255,255,0.05); color: #64748b; width: 100%; border: 1px solid rgba(255,255,255,0.1); cursor: not-allowed;" disabled>
+                            Start Delivery (At 1:30 PM)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
         let currentRider = '';
+        let isOnline = true;
+        let totalPayout = 0;
+        let totalDeliveries = 0;
+        let completedDeliveries = [];
+        let gcashDetails = { number: '', hasQR: false };
+        let riderProfile = { sms: '', address: '', idVerified: false, profilePic: '' };
+        let payoutHistory = [];
         
         function login() {
-            currentRider = document.getElementById('rider-name-select').value;
-            document.getElementById('display-rider-name').innerText = currentRider;
+            let input = document.getElementById('rider-id-input');
+            currentRider = input && input.value.trim() !== '' ? input.value : 'John Doe';
+            document.getElementById('display-rider-name').innerText = currentRider.split(' ')[0];
             document.getElementById('login-overlay').style.display = 'none';
             
             // Simulate incoming order for demo purposes
-            if (currentRider === 'John') {
-                setTimeout(() => {
-                    document.getElementById('empty-state').style.display = 'none';
-                    document.getElementById('incoming-order').style.display = 'block';
-                }, 1000);
+            simulateIncoming();
+        }
+
+        function simulateIncoming() {
+            if (!isOnline) return;
+            
+            setTimeout(() => {
+                // Ensure we are on Live tab
+                switchTab('live');
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('incoming-order').style.display = 'none';
+                document.getElementById('dispatch-queue').style.display = 'block';
+                
+                console.log("🔔 Multiple Dispatch Calls Received!");
+            }, 2000);
+        }
+
+        function openOrderDetails(orderId) {
+            // Hide queue, show details
+            document.getElementById('dispatch-queue').style.display = 'none';
+            document.getElementById('incoming-order').style.display = 'block';
+            // In a real app, populate order details dynamically based on orderId
+        }
+
+        function backToQueue() {
+            document.getElementById('incoming-order').style.display = 'none';
+            document.getElementById('dispatch-queue').style.display = 'block';
+        }
+
+        function toggleStatus() {
+            const toggle = document.getElementById('status-toggle');
+            const statusText = document.getElementById('status-text');
+            const emptyStateText = document.getElementById('empty-state-text');
+            
+            isOnline = toggle.checked;
+            
+            if (isOnline) {
+                statusText.innerText = "ACTIVE";
+                statusText.style.color = "var(--rider-accent)";
+                emptyStateText.innerText = "Stay online to receive new delivery assignments.";
+                simulateIncoming();
+            } else {
+                statusText.innerText = "OFFLINE";
+                statusText.style.color = "#64748b";
+                emptyStateText.innerText = "You are currently offline. Toggle status to receive calls.";
+                document.getElementById('incoming-order').style.display = 'none';
+                document.getElementById('dispatch-queue').style.display = 'none';
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if(tabId === 'live') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('tab-live').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('tab-advance').classList.add('active');
             }
         }
 
         function acceptOrder() {
             document.getElementById('incoming-order').style.display = 'none';
+            document.getElementById('dispatch-queue').style.display = 'none';
             document.getElementById('active-delivery').style.display = 'block';
-            
-            // Update Active Order Details
-            document.getElementById('active-id').innerText = '#IQ-9751';
-            document.getElementById('active-customer').innerText = 'Fat Monk Coffee';
-            document.getElementById('active-addr').innerText = '📍 Uptown CDO, Xavier Estates';
-            document.getElementById('active-items').innerText = '5×3kg Half-Dice (H)';
-            
-            document.getElementById('active-items-price').innerText = '₱850.00';
-            document.getElementById('active-delivery-fee').innerText = '₱80.00';
-            document.getElementById('active-priority-fee').innerText = '₱20.00';
-            document.getElementById('active-price').innerText = 'Collect: ₱950.00';
-
             console.log("📡 Order Accepted by " + currentRider);
-        }ted by " + currentRider);
-            // In real app, this would PATCH status to 'Dispatched' in Supabase
         }
 
         function declineOrder() {
             document.getElementById('incoming-order').style.display = 'none';
-            document.getElementById('empty-state').style.display = 'flex';
+            document.getElementById('dispatch-queue').style.display = 'block';
+            // Mock removing an item or showing empty state
             console.log("📡 Order Declined by " + currentRider);
-            // In real app, this would PATCH rider to 'Unassigned' and status to 'Pending'
         }
 
-        function completeOrder() {
-            if (confirm("Confirm delivery completed?")) {
-                document.getElementById('active-delivery').style.display = 'none';
-                document.getElementById('empty-state').style.display = 'flex';
-                alert("Delivery Completed! Great job.");
-                console.log("📡 Order Delivered by " + currentRider);
-                // In real app, this would PATCH status to 'Delivered'
+        async function syncGeotagToSupabase(orderId, lat, lng, riderId) {
+            console.log(`☁️ Syncing POD and Geotag to Supabase for Order ${orderId}...`);
+            
+            // To implement actual Supabase sync:
+            /*
+            const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co/rest/v1/delivery_logs';
+            const SUPABASE_KEY = 'YOUR_ANON_KEY';
+            
+            try {
+                const response = await fetch(SUPABASE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        rider_id: riderId,
+                        geotag_lat: lat,
+                        geotag_lng: lng,
+                        pod_photo_url: 'https://storage.supabase.co/ice_deliveries/pod_' + orderId + '.jpg',
+                        status: 'Delivered',
+                        delivered_at: new Date().toISOString()
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Supabase Sync Failed');
+                console.log('✅ Supabase Sync Successful');
+            } catch (error) {
+                console.error('❌ Supabase Sync Error:', error);
+                // Handle offline caching here if needed
+            }
+            */
+            
+            // Simulating network delay for prototype
+            return new Promise(resolve => setTimeout(resolve, 800));
+        }
+
+        async function completeOrder() {
+            // Show Geotagging overlay
+            const overlay = document.getElementById('geotag-overlay');
+            overlay.style.display = 'flex';
+            
+            // 1. Fetch real GPS coordinates (simulated here)
+            const simulatedLat = 8.4526;
+            const simulatedLng = 124.6293;
+            const currentOrderId = "IQ-9751";
+
+            // 2. Sync to Supabase for Dispute Archive
+            await syncGeotagToSupabase(currentOrderId, simulatedLat, simulatedLng, currentRider);
+            
+            // 3. Complete UI Updates
+            overlay.style.display = 'none';
+            
+            // Add to history
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            completedDeliveries.push({
+                id: "#" + currentOrderId,
+                location: "Fat Monk Coffee",
+                time: timeString,
+                fee: 80,
+                tip: 20,
+                total: 100
+            });
+
+            // Update Dashboard
+            totalDeliveries++;
+            totalPayout += 100; // 80 fee + 20 tip
+            
+            document.getElementById('deliveries-count').innerText = totalDeliveries;
+            document.getElementById('payout-amount').innerText = `₱${totalPayout.toFixed(2)}`;
+            
+            // Reset View
+            document.getElementById('active-delivery').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'flex';
+            
+            alert(`Delivery Completed & Synced to Supabase!\n📍 Location: ${simulatedLat}° N, ${simulatedLng}° E\n💰 Payout Added: ₱100.00`);
+            console.log("📡 Order Delivered by " + currentRider);
+        }
+
+        // --- PAYOUT LOGIC ---
+        function openPayoutDrawer() {
+            // Render History List
+            const listContainer = document.getElementById('drawer-deliveries-list');
+            listContainer.innerHTML = '';
+            
+            if (completedDeliveries.length === 0) {
+                listContainer.innerHTML = '<div style="color: #64748b; font-size: 0.9rem; text-align: center; padding: 1rem;">No deliveries yet</div>';
+            } else {
+                completedDeliveries.forEach(del => {
+                    listContainer.innerHTML += `
+                        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                                <div>
+                                    <div style="color: white; font-weight: 600; font-size: 0.95rem;">${del.location}</div>
+                                    <div style="color: #94a3b8; font-size: 0.8rem;">${del.id} • ${del.time}</div>
+                                </div>
+                                <div style="color: var(--rider-accent); font-weight: 800;">₱${del.total.toFixed(2)}</div>
+                            </div>
+                            <div style="display: flex; gap: 10px; font-size: 0.8rem; color: #cbd5e1;">
+                                <span>Fee: ₱${del.fee.toFixed(2)}</span>
+                                <span style="color: #38bdf8;">Tip: ₱${del.tip.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Update details breakdown
+            document.getElementById('drawer-deliveries-text').innerText = `${totalDeliveries} Deliveries`;
+            const baseFee = totalDeliveries * 80;
+            const tips = totalPayout - baseFee;
+            document.getElementById('drawer-deliveries-fee').innerText = `₱${baseFee.toFixed(2)}`;
+            document.getElementById('drawer-tips-fee').innerText = `₱${(tips > 0 ? tips : 0).toFixed(2)}`;
+            document.getElementById('drawer-total').innerText = `₱${totalPayout.toFixed(2)}`;
+
+            document.getElementById('payout-overlay').classList.add('active');
+            document.getElementById('payout-drawer').classList.add('active');
+            
+            if (gcashDetails.number !== '' && gcashDetails.hasQR) {
+                // GCash is set up, show request view
+                document.getElementById('payout-setup-warning').style.display = 'none';
+                document.getElementById('payout-request').style.display = 'block';
+                document.getElementById('display-gcash-number').innerText = gcashDetails.number;
+            } else {
+                // Needs GCash setup
+                document.getElementById('payout-setup-warning').style.display = 'block';
+                document.getElementById('payout-request').style.display = 'none';
             }
         }
+
+        function closePayoutDrawer() {
+            document.getElementById('payout-overlay').classList.remove('active');
+            document.getElementById('payout-drawer').classList.remove('active');
+        }
+
+        // --- PROFILE LOGIC ---
+        function openProfileDrawer() {
+            document.getElementById('profile-overlay').classList.add('active');
+            document.getElementById('profile-drawer').classList.add('active');
+            
+            // Populate fields if they exist
+            if (riderProfile.fullName) document.getElementById('profile-fullname').value = riderProfile.fullName;
+            if (riderProfile.sms) document.getElementById('profile-sms').value = riderProfile.sms;
+            if (riderProfile.address) document.getElementById('profile-address').value = riderProfile.address;
+            if (gcashDetails.number) document.getElementById('gcash-number').value = gcashDetails.number;
+        }
+
+        function closeProfileDrawer() {
+            document.getElementById('profile-overlay').classList.remove('active');
+            document.getElementById('profile-drawer').classList.remove('active');
+        }
+
+        function profilePicUploaded(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profile-pic-placeholder').style.display = 'none';
+                    document.getElementById('profile-pic-img').style.display = 'block';
+                    document.getElementById('profile-pic-img').src = e.target.result;
+                    riderProfile.profilePic = e.target.result;
+                    // Update header avatar too
+                    document.getElementById('header-avatar').innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function idUploaded(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('id-upload-btn').innerHTML = '✔️ Valid ID Uploaded';
+                document.getElementById('id-upload-btn').style.color = 'var(--rider-accent)';
+                document.getElementById('id-status-badge').innerText = 'Verified';
+                document.getElementById('id-status-badge').style.background = 'rgba(34, 197, 94, 0.2)';
+                document.getElementById('id-status-badge').style.color = '#22c55e';
+                riderProfile.idVerified = true;
+            }
+        }
+
+        function qrUploaded(input) {
+            if (input.files && input.files[0]) {
+                gcashDetails.hasQR = true;
+                document.getElementById('qr-preview').style.display = 'block';
+            }
+        }
+
+        function saveProfileDetails() {
+            const fullName = document.getElementById('profile-fullname').value.trim();
+            const sms = document.getElementById('profile-sms').value.trim();
+            const address = document.getElementById('profile-address').value.trim();
+            const gcashNum = document.getElementById('gcash-number').value.trim();
+            
+            if (fullName.length < 3) {
+                alert("Please enter your full legal name.");
+                return;
+            }
+            if (!riderProfile.idVerified) {
+                alert("Please upload a Valid ID for verification.");
+                return;
+            }
+            if (address.length < 5) {
+                alert("Please enter your current address.");
+                return;
+            }
+            if (sms.length < 10) {
+                alert("Please enter a valid SMS number.");
+                return;
+            }
+            if (gcashNum.length < 10) {
+                alert("Please enter a valid GCash mobile number.");
+                return;
+            }
+            if (!gcashDetails.hasQR) {
+                alert("Please upload your GCash QR code.");
+                return;
+            }
+            
+            riderProfile.fullName = fullName;
+            riderProfile.sms = sms;
+            riderProfile.address = address;
+            gcashDetails.number = gcashNum;
+            alert("Personal Data saved successfully!");
+            
+            // Update header display name
+            document.getElementById('display-rider-name').innerText = fullName.split(' ')[0];
+            
+            closeProfileDrawer();
+        }
+
+        function confirmPayout() {
+            if (totalPayout <= 0) {
+                alert("No accumulated earnings available for payout yet.");
+                return;
+            }
+            
+            const amount = totalPayout;
+            const now = new Date();
+            const dateStr = now.toLocaleDateString([], {month: 'short', day: 'numeric'});
+            const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            // Add to history
+            payoutHistory.unshift({
+                amount: amount,
+                date: dateStr,
+                time: timeStr,
+                status: 'PROCESSING',
+                ref: 'Pending Admin'
+            });
+
+            alert(`Payout Request Submitted!\n₱${amount.toFixed(2)} is now being processed for GCash transfer.`);
+            
+            // Reset payout
+            totalPayout = 0;
+            totalDeliveries = 0;
+            completedDeliveries = [];
+            document.getElementById('payout-amount').innerText = `₱0.00`;
+            document.getElementById('deliveries-count').innerText = 0;
+            
+            updatePayoutHistoryUI();
+            closePayoutDrawer();
+        }
+
+        function updatePayoutHistoryUI() {
+            const list = document.getElementById('payout-history-list');
+            const dashList = document.getElementById('dashboard-payout-list');
+            const carouselList = document.getElementById('carousel-payout-list');
+            const dashSection = document.getElementById('dashboard-payout-history');
+            
+            // Persistent Elements
+            const persistBar = document.getElementById('persistent-payout-status');
+            const persistAmount = document.getElementById('persistent-status-amount');
+            const persistBadge = document.getElementById('persistent-status-badge');
+            const persistIcon = document.getElementById('persistent-status-icon');
+            
+            if (payoutHistory.length === 0) {
+                dashSection.style.display = 'none';
+                persistBar.style.display = 'none';
+                return;
+            }
+
+            dashSection.style.display = 'block';
+            persistBar.style.display = 'block';
+            list.innerHTML = '';
+            dashList.innerHTML = '';
+            carouselList.innerHTML = '';
+
+            payoutHistory.forEach((item, index) => {
+                const isPaid = item.status === 'PAID';
+                const statusColor = isPaid ? '#4ade80' : '#f59e0b';
+                const statusBg = isPaid ? 'rgba(74, 222, 128, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+                
+                const html = `
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="color: white; font-weight: 700; font-size: 0.95rem;">₱${item.amount.toFixed(2)}</div>
+                            <div style="color: #64748b; font-size: 0.75rem;">${item.date} • ${item.time}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="background: ${statusBg}; color: ${statusColor}; font-size: 0.65rem; font-weight: 900; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;">${item.status}</div>
+                            <div style="color: #475569; font-size: 0.7rem; margin-top: 4px;">${item.ref}</div>
+                        </div>
+                    </div>
+                `;
+                
+                list.innerHTML += html;
+                if (index < 2) dashList.innerHTML += html;
+                if (index === 0) {
+                    // Update Active Slide (Carousel Slide 2)
+                    carouselList.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="color: white; font-weight: 800; font-size: 1.2rem;">₱${item.amount.toFixed(2)}</div>
+                                <div style="color: #94a3b8; font-size: 0.75rem;">Requested on ${item.date}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="background: ${statusBg}; color: ${statusColor}; font-size: 0.7rem; font-weight: 900; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; border: 1px solid ${statusColor}33;">${item.status}</div>
+                                <div style="color: ${statusColor}; font-size: 0.65rem; font-weight: 700; margin-top: 4px; opacity: 0.8;">${item.ref}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update Passive Preview (Carousel Slide 1)
+                    persistAmount.innerText = `₱${item.amount.toFixed(2)}`;
+                    persistBadge.innerText = item.status;
+                    persistBadge.style.borderColor = isPaid ? '#4ade8044' : '#f59e0b44';
+                    persistBadge.style.color = statusColor;
+                    persistIcon.style.filter = isPaid ? 'none' : 'grayscale(1)';
+                    persistIcon.innerText = isPaid ? '✅' : '🕒';
+
+                    // Show sim button if pending
+                    document.getElementById('sim-pay-btn').style.display = isPaid ? 'none' : 'block';
+                }
+            });
+        }
+
+        function simulateAdminApproval() {
+            if (payoutHistory.length > 0) {
+                payoutHistory[0].status = 'PAID';
+                payoutHistory[0].ref = 'Ref: GC-' + Math.floor(Math.random() * 1000000);
+                updatePayoutHistoryUI();
+                alert("Simulated Admin Approval:\nPayout marked as PAID. Check your dashboard!");
+            }
+        }
+
+        function updateCarouselDots() {
+            // Optional: Add logic to update dots based on scroll position if needed
+            // For now, simple scroll-snap handles the visual position
+        }
+        
+        function claimAdvanceOrder(orderId) {
+            document.getElementById('advance-actions-' + orderId).style.display = 'none';
+            document.getElementById('reserved-actions-' + orderId).style.display = 'block';
+            document.getElementById('advance-badge').style.display = 'none';
+            console.log("📅 Advance Order " + orderId + " Claimed by " + currentRider);
+            alert("Order Reserved!\nThis delivery is now locked to you. Please return to the hub by 1:30 PM to start.");
+        }
+
+        function openAdvanceDetails(orderId) {
+            document.getElementById('advance-queue').style.display = 'none';
+            document.getElementById('advance-order').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function backToAdvanceQueue() {
+            document.getElementById('advance-order').style.display = 'none';
+            document.getElementById('advance-queue').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        function toggleTheme() {
+            const root = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (root.classList.contains('light-theme')) {
+                root.classList.remove('light-theme');
+                root.classList.add('dark-theme');
+                icon.innerText = '🌙';
+            } else {
+                root.classList.remove('dark-theme');
+                root.classList.add('light-theme');
+                icon.innerText = '☀️';
+            }
+        }
+        function openCamera() {
+            document.getElementById('camera-overlay').style.display = 'flex';
+        }
+
+        function closeCamera() {
+            document.getElementById('camera-overlay').style.display = 'none';
+        }
+
+        function takePhoto() {
+            const flash = document.getElementById('camera-flash');
+            flash.style.display = 'block';
+            flash.style.opacity = '1';
+            
+            setTimeout(() => {
+                flash.style.transition = 'opacity 0.3s ease-out';
+                flash.style.opacity = '0';
+                
+                setTimeout(() => {
+                    flash.style.display = 'none';
+                    flash.style.transition = 'none';
+                    closeCamera();
+                    completeOrder(); // Proceed to geotagging and completion
+                }, 300);
+            }, 50);
+        }
     </script>
+
+    <!-- CAMERA OVERLAY (Proof of Delivery) -->
+    <div id="camera-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; background: black; flex-direction: column;">
+        
+        <!-- Top Controls -->
+        <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1001;">
+            <button onclick="closeCamera()" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer;">✕</button>
+            <div style="color: white; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.1em; background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 20px;">Proof of Delivery</div>
+            <div style="width: 40px;"></div> <!-- Spacer -->
+        </div>
+
+        <!-- Viewfinder -->
+        <div style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <!-- Simulated Camera Feed -->
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #1e293b; background-image: radial-gradient(circle, #334155 10%, transparent 10%), radial-gradient(circle, #334155 10%, transparent 10%); background-size: 20px 20px; background-position: 0 0, 10px 10px; opacity: 0.5;"></div>
+            
+            <!-- Viewfinder brackets -->
+            <div style="width: 80%; height: 60%; position: relative; z-index: 1001;">
+                <div style="position: absolute; top: 0; left: 0; width: 40px; height: 40px; border-top: 3px solid var(--rider-accent); border-left: 3px solid var(--rider-accent);"></div>
+                <div style="position: absolute; top: 0; right: 0; width: 40px; height: 40px; border-top: 3px solid var(--rider-accent); border-right: 3px solid var(--rider-accent);"></div>
+                <div style="position: absolute; bottom: 0; left: 0; width: 40px; height: 40px; border-bottom: 3px solid var(--rider-accent); border-left: 3px solid var(--rider-accent);"></div>
+                <div style="position: absolute; bottom: 0; right: 0; width: 40px; height: 40px; border-bottom: 3px solid var(--rider-accent); border-right: 3px solid var(--rider-accent);"></div>
+            </div>
+
+            <!-- Focus box -->
+            <div style="position: absolute; width: 60px; height: 60px; border: 1px solid rgba(255,255,255,0.5); z-index: 1001; pointer-events: none;"></div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div style="height: 120px; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1001;">
+            <div onclick="takePhoto()" style="width: 70px; height: 70px; border-radius: 50%; border: 4px solid white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.1s;">
+                <div style="width: 54px; height: 54px; background: white; border-radius: 50%;"></div>
+            </div>
+        </div>
+
+        <!-- Flash Overlay -->
+        <div id="camera-flash" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1002; display: none;"></div>
+    </div>
 </body>
 </html>
