@@ -123,11 +123,11 @@ const app = {
         schedules: {}
     },
     user: {
-        accountType: 'Enterprise', // Mocked: 'Standard', 'Enterprise', or 'Verified_Partner'
-        companyName: 'IceCorp Industries',
-        role: 'Admin', // Roles: 'Admin', 'Owner', or 'Staff'
-        balance: 1250.00,
-        creditLimit: 2500.00
+        accountType: 'Standard', 
+        companyName: 'Guest Customer',
+        role: 'Owner', 
+        balance: 0.00,
+        creditLimit: 50000.00
     },
     invoices: [
         { id: 'INV-8815', amount_due: 600, total: 600, created_at: '2026-04-10', status: 'unpaid' },
@@ -1098,6 +1098,10 @@ const app = {
     },
 
     async reverseGeocode(lat, lng) {
+        // Set these immediately so they are available for confirmation even if resolve is slow
+        this._tempLat = lat;
+        this._tempLng = lng;
+        
         const addrElem = document.getElementById('map-address-text');
         const coordsStr = `(${lat.toFixed(4)}, ${lng.toFixed(4)})`;
         if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Engine V3 ${coordsStr}</span>`;
@@ -1281,6 +1285,7 @@ const app = {
         if (satLabel) satLabel.innerText = name;
 
         this._tempAddress = name;
+        this._tempEstablishment = isPOI ? name : null;
         this._tempLat = lat;
         this._tempLng = lng;
         this.sanitizeSearchIcons();
@@ -1288,17 +1293,28 @@ const app = {
 
 
     confirmMapLocation() {
+        // Force resolve: Use coords if address is missing
         if (!this._tempAddress) {
-            alert('Please wait for the location to resolve...');
-            return;
+            this._tempAddress = (this._tempLat && this._tempLng) 
+                ? `${this._tempLat.toFixed(4)}, ${this._tempLng.toFixed(4)}`
+                : "Selected Location";
         }
 
         const locInput = document.getElementById('delivery-location');
-        locInput.value = this._tempAddress;
+        if (locInput) {
+            // ONLY overwrite if the input is empty or if we specifically found a POI name
+            if (!locInput.value.trim() || this._tempEstablishment) {
+                locInput.value = this._tempAddress;
+            }
+        }
         
         this.orderData.deliveryDetails.location = this._tempAddress;
-        this.orderData.deliveryDetails.lat = this._tempLat;
-        this.orderData.deliveryDetails.lng = this._tempLng;
+        // Save establishment name if it was a POI
+        if (this._tempEstablishment) {
+            this.orderData.deliveryDetails.establishment = this._tempEstablishment;
+        }
+        this.orderData.deliveryDetails.lat = this._tempLat || 0;
+        this.orderData.deliveryDetails.lng = this._tempLng || 0;
         
         // Populate the maps link field too
         const mapsInput = document.getElementById('delivery-maps');
@@ -1914,11 +1930,14 @@ const app = {
     goToPayment() {
         if (this.logisticsState === 'delivery') {
             this.orderData.deliveryDetails = {
-                location: document.getElementById('delivery-location').value,
+                establishment: document.getElementById('delivery-location').value,
+                physical_address: this._tempAddress || document.getElementById('delivery-location').value,
                 person: document.getElementById('delivery-person').value,
                 contact: document.getElementById('delivery-contact').value,
                 instructions: document.getElementById('delivery-instructions').value,
-                maps: document.getElementById('delivery-maps').value
+                maps: document.getElementById('delivery-maps').value,
+                lat: this._tempLat,
+                lng: this._tempLng
             };
         }
         
@@ -2424,30 +2443,61 @@ const app = {
 
 
     async supabaseUpdate(orderId) {
-        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
-            console.warn('Supabase not configured. Skipping persistence.');
-            return;
-        }
-
+        if (!this.orderData) return;
+        
         const isPO = this.orderData.payment === 'Purchase Order';
         let paymentStatus = 'Pending';
         if (isPO) paymentStatus = 'Invoiced';
 
+        let customerName = 'Guest Customer';
+        let deliveryAddress = 'N/A';
+        
+        if (this.orderData.deliveryDetails) {
+            const details = this.orderData.deliveryDetails;
+            
+            // 1. Determine Customer Name
+            if (details.establishment) {
+                customerName = details.establishment;
+            } else if (this.user && this.user.companyName && this.user.companyName !== 'Guest Customer') {
+                customerName = this.user.companyName;
+            } else if (details.person) {
+                customerName = details.person;
+            }
+
+            // 2. Determine Delivery Address (Physical Location)
+            deliveryAddress = details.physical_address || details.location || 'N/A';
+        }
+
+        const contactNumber = (this.orderData.deliveryDetails && this.orderData.deliveryDetails.contact) ? this.orderData.deliveryDetails.contact : 'N/A';
+
         const payload = {
-            order_id: orderId,
-            customer_name: this.user.companyName || 'Guest Customer',
-            contact_number: this.orderData.deliveryDetails.contact,
+            order_id: orderId, 
+            customer_name: customerName,
+            receiver_name: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.person) ? this.orderData.deliveryDetails.person : customerName,
+            contact_number: contactNumber,
+            delivery_notes: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.',
             items: this.orderData.qty,
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
             delivery_status: 'Pending',
             delivery_schedule: this.orderData.schedule.type === 'Deliver Now' ? 'Immediate' : `${this.orderData.schedule.date} ${this.orderData.schedule.time}`,
-            delivery_location: this.orderData.deliveryDetails.location,
-            delivery_lat: this.orderData.deliveryDetails.lat,
-            delivery_lng: this.orderData.deliveryDetails.lng,
-            po_number: this.orderData.poNumber
+            delivery_address: deliveryAddress,
+            delivery_lat: this.orderData.deliveryDetails ? this.orderData.deliveryDetails.lat : null,
+            delivery_lng: this.orderData.deliveryDetails ? this.orderData.deliveryDetails.lng : null,
+            delivery_fee: this.orderData.deliveryFee || 0,
+            po_number: this.orderData.poNumber,
+            created_at: new Date().toISOString()
         };
 
+        // Local Sync (BroadcastChannel)
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishNewOrder(payload);
+        }
+
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            console.warn('Supabase not configured. Persistence limited to local sync.');
+            return;
+        }
         console.log('--- SYNCING TO SUPABASE ---');
         try {
             const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {

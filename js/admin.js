@@ -7,7 +7,7 @@ const admin = {
     _syncIntervalId: null,
     pin: '',
     correctPin: '2026', 
-    manualEntries: JSON.parse(localStorage.getItem('iceqube_manual_cashflow') || '[]'),
+    manualEntries: JSON.parse(localStorage.getItem('ice_cashflow') || '[]'),
     consumables: JSON.parse(localStorage.getItem('iceqube_consumables') || JSON.stringify({
         packaging: [
             { id: 'bags3kg', name: '3kg Bag', current: 4200, max: 10000, unit: 'pcs' },
@@ -39,6 +39,17 @@ const admin = {
     rental: JSON.parse(localStorage.getItem('iceqube_rental') || '15000'),
     cashflowFilter: 'daily', 
 
+    resetSystem() {
+        if (confirm('Are you sure you want to clear all real orders and cashflow data? This will restore mock data for the demo.')) {
+            localStorage.removeItem('ice_orders');
+            localStorage.removeItem('ice_deliveries');
+            localStorage.removeItem('ice_cashflow');
+            localStorage.removeItem('ice_messages');
+            localStorage.removeItem('iceqube_manual_cashflow'); // Clean up old key if exists
+            location.reload();
+        }
+    },
+
     init() {
         console.log('--- COMMAND CENTER INITIALIZED (Bypass Mode) ---');
         
@@ -67,6 +78,57 @@ const admin = {
         this.updateUtilitiesUI();
         this.updateRentalUI();
         this.checkMonthlyReset();
+
+        // Local Sync Listener
+        if (window.IceQubeSync) {
+            const badge = document.getElementById('sync-status-badge');
+            const dot = document.getElementById('sync-dot');
+            if (badge && dot) {
+                badge.style.background = 'rgba(34, 197, 94, 0.1)';
+                badge.style.color = '#22c55e';
+                badge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                badge.innerHTML = '<span id="sync-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> SYNC ONLINE';
+            }
+
+            window.IceQubeSync.onOrderEvent((event) => {
+                if (event.type === 'NEW_ORDER') {
+                    console.log("🔔 [Admin] New order detected via Sync:", event.payload.order_id);
+                    this.handleIncomingOrder(event.payload);
+                }
+            });
+
+            window.IceQubeSync.onDeliveryEvent((event) => {
+                if (event.type === 'DELIVERY_COMPLETED') {
+                    console.log("🏁 [Admin] Delivery completed via Sync:", event.payload.orderId);
+                    this.fetchRealStats(); // Refresh everything
+                }
+            });
+        }
+    },
+
+    handleIncomingOrder(order) {
+        if (!order || !order.order_id) return;
+        
+        const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        // Prevent duplicates
+        if (!orders.find(o => o.order_id === order.order_id)) {
+            orders.unshift(order);
+            localStorage.setItem('ice_orders', JSON.stringify(orders));
+            console.log("💾 [Admin] Order persisted to LocalStorage:", order.order_id);
+            
+            this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
+            this.fetchRealStats();
+        }
+    },
+
+    showNotification(title, sub) {
+        const bell = document.getElementById('notif-dot');
+        if (bell) bell.style.display = 'block';
+        
+        // Browser notification if permitted
+        if (Notification.permission === "granted") {
+            new Notification(title, { body: sub, icon: './assets/logo.png' });
+        }
     },
 
     addPin(num) {
@@ -254,55 +316,23 @@ const admin = {
         this.animateCards();
         
         // Comprehensive Mock Data for Order Queue and Dashboard
-        const mockOrders = [
-            {
-                id: 'mock-1',
-                order_id: 'IQ-9750',
-                created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-                customer_name: 'Loft Living CDO',
-                delivery_address: 'Macabalan, Cagayan de Oro City',
-                total_price: 2550,
-                delivery_fee: 50,
-                priority_fee: 20,
-                payment_method: 'GCash',
-                delivery_status: 'Dispatched',
-                rider: 'John',
-                items: { fullDice: { '3kg': 10 } }
-            },
-            {
-                id: 'mock-2',
-                order_id: 'IQ-9751',
-                created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-                customer_name: 'Fat Monk Coffee',
-                delivery_address: 'Uptown CDO, Xavier Estates',
-                total_price: 850,
-                delivery_fee: 80,
-                priority_fee: 0,
-                payment_method: 'Cash',
-                delivery_status: 'Pending',
-                rider: 'Unassigned',
-                items: { halfDice: { '3kg': 5 } }
-            },
-            {
-                id: 'mock-3',
-                order_id: 'IQ-9752',
-                created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-                customer_name: 'Zion Business Center',
-                delivery_address: 'Divisoria, RN Pelaez Blvd',
-                total_price: 1250,
-                delivery_fee: 40,
-                priority_fee: 0,
-                payment_method: 'GCash',
-                delivery_status: 'Delivered',
-                rider: 'Mark',
-                items: { fullDice: { '1kg': 20 } }
-            }
-        ];
+        const mockOrders = [];
 
-        // Populate the whole UI with this mock data
-        this.updateDashboardUI(mockOrders);
-        this.updateAlertCenter(mockOrders);
-        console.log("🎨 Dashboard rendered with development mock data.");
+        // Load Synced Orders from Local Storage
+        const syncedOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        
+        // Merge: Only use mocks if no synced orders exist
+        let combinedOrders = [];
+        if (syncedOrders.length > 0) {
+            combinedOrders = [...syncedOrders];
+        } else {
+            combinedOrders = [...mockOrders];
+        }
+
+        // Populate the whole UI with combined data
+        this.updateDashboardUI(combinedOrders);
+        this.updateAlertCenter(combinedOrders);
+        console.log("🎨 Dashboard rendered with combined Sync + Mock data.");
     },
 
     animateCards() {
@@ -377,35 +407,50 @@ const admin = {
         const totalUtils = this.utilities.electricity + this.utilities.water + this.utilities.internet;
         const totalOpEx = totalUtils + (this.rental || 0);
 
-        // Mock data for different periods (Realistically this would be an API call)
-        const data = {
-            mtd: {
-                revenue: 124500,
-                cogs: 18500,
-                opex: 45200,
-                depreciation: monthlyDep,
-                riderPayouts: 32000,
-                utilities: totalOpEx
-            },
-            last_month: {
-                revenue: 385000,
-                cogs: 52000,
-                opex: 125000,
-                depreciation: monthlyDep,
-                riderPayouts: 85000,
-                utilities: totalOpEx * 0.95 // slight variance
-            },
-            ytd: {
-                revenue: 1450000,
-                cogs: 210000,
-                opex: 520000,
-                depreciation: monthlyDep * ytdMonths,
-                riderPayouts: 380000,
-                utilities: totalOpEx * ytdMonths
-            }
-        };
+        // Calculate Real Revenue and Expenses from all available sources
+        const syncedOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const manualEntries = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
+        
+        // 1. Process Automatic Entries from Orders (Revenue)
+        const autoEntries = syncedOrders.map(o => ({
+            timestamp: o.created_at,
+            category: 'Sales',
+            type: 'IN',
+            amount: parseFloat(o.total_price) || 0
+        }));
 
-        const p = data[period] || data.mtd;
+        const allEntries = [...autoEntries, ...manualEntries];
+        
+        // 2. Filter by period
+        const now = new Date();
+        const periodEntries = allEntries.filter(entry => {
+            const entryDate = new Date(entry.timestamp);
+            if (period === 'mtd') {
+                return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+            } else if (period === 'last_month') {
+                const lastMonth = new Date();
+                lastMonth.setMonth(now.getMonth() - 1);
+                return entryDate.getMonth() === lastMonth.getMonth() && entryDate.getFullYear() === lastMonth.getFullYear();
+            } else if (period === 'ytd') {
+                return entryDate.getFullYear() === now.getFullYear();
+            }
+            return true;
+        });
+
+        // 3. Aggregate
+        const realRevenue = periodEntries.filter(e => e.type === 'IN' && e.category === 'Sales').reduce((sum, e) => sum + e.amount, 0);
+        const realOpEx = periodEntries.filter(e => e.type === 'OUT' && e.category !== 'COGS').reduce((sum, e) => sum + e.amount, 0);
+        const realCOGS = periodEntries.filter(e => e.type === 'OUT' && e.category === 'COGS').reduce((sum, e) => sum + e.amount, 0);
+        const realRiderPayouts = periodEntries.filter(e => e.type === 'OUT' && e.category === 'Rider Payout').reduce((sum, e) => sum + e.amount, 0);
+
+        const p = {
+            revenue: realRevenue || (syncedOrders.length === 0 ? 124500 : 0), // Fallback only if totally empty
+            cogs: realCOGS || (syncedOrders.length === 0 ? 18500 : 0),
+            opex: realOpEx || (syncedOrders.length === 0 ? 45200 : 0),
+            depreciation: monthlyDep * (period === 'ytd' ? ytdMonths : 1),
+            riderPayouts: realRiderPayouts || (syncedOrders.length === 0 ? 32000 : 0),
+            utilities: totalOpEx * (period === 'ytd' ? ytdMonths : 1)
+        };
         
         // Calculations
         const grossProfit = p.revenue - p.cogs;
@@ -493,24 +538,6 @@ const admin = {
             amount: parseFloat(o.total_price) || 0,
             source: 'AUTO'
         }));
-
-        // Add Mock Expenses (as seen in Finance View) for realism
-        autoEntries.push({
-            timestamp: new Date().toISOString(),
-            category: 'Expense',
-            description: 'Rider Payouts (Daily)',
-            type: 'OUT',
-            amount: 4200,
-            source: 'AUTO'
-        });
-        autoEntries.push({
-            timestamp: new Date().toISOString(),
-            category: 'Expense',
-            description: 'Utility Cost (Est.)',
-            type: 'OUT',
-            amount: 850,
-            source: 'AUTO'
-        });
 
         // 2. Combine with Manual Entries
         const allEntries = [...autoEntries, ...this.manualEntries];
@@ -635,7 +662,7 @@ const admin = {
     },
 
     saveManualEntries() {
-        localStorage.setItem('iceqube_manual_cashflow', JSON.stringify(this.manualEntries));
+        localStorage.setItem('ice_cashflow', JSON.stringify(this.manualEntries));
     },
 
     exportCashflow() {
@@ -657,60 +684,20 @@ const admin = {
         
         if (!pendingBody || !ledgerBody) return;
 
-        // Force mock data if no live orders are present today
-        let allOrders = (orders && orders.length > 0) ? [...orders] : [
-            {
-                id: 'mock-1',
-                order_id: 'IQ-9750',
-                created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-                customer_name: 'Loft Living CDO',
-                delivery_address: 'Macabalan, Cagayan de Oro City',
-                total_price: 2550,
-                delivery_fee: 50,
-                priority_fee: 20,
-                payment_method: 'GCash',
-                delivery_status: 'Dispatched',
-                rider: 'John',
-                items: { fullDice: { '3kg': 10 } }
-            },
-            {
-                id: 'mock-2',
-                order_id: 'IQ-9751',
-                created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-                customer_name: 'Fat Monk Coffee',
-                delivery_address: 'Uptown CDO, Xavier Estates',
-                total_price: 850,
-                delivery_fee: 80,
-                priority_fee: 0,
-                payment_method: 'Cash',
-                delivery_status: 'Pending',
-                rider: 'Unassigned',
-                items: { halfDice: { '3kg': 5 } }
-            },
-            {
-                id: 'mock-3',
-                order_id: 'IQ-9752',
-                created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-                customer_name: 'Zion Business Center',
-                delivery_address: 'Divisoria, RN Pelaez Blvd',
-                total_price: 1250,
-                delivery_fee: 40,
-                priority_fee: 0,
-                payment_method: 'GCash',
-                delivery_status: 'Delivered',
-                rider: 'Mark',
-                items: { fullDice: { '1kg': 20 } }
-            }
-        ];
+        // Use provided orders, or fallback to synced orders in localStorage
+        let allOrders = (orders && orders.length > 0) ? [...orders] : JSON.parse(localStorage.getItem('ice_orders') || '[]');
 
-        // Sort by time: Soonest (Earliest created) at the top
-        allOrders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        // SANITIZE: Remove any broken or malformed test data
+        allOrders = allOrders.filter(o => o && o.order_id && o.created_at && !o.order_id.includes('undefined'));
+
+        // Sort by time: Newest at the top
+        allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         const pendingOrders = allOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance');
         const ledgerOrders = allOrders.filter(o => o.delivery_status !== 'Pending' && o.delivery_status !== 'Awaiting Acceptance');
 
-        pendingBadge.innerText = `${pendingOrders.length} Pending`;
-        ledgerBadge.innerText = `${ledgerOrders.length} Orders`;
+        if (pendingBadge) pendingBadge.innerText = `${pendingOrders.length} Pending`;
+        if (ledgerBadge) ledgerBadge.innerText = `${ledgerOrders.length} Orders`;
         
         const ridersList = ['Unassigned', 'John', 'Mark', 'Dave', 'Rico'];
 
@@ -723,25 +710,24 @@ const admin = {
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${timeStr}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">#${o.order_id}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
                     <td><b>${o.customer_name}</b></td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
                     <td>
                         <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
-                               onchange="admin.updatePriorityFee('${o.id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
+                               onchange="admin.updatePriorityFee('${o.id || o.order_id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
                     </td>
                     <td>
-                        <select class="status-select" onchange="admin.assignRider('${o.id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
+                        <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
                             ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
                         </select>
                     </td>
                     <td style="text-align: right;">
-                        ${isAwaiting ? 
-                            `<span class="status-badge status-awaiting">Awaiting Rider...</span>` : 
-                            `<button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id}', '${o.rider}', '${o.order_id}')">Dispatch</button>`
-                        }
+                        <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')">
+                            ${isAwaiting ? 'Re-Dispatch' : 'Dispatch'}
+                        </button>
                     </td>
                 </tr>
             `;
@@ -756,7 +742,7 @@ const admin = {
             return `
                 <tr>
                     <td>${timeStr}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">#${o.order_id}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
                     <td><b>${o.customer_name}</b></td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
@@ -770,7 +756,7 @@ const admin = {
                         </div>
                     </td>
                     <td>
-                        <span class="status-badge status-${(o.delivery_status || 'pending').toLowerCase()}" style="font-size: 0.65rem;">${o.delivery_status}</span>
+                        <span class="status-badge status-${(o.delivery_status || 'Pending').toLowerCase()}" style="font-size: 0.65rem;">${o.delivery_status || 'Pending'}</span>
                     </td>
                 </tr>
             `;
@@ -813,8 +799,26 @@ const admin = {
     },
 
     async dispatchOrder(id, rider, orderId) {
-        if (rider === 'Unassigned') {
-            alert('Please assign a rider before dispatching.');
+        // If rider is Unassigned, it becomes a Broadcast/Open Dispatch
+        const isBroadcast = rider === 'Unassigned';
+
+        const dispatchData = {
+            orderId: orderId,
+            id: id,
+            riderId: (rider === 'undefined' || !rider) ? 'Unassigned' : rider,
+            dispatchedAt: new Date().toISOString(),
+            status: 'Awaiting Acceptance'
+        };
+
+        // Local Sync (BroadcastChannel)
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishDispatch(dispatchData);
+        }
+
+        if (id.startsWith('mock')) {
+            console.log(`Mock Dispatch for ${orderId} assigned to ${rider}`);
+            alert(`Order ${orderId} dispatched to ${rider}!`);
+            this.fetchRealStats();
             return;
         }
 
@@ -832,19 +836,34 @@ const admin = {
 
         try {
             await this.updateOrderStatus(id, 'Awaiting Acceptance');
-            alert(`Order ${orderId} dispatched! Notification sent to ${rider}.`);
+            const msg = isBroadcast ? `Order ${orderId} broadcasted to ALL riders!` : `Order ${orderId} dispatched! Notification sent to ${rider}.`;
+            alert(msg);
         } catch (err) {
             console.error('Dispatch failed:', err);
         }
     },
 
     async assignRider(id, riderName) {
-        if (id.startsWith('mock')) {
-            console.log(`Mock Rider Assigned: ${riderName}`);
+        console.log(`📡 Assigning Rider ${riderName} to Order ${id}...`);
+
+        // 1. Update localStorage immediately for UI consistency
+        const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const orderIdx = existingOrders.findIndex(o => o.id === id || o.order_id === id);
+        if (orderIdx > -1) {
+            existingOrders[orderIdx].rider = riderName;
+            localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+        }
+
+        // 2. Re-render UI so the Dispatch button gets the new rider value
+        this.fetchRealStats();
+
+        if (id.startsWith('mock')) return;
+
+        // Demo Mode Check
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             return;
         }
         
-        console.log(`📡 Assigning Rider ${riderName} to Order ${id}...`);
         try {
             await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
                 method: 'PATCH',
@@ -855,7 +874,7 @@ const admin = {
                 },
                 body: JSON.stringify({ assigned_rider: riderName })
             });
-            console.log('✅ Rider Assigned');
+            console.log('✅ Rider Assigned to Supabase');
         } catch (err) {
             console.error('Assignment Failed:', err);
         }
@@ -864,6 +883,13 @@ const admin = {
     async updateOrderStatus(id, newStatus) {
         console.log(`📡 Updating Order ${id} to ${newStatus}...`);
         
+        // Demo Mode: Skip network if Supabase not configured
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            console.log("🛠️ Local Sync Only: Supabase not configured.");
+            this.fetchRealStats();
+            return;
+        }
+
         try {
             const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
                 method: 'PATCH',

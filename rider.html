@@ -963,61 +963,8 @@
                     <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;">5</span>
                 </div>
                 
-                <div class="queue-list-container" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
-                    <div class="queue-card urgent" onclick="openOrderDetails('IQ-9751')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Fat Monk Coffee</div>
-                            <div class="queue-info">
-                                <span style="color: #ef4444; font-weight: 700;">● Due: 12:30 PM</span>
-                                <span>• 5 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱100</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openOrderDetails('IQ-9752')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Coffee Project</div>
-                            <div class="queue-info">
-                                <span style="color: #f59e0b; font-weight: 700;">● Due: 12:45 PM</span>
-                                <span>• 2 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱80</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openOrderDetails('IQ-9753')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Milktea Co.</div>
-                            <div class="queue-info">
-                                <span style="color: #38bdf8; font-weight: 700;">● Due: 1:00 PM</span>
-                                <span>• 10 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱150</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openOrderDetails('IQ-9754')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Seda Hotel</div>
-                            <div class="queue-info">
-                                <span style="color: #38bdf8; font-weight: 700;">● Due: 2:30 PM</span>
-                                <span>• 20 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱250</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openOrderDetails('IQ-9755')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Cucina Higala</div>
-                            <div class="queue-info">
-                                <span style="color: #38bdf8; font-weight: 700;">● Due: 3:00 PM</span>
-                                <span>• 3 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱90</div>
-                    </div>
+                <div class="queue-list-container" id="rider-queue-list" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
+                    <!-- Real Dispatches Injected Here -->
                 </div>
             </div>
 
@@ -1079,6 +1026,9 @@
 
             <!-- ACTIVE DELIVERY -->
             <div id="active-delivery" style="display: none;">
+                <button onclick="backToQueue()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #94a3b8; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; padding: 6px 12px; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg> Minimize View
+                </button>
                 <div class="card">
                     <div id="geotag-overlay">
                         <div class="spinner"></div>
@@ -1096,16 +1046,16 @@
                     <div class="customer-addr" id="active-addr" style="margin-bottom: 0.5rem;">📍 Uptown CDO, Xavier Estates</div>
 
                     <div style="background: var(--rider-surface); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; border-left: 2px solid var(--rider-accent);">
-                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Receiver:</span> John Doe</div>
-                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Contact:</span> 0917 123 4567</div>
-                        <div style="color: #f59e0b;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Note:</span> Leave at the lobby desk.</div>
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Receiver:</span> <span id="active-receiver">John Doe</span></div>
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Contact:</span> <span id="active-contact">0917 123 4567</span></div>
+                        <div style="color: #f59e0b;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Note:</span> <span id="active-notes">Leave at the lobby desk.</span></div>
                     </div>
 
                     <div class="contact-group">
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=IceQube+Macabalan+Hub&destination=8.4526,124.6293" target="_blank" class="contact-btn map">🗺️ Open Map</a>
-                        <a href="tel:+639171234567" class="contact-btn">📞 Call</a>
-                        <a href="sms:+639171234567" class="contact-btn">📱 SMS</a>
-                        <a href="https://m.me/fatmonkcoffee" target="_blank" class="contact-btn">💬 Messenger</a>
+                        <a href="#" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a id="active-call" href="tel:+639171234567" class="contact-btn">📞 Call</a>
+                        <a id="active-sms" href="sms:+639171234567" class="contact-btn">📱 SMS</a>
+                        <a id="active-messenger" href="#" target="_blank" class="contact-btn">💬 Messenger</a>
                     </div>
 
                     <div class="payment-method">💳 GCash (Paid)</div>
@@ -1142,11 +1092,18 @@
             <div id="dashboard-payout-list">
                 <!-- Latest payout item will appear here -->
             </div>
-        </div>
+                    </div>
 
-    </div>
+                    <div id="accept-decline-group" style="display: none; gap: 10px; margin-bottom: 1.5rem;">
+                        <button class="btn btn-decline" onclick="backToQueue()" style="flex: 1; height: 55px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-weight: 700; border-radius: 12px; cursor: pointer;">
+                            DECLINE
+                        </button>
+                        <button class="btn btn-accept" onclick="acceptBroadcastOrder()" style="flex: 2; height: 55px; background: #10b981; border: none; color: white; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);">
+                            ✅ ACCEPT DELIVERY
+                        </button>
+                    </div>
 
-                    <button class="btn btn-delivered" onclick="openCamera()">
+                    <button id="btn-confirm-delivery" class="btn btn-delivered" onclick="openCamera()" style="display: none; width: 100%; height: 60px; font-weight: 800; font-size: 1.1rem; border-radius: 15px;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right: 4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                         Take POD Photo & Confirm
                     </button>
@@ -1161,53 +1118,11 @@
             <div id="advance-queue">
                 <div class="queue-header">
                     <span>Scheduled Bookings</span>
-                    <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;">4</span>
+                    <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;" id="advance-queue-count">0</span>
                 </div>
                 
-                <div class="queue-list-container" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
-                    <div class="queue-card urgent" onclick="openAdvanceDetails('IQ-9760')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Event Center CDO</div>
-                            <div class="queue-info">
-                                <span style="color: #ef4444; font-weight: 700;">● 2:00 PM Today</span>
-                                <span>• 21 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱250</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openAdvanceDetails('IQ-9761')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">N Hotel</div>
-                            <div class="queue-info">
-                                <span style="color: #f59e0b; font-weight: 700;">● 4:00 PM Today</span>
-                                <span>• 10 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱180</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openAdvanceDetails('IQ-9762')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Smac's Bar</div>
-                            <div class="queue-info">
-                                <span style="color: #38bdf8; font-weight: 700;">● 6:30 PM Today</span>
-                                <span>• 15 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱200</div>
-                    </div>
-
-                    <div class="queue-card" onclick="openAdvanceDetails('IQ-9763')">
-                        <div style="padding-left: 8px;">
-                            <div class="queue-customer">Xavier Gym</div>
-                            <div class="queue-info">
-                                <span style="color: #38bdf8; font-weight: 700;">● 8:00 AM Tomorrow</span>
-                                <span>• 30 Items</span>
-                            </div>
-                        </div>
-                        <div class="queue-payout">₱400</div>
-                    </div>
+                <div class="queue-list-container" id="advance-queue-list" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
+                    <!-- Real Advance Bookings Injected Here -->
                 </div>
             </div>
 
@@ -1268,6 +1183,7 @@
 
     </div>
 
+    <script src="js/sync.js?v=1.0.0"></script>
     <script>
         let currentRider = '';
         let isOnline = true;
@@ -1277,15 +1193,154 @@
         let gcashDetails = { number: '', hasQR: false };
         let riderProfile = { sms: '', address: '', idVerified: false, profilePic: '' };
         let payoutHistory = [];
+        let activeOrder = null; // Store the current synced order here
         
+        // --- GLOBAL SYNC LISTENER ---
+        // Moved outside login() to ensure it's always listening even if login overlay is skipped
+        if (window.IceQubeSync) {
+            window.IceQubeSync.onDeliveryEvent((event) => {
+                if (event.type === 'NEW_DISPATCH') {
+                    const assignedRider = event.payload.riderId;
+                    const isMe = assignedRider === currentRider || (currentRider && currentRider.startsWith(assignedRider));
+                    
+                    if (isMe || assignedRider === 'Unassigned') {
+                        console.log("🚚 [Rider] New dispatch detected via Sync:", event.payload.orderId);
+                        handleIncomingDispatch(event.payload);
+                    }
+                }
+            });
+        }
+
         function login() {
             let input = document.getElementById('rider-id-input');
-            currentRider = input && input.value.trim() !== '' ? input.value : 'John Doe';
+            currentRider = input && input.value.trim() !== '' ? input.value : 'John'; 
             document.getElementById('display-rider-name').innerText = currentRider.split(' ')[0];
             document.getElementById('login-overlay').style.display = 'none';
             
-            // Simulate incoming order for demo purposes
-            simulateIncoming();
+            // Re-render queue to ensure currentRider filter is applied correctly
+            renderRiderQueue();
+        }
+
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderRiderQueue();
+        });
+
+        function formatOrderItems(o) {
+            if (!o.items) return '1 Bag';
+            if (typeof o.items === 'string' || typeof o.items === 'number') return `${o.items} Bags`;
+            
+            const fd = o.items.fullDice || {};
+            const hd = o.items.halfDice || {};
+            const parts = [];
+            if (fd['3kg']) parts.push(`${fd['3kg']}×3kg (F)`);
+            if (fd['1kg']) parts.push(`${fd['1kg']}×1kg (F)`);
+            if (hd['3kg']) parts.push(`${hd['3kg']}×3kg (H)`);
+            if (hd['1kg']) parts.push(`${hd['1kg']}×1kg (H)`);
+            
+            return parts.length > 0 ? parts.join(', ') : '1 Bag';
+        }
+
+        function renderRiderQueue() {
+            const queueList = document.getElementById('rider-queue-list');
+            const queueCount = document.querySelector('#dispatch-queue .queue-header span:last-child');
+            const advanceList = document.getElementById('advance-queue-list');
+            const advanceCount = document.getElementById('advance-queue-count');
+            const advanceBadge = document.getElementById('advance-badge');
+
+            if (!queueList || !advanceList) return;
+
+            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            
+            // Live Orders (Dispatched to me OR Unassigned)
+            const myLive = allOrders.filter(o => {
+                const r = String(o.rider || 'Unassigned').trim();
+                const isAssignedToMe = r === currentRider || (currentRider && currentRider.startsWith(r));
+                const isOpenDispatch = r === 'Unassigned' || r === 'undefined' || !o.rider;
+                
+                return (isAssignedToMe || isOpenDispatch) && 
+                       (o.delivery_status === 'Dispatched' || o.delivery_status === 'Awaiting Acceptance' || o.delivery_status === 'In Transit');
+            });
+            if (queueCount) queueCount.innerText = myLive.length;
+
+            if (myLive.length === 0) {
+                document.getElementById('empty-state').style.display = 'flex';
+                document.getElementById('dispatch-queue').style.display = 'none';
+            } else {
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('dispatch-queue').style.display = 'block';
+                queueList.innerHTML = myLive.map(o => {
+                    const isInTransit = o.delivery_status === 'In Transit';
+                    const isUnassigned = o.rider === 'Unassigned' || !o.rider || o.rider === 'undefined';
+                    
+                    const cardStyle = isInTransit ? 
+                        'border: 1px solid var(--rider-accent); background: rgba(56,189,248,0.1); box-shadow: 0 0 15px rgba(56,189,248,0.1);' : 
+                        '';
+                    
+                    const badge = isInTransit ? 
+                        '<span style="background: var(--rider-accent); color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 800;">ACTIVE</span>' : 
+                        (isUnassigned ? '<span style="background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">📢 OPEN DISPATCH</span>' : '');
+
+                    return `
+                        <div class="queue-card" style="${cardStyle}" onclick="openOrderDetails('${o.order_id}')">
+                            <div style="padding-left: 8px;">
+                                <div class="queue-customer">
+                                    ${o.customer_name} 
+                                    ${badge}
+                                </div>
+                                <div class="queue-info">
+                                    <span style="color: ${isInTransit ? 'var(--rider-accent)' : '#38bdf8'}; font-weight: 700;">● ${o.delivery_schedule || 'Immediate'}</span>
+                                    <span>• ${formatOrderItems(o)}</span>
+                                </div>
+                            </div>
+                            <div class="queue-payout">₱${o.delivery_fee || 0}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Advance Bookings (Unassigned or assigned to me, with a schedule)
+            const myAdvance = allOrders.filter(o => 
+                (o.delivery_schedule && o.delivery_schedule !== 'Immediate') && 
+                (o.rider === currentRider || !o.rider || o.rider === 'Unassigned') &&
+                o.delivery_status !== 'Delivered'
+            );
+
+            if (advanceCount) advanceCount.innerText = myAdvance.length;
+            if (advanceBadge) {
+                advanceBadge.innerText = myAdvance.length;
+                advanceBadge.style.display = myAdvance.length > 0 ? 'inline-block' : 'none';
+            }
+
+            if (myAdvance.length === 0) {
+                advanceList.innerHTML = '<div style="color: #475569; font-size: 0.9rem; text-align: center; padding: 2rem;">No upcoming bookings.</div>';
+            } else {
+                advanceList.innerHTML = myAdvance.map(o => `
+                    <div class="queue-card" onclick="openAdvanceDetails('${o.order_id}')">
+                        <div style="padding-left: 8px;">
+                            <div class="queue-customer">${o.customer_name}</div>
+                            <div class="queue-info">
+                                <span style="color: #f59e0b; font-weight: 700;">● ${o.delivery_schedule}</span>
+                                <span>• ${formatOrderItems(o)}</span>
+                            </div>
+                        </div>
+                        <div class="queue-payout">₱${o.delivery_fee || 0}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function handleIncomingDispatch(dispatch) {
+            if (!isOnline) return;
+            activeOrder = dispatch;
+            
+            // Re-render the queue to show the new real order
+            renderRiderQueue();
+            
+            // Automatically open the details drawer for new dispatch
+            openOrderDetails(dispatch.orderId);
+            
+            console.log("🔔 Incoming Dispatch:", dispatch.orderId);
         }
 
         function simulateIncoming() {
@@ -1303,15 +1358,140 @@
         }
 
         function openOrderDetails(orderId) {
+            // Hide mini-bar when opening full details
+            document.getElementById('minimized-order-bar').style.display = 'none';
+
+            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const cleanId = id => id ? String(id).replace('#', '').trim() : '';
+            const targetId = cleanId(orderId);
+
+            const order = allOrders.find(o => cleanId(o.order_id) === targetId);
+            if (!order) {
+                console.warn("⚠️ [Rider] Order not found for details view:", orderId);
+                return;
+            }
+
+            activeOrder = order;
+
+            // Populate Active Card
+            const idEl = document.getElementById('active-id');
+            const custEl = document.getElementById('active-customer');
+            const addrEl = document.getElementById('active-addr');
+            const itemsEl = document.getElementById('active-items');
+            
+            if (idEl) idEl.innerText = `#${order.order_id}`;
+            if (custEl) custEl.innerText = order.customer_name;
+            if (addrEl) addrEl.innerText = `📍 ${order.delivery_address || 'Macabalan Hub'}`;
+            
+            const receiverEl = document.getElementById('active-receiver');
+            const contactEl = document.getElementById('active-contact');
+            const notesEl = document.getElementById('active-notes');
+            
+            if (receiverEl) receiverEl.innerText = order.receiver_name || order.customer_name;
+            if (contactEl) contactEl.innerText = order.contact_number || 'N/A';
+            if (notesEl) notesEl.innerText = order.delivery_notes || 'No special notes.';
+
+            const callBtn = document.getElementById('active-call');
+            const smsBtn = document.getElementById('active-sms');
+            if (callBtn) callBtn.href = `tel:${order.contact_number || ''}`;
+            if (smsBtn) smsBtn.href = `sms:${order.contact_number || ''}`;
+
+            if (itemsEl) {
+                itemsEl.innerHTML = `<div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="color: var(--rider-text-main); font-size: 1.2em; vertical-align: middle; line-height: 1.2;">${formatOrderItems(order)}</span>
+                </div>`;
+            }
+
+            // Payouts
+            const itemsPriceEl = document.getElementById('active-items-price');
+            const deliveryFeeEl = document.getElementById('active-delivery-fee');
+            const priorityFeeEl = document.getElementById('active-priority-fee');
+            
+            if (itemsPriceEl) itemsPriceEl.innerText = `₱${parseFloat(order.total_price || 0).toLocaleString()}`;
+            if (deliveryFeeEl) deliveryFeeEl.innerText = `₱${parseFloat(order.delivery_fee || 0).toLocaleString()}`;
+            if (priorityFeeEl) priorityFeeEl.innerText = `₱${parseFloat(order.priority_fee || 0).toLocaleString()}`;
+
+            // To Collect
+            const collectEl = document.querySelector('#active-delivery .card > div:nth-last-child(2) > div:last-child');
+            if (collectEl) {
+                const toCollect = order.payment_method === 'COD' ? order.total_price : 0;
+                collectEl.innerText = `₱${parseFloat(toCollect || 0).toLocaleString()}`;
+            }
+
+            // Map & Call Links
+            const mapLink = document.querySelector('#active-delivery .contact-btn.map');
+            if (mapLink) mapLink.href = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`;
+
+            // Show/Hide buttons based on assignment
+            // Show/Hide buttons based on assignment and status
+            const acceptGroup = document.getElementById('accept-decline-group');
+            const deliverBtn = document.getElementById('btn-confirm-delivery');
+            
+            const isUnassigned = order.rider === 'Unassigned' || order.rider === 'undefined' || !order.rider;
+            const isAwaiting = order.delivery_status === 'Awaiting Acceptance' || !order.delivery_status;
+
+            if (isUnassigned || isAwaiting) {
+                if (acceptGroup) acceptGroup.style.display = 'flex';
+                if (deliverBtn) deliverBtn.style.display = 'none';
+            } else {
+                if (acceptGroup) acceptGroup.style.display = 'none';
+                if (deliverBtn) deliverBtn.style.display = 'flex';
+            }
+
             // Hide queue, show details
             document.getElementById('dispatch-queue').style.display = 'none';
-            document.getElementById('incoming-order').style.display = 'block';
-            // In a real app, populate order details dynamically based on orderId
+            document.getElementById('active-delivery').style.display = 'block';
+        }
+
+        function acceptBroadcastOrder() {
+            if (!activeOrder) return;
+            
+            // 1. Update order in localStorage
+            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const cleanId = id => id ? String(id).replace('#', '').trim() : '';
+            const targetId = cleanId(activeOrder.order_id || activeOrder.orderId);
+
+            const idx = allOrders.findIndex(o => cleanId(o.order_id) === targetId);
+            if (idx !== -1) {
+                allOrders[idx].rider = currentRider;
+                allOrders[idx].delivery_status = 'In Transit'; // Update status to move to next step
+                localStorage.setItem('ice_orders', JSON.stringify(allOrders));
+            }
+
+            // 2. Broadcast the claim so other riders see it's gone
+            if (window.IceQubeSync) {
+                window.IceQubeSync.publishDeliveryEvent({
+                    type: 'ORDER_CLAIMED',
+                    payload: {
+                        orderId: activeOrder.order_id || activeOrder.orderId,
+                        riderId: currentRider
+                    }
+                });
+            }
+
+            // 3. Refresh UI
+            activeOrder.rider = currentRider;
+            activeOrder.delivery_status = 'In Transit';
+            openOrderDetails(activeOrder.order_id || activeOrder.orderId);
+            renderRiderQueue();
+            
+            alert("✅ Delivery Accepted! Drive safely.");
         }
 
         function backToQueue() {
             document.getElementById('incoming-order').style.display = 'none';
+            document.getElementById('active-delivery').style.display = 'none';
             document.getElementById('dispatch-queue').style.display = 'block';
+
+            // Show mini-bar if we have an active order
+            if (activeOrder && (activeOrder.delivery_status === 'Dispatched' || activeOrder.delivery_status === 'Awaiting Acceptance')) {
+                const bar = document.getElementById('minimized-order-bar');
+                const info = document.getElementById('mini-order-info');
+                if (bar && info) {
+                    info.innerText = `#${activeOrder.order_id} • ${activeOrder.customer_name}`;
+                    bar.style.display = 'flex';
+                }
+            }
         }
 
         function toggleStatus() {
@@ -1402,46 +1582,68 @@
         }
 
         async function completeOrder() {
+            if (!activeOrder) {
+                alert("No active order to complete.");
+                return;
+            }
+
             // Show Geotagging overlay
             const overlay = document.getElementById('geotag-overlay');
-            overlay.style.display = 'flex';
+            if (overlay) overlay.style.display = 'flex';
             
             // 1. Fetch real GPS coordinates (simulated here)
-            const simulatedLat = 8.4526;
-            const simulatedLng = 124.6293;
-            const currentOrderId = "IQ-9751";
+            const simulatedLat = activeOrder.delivery_lat || 8.4526;
+            const simulatedLng = activeOrder.delivery_lng || 124.6293;
+            const currentOrderId = activeOrder.order_id || activeOrder.orderId;
 
             // 2. Sync to Supabase for Dispute Archive
             await syncGeotagToSupabase(currentOrderId, simulatedLat, simulatedLng, currentRider);
             
             // 3. Complete UI Updates
-            overlay.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
             
             // Add to history
             const now = new Date();
             const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const delFee = parseFloat(activeOrder.delivery_fee || 0);
+            const tipFee = parseFloat(activeOrder.priority_fee || 0);
+            const total = delFee + tipFee;
+
             completedDeliveries.push({
                 id: "#" + currentOrderId,
-                location: "Fat Monk Coffee",
+                location: activeOrder.customer_name || "Synced Delivery",
                 time: timeString,
-                fee: 80,
-                tip: 20,
-                total: 100
+                fee: delFee,
+                tip: tipFee,
+                total: total
             });
 
             // Update Dashboard
             totalDeliveries++;
-            totalPayout += 100; // 80 fee + 20 tip
+            totalPayout += total;
             
-            document.getElementById('deliveries-count').innerText = totalDeliveries;
-            document.getElementById('payout-amount').innerText = `₱${totalPayout.toFixed(2)}`;
+            const countEl = document.getElementById('deliveries-count');
+            const amountEl = document.getElementById('payout-amount');
+            if (countEl) countEl.innerText = totalDeliveries;
+            if (amountEl) amountEl.innerText = `₱${totalPayout.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             
             // Reset View
             document.getElementById('active-delivery').style.display = 'none';
-            document.getElementById('empty-state').style.display = 'flex';
+            renderRiderQueue();
             
-            alert(`Delivery Completed & Synced to Supabase!\n📍 Location: ${simulatedLat}° N, ${simulatedLng}° E\n💰 Payout Added: ₱100.00`);
+            alert(`Delivery Completed & Synced to Supabase!\n📍 Location: ${simulatedLat.toFixed(4)}° N, ${simulatedLng.toFixed(4)}° E\n💰 Payout Added: ₱${total.toFixed(2)}`);
             console.log("📡 Order Delivered by " + currentRider);
+
+            // Local Sync (BroadcastChannel)
+            if (window.IceQubeSync) {
+                window.IceQubeSync.publishDeliveryComplete({
+                    orderId: currentOrderId,
+                    riderId: currentRider,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            activeOrder = null;
         }
 
         // --- PAYOUT LOGIC ---
@@ -1722,6 +1924,32 @@
         }
 
         function openAdvanceDetails(orderId) {
+            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const order = allOrders.find(o => o.order_id === orderId);
+            if (!order) return;
+
+            // Populate Advance Detail Card
+            const card = document.getElementById('advance-order');
+            if (card) {
+                card.querySelector('.time-badge').innerText = `⏰ ${order.delivery_schedule}`;
+                card.querySelector('.order-id').innerText = `#${order.order_id}`;
+                card.querySelector('.customer-name').innerText = order.customer_name;
+                card.querySelector('.customer-addr').innerText = `📍 ${order.delivery_location || 'Macabalan Hub'}`;
+                
+                // Map Link
+                const mapBtn = card.querySelector('.contact-btn.map');
+                if (mapBtn) mapBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`;
+                
+                // Payout
+                card.querySelector('span[style*="font-weight: 700"]').innerText = `₱${parseFloat(order.delivery_fee || 0).toFixed(2)}`;
+                
+                // Update Claim Button ID
+                const claimBtn = card.querySelector('.btn-accept');
+                if (claimBtn) {
+                    claimBtn.setAttribute('onclick', `claimAdvanceOrder('${order.order_id}')`);
+                }
+            }
+
             document.getElementById('advance-queue').style.display = 'none';
             document.getElementById('advance-order').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1774,7 +2002,7 @@
     </script>
 
     <!-- CAMERA OVERLAY (Proof of Delivery) -->
-    <div id="camera-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; background: black; flex-direction: column;">
+    <div id="camera-overlay" style="display: none; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 100%; z-index: 3000; background: black; flex-direction: column;">
         
         <!-- Top Controls -->
         <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1001;">
@@ -1809,6 +2037,18 @@
 
         <!-- Flash Overlay -->
         <div id="camera-flash" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1002; display: none;"></div>
+    </div>
+
+    <!-- PERSISTENT MINI-BAR FOR MINIMIZED ORDER -->
+    <div id="minimized-order-bar" onclick="openOrderDetails(activeOrder.order_id)" style="display: none; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #0284c7; color: white; padding: 14px 20px; z-index: 2000; border-top-left-radius: 16px; border-top-right-radius: 16px; box-shadow: 0 -8px 24px rgba(0,0,0,0.4); justify-content: space-between; align-items: center; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.2);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem;">🛵</div>
+            <div>
+                <div style="font-size: 0.65rem; opacity: 0.9; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Ongoing Delivery</div>
+                <div id="mini-order-info" style="font-weight: 700; font-size: 0.95rem;">#IQ-0000 • Customer Name</div>
+            </div>
+        </div>
+        <div style="background: white; color: #0284c7; padding: 6px 14px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">OPEN</div>
     </div>
 </body>
 </html>
