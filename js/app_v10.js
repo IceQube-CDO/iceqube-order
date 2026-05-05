@@ -4260,8 +4260,7 @@ function mockSupabaseAICall(file) {
     });
 }
 
-// Start the app
-window.onload = () => app.init();
+// Start the app (Already initialized via DOMContentLoaded)
 
 // FORCED 1:1 SCALE & UNZOOMABLE
 // This ensures that even if browsers ignore the meta viewport tag, 

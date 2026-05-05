@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-v4';
+const CACHE_NAME = 'iceqube-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -9,8 +9,11 @@ const ASSETS = [
   './js/sync.js',
   './js/app_header.js',
   './css/style_v10.css',
+  './assets/logo-192.png',
+  './assets/logo-512.png',
   './assets/logo.png',
   './assets/logo2.png',
+  './ice_bg.png',
   './assets/hero.jpeg',
   './assets/full_dice.png',
   './assets/half_dice.png',
@@ -46,8 +49,8 @@ self.addEventListener('fetch', (event) => {
       caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
       return response;
     }).catch(() => {
-      // Network failed — fall back to cache
-      return caches.match(event.request);
+      // Network failed — fall back to cache (ignore query strings for versioned assets)
+      return caches.match(event.request, { ignoreSearch: true });
     })
   );
 });
