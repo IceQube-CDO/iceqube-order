@@ -27,6 +27,7 @@ window.IceQubeSync = {
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
         // Don't duplicate if already exists
         if (!existingOrders.find(o => o.order_id === orderData.order_id)) {
+            orderData.is_real = true; // Mark as real for the purge logic
             existingOrders.unshift(orderData);
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
@@ -44,6 +45,7 @@ window.IceQubeSync = {
         
         // Save to localStorage for persistence
         const existingDeliveries = JSON.parse(localStorage.getItem('ice_deliveries') || '[]');
+        dispatchData.is_real = true; // Mark as real for the purge logic
         existingDeliveries.push(dispatchData);
         localStorage.setItem('ice_deliveries', JSON.stringify(existingDeliveries));
 
@@ -87,6 +89,12 @@ window.IceQubeSync = {
         });
     },
 
+    // Generic Delivery Event Publisher
+    publishDeliveryEvent: function(event) {
+        console.log("📡 [Sync] Publishing Delivery Event:", event.type);
+        deliveriesChannel.postMessage(event);
+    },
+
     // --- SUBSCRIBERS ---
 
     // Listen for events on the Orders Channel
@@ -107,7 +115,7 @@ window.IceQubeSync = {
             
             const data = event.data;
             const payload = data.payload;
-            const cleanId = id => id ? String(id).replace('#', '').trim() : '';
+            const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
 
             // SYNC LOCALSTORAGE FOR RECEIVER
             if (data.type === 'NEW_DISPATCH') {
@@ -116,23 +124,24 @@ window.IceQubeSync = {
                 const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id) === targetId);
                 
                 if (orderIdx > -1) {
-                    existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
-                    existingOrders[orderIdx].rider = payload.riderId;
-                    localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
-                    console.log("✅ [Sync] Receiver LocalStorage updated for Dispatch:", payload.orderId);
-                } else {
-                    // Fallback: If not found, add it to local storage anyway so it shows up
-                    // ONLY if not already there as an external order
-                    if (!existingOrders.find(o => cleanId(o.order_id) === targetId)) {
-                        existingOrders.unshift({
-                            order_id: payload.orderId,
-                            customer_name: "External Order",
-                            delivery_status: 'Awaiting Acceptance',
-                            rider: payload.riderId,
-                            items: { fullDice: {'3kg': 1} } // Dummy items
-                        });
+                    // Only update to 'Awaiting Acceptance' if it's currently 'Pending' or undefined
+                    const currentStatus = existingOrders[orderIdx].delivery_status;
+                    if (!currentStatus || currentStatus === 'Pending' || currentStatus === 'Dispatched') {
+                        existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
+                        existingOrders[orderIdx].rider = payload.riderId;
                         localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+                        console.log("✅ [Sync] Status set to Awaiting Acceptance:", payload.orderId);
                     }
+                } else {
+                    // Fallback: If not found, add it
+                    existingOrders.unshift({
+                        order_id: payload.orderId,
+                        customer_name: "External Order",
+                        delivery_status: 'Awaiting Acceptance',
+                        rider: payload.riderId,
+                        items: { fullDice: {'3kg': 1} }
+                    });
+                    localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
                 }
             } else if (data.type === 'ORDER_CLAIMED') {
                 const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
@@ -141,8 +150,10 @@ window.IceQubeSync = {
                 
                 if (orderIdx > -1) {
                     existingOrders[orderIdx].rider = payload.riderId;
+                    // When an order is claimed, it officially becomes 'In Transit'
+                    existingOrders[orderIdx].delivery_status = 'In Transit';
                     localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
-                    console.log("✅ [Sync] Receiver LocalStorage updated for Claim:", payload.orderId);
+                    console.log("✅ [Sync] Status set to In Transit (Claimed):", payload.orderId);
                 }
             }
 

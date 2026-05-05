@@ -129,11 +129,7 @@ const app = {
         balance: 0.00,
         creditLimit: 50000.00
     },
-    invoices: [
-        { id: 'INV-8815', amount_due: 600, total: 600, created_at: '2026-04-10', status: 'unpaid' },
-        { id: 'INV-8821', amount_due: 400, total: 400, created_at: '2026-04-17', status: 'unpaid' },
-        { id: 'INV-8828', amount_due: 250, total: 250, created_at: '2026-04-24', status: 'unpaid' }
-    ],
+    invoices: [],
     isQuickReorder: false,
     orderData: {
         qty: {
@@ -499,13 +495,7 @@ const app = {
     },
 
     initLegitimacyDB() {
-        if (!localStorage.getItem('ice_orders')) {
-            const mockOrders = [
-                { id: 'IQ-10001', refNo: '123456789', amount: 150 },
-                { id: 'IQ-10002', refNo: '987654321', amount: 200 }
-            ];
-            localStorage.setItem('ice_orders', JSON.stringify(mockOrders));
-        }
+        // Mock data seeding disabled for production run
     },
 
     checkUserPrivileges() {
@@ -2486,6 +2476,7 @@ const app = {
             delivery_lng: this.orderData.deliveryDetails ? this.orderData.deliveryDetails.lng : null,
             delivery_fee: this.orderData.deliveryFee || 0,
             po_number: this.orderData.poNumber,
+            is_real: true, // Safeguard for Purge Logic
             created_at: new Date().toISOString()
         };
 

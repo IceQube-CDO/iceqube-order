@@ -3,7 +3,7 @@ if (typeof SUPABASE_CONFIG === 'undefined') {
     var SUPABASE_CONFIG = { URL: '', ANON_KEY: '' };
 }
 
-const admin = {
+var admin = {
     _syncIntervalId: null,
     pin: '',
     correctPin: '2026', 
@@ -38,15 +38,86 @@ const admin = {
     })),
     rental: JSON.parse(localStorage.getItem('iceqube_rental') || '15000'),
     cashflowFilter: 'daily', 
+    vacationMode: JSON.parse(localStorage.getItem('iceqube_vacation_mode') || 'false'),
+    autoDispatchType: 'broadcast',
 
-    resetSystem() {
-        if (confirm('Are you sure you want to clear all real orders and cashflow data? This will restore mock data for the demo.')) {
-            localStorage.removeItem('ice_orders');
-            localStorage.removeItem('ice_deliveries');
-            localStorage.removeItem('ice_cashflow');
-            localStorage.removeItem('ice_messages');
-            localStorage.removeItem('iceqube_manual_cashflow'); // Clean up old key if exists
-            location.reload();
+    purgeTestData() {
+        console.log('[SYSTEM] Purge Test Data triggered');
+        admin.showConfirmModal(
+            "Purge Test Data",
+            "This will remove all TEST entries but will PROTECT your 'Real Business' data. Proceed?",
+            () => {
+                console.log('🧹 Purging Test Data starting...');
+                try {
+                    const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                    const realOrders = orders.filter(o => o.is_real === true);
+                    localStorage.setItem('ice_orders', JSON.stringify(realOrders));
+                    console.log(`- Filtered Orders: ${realOrders.length} kept`);
+
+                    const deliveries = JSON.parse(localStorage.getItem('ice_deliveries') || '[]');
+                    const realDeliveries = deliveries.filter(d => d.is_real === true);
+                    localStorage.setItem('ice_deliveries', JSON.stringify(realDeliveries));
+                    console.log(`- Filtered Deliveries: ${realDeliveries.length} kept`);
+
+                    const cashflow = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
+                    const realCashflow = cashflow.filter(c => c.is_real === true);
+                    localStorage.setItem('ice_cashflow', JSON.stringify(realCashflow));
+                    console.log(`- Filtered Cashflow: ${realCashflow.length} kept`);
+
+                    localStorage.removeItem('ice_messages');
+                    console.log('- Demo messages cleared');
+
+                    localStorage.setItem('ice_system_purged', 'true');
+                    console.log('- System marked as PURGED (Clean Slate Mode)');
+                    
+                    console.log('Purge successful. Reloading...');
+                    location.reload();
+                } catch (err) {
+                    console.error('❌ Error during purge:', err);
+                    alert('Purge failed! Check console for details.');
+                }
+            }
+        );
+    },
+
+    showConfirmModal(title, message, onConfirm) {
+        console.log(`[UI] Showing Confirm Modal: ${title}`);
+        const modal = document.getElementById('global-confirm-modal');
+        const titleEl = document.getElementById('confirm-modal-title');
+        const bodyEl = document.getElementById('confirm-modal-body');
+        const confirmBtn = document.getElementById('confirm-modal-btn');
+        
+        if (!modal || !titleEl || !bodyEl || !confirmBtn) {
+            console.error('❌ Missing modal elements!', { modal, titleEl, bodyEl, confirmBtn });
+            if (confirm(message)) onConfirm();
+            return;
+        }
+        
+        titleEl.innerText = title;
+        bodyEl.innerText = message;
+        confirmBtn.onclick = () => {
+            console.log('[UI] Modal confirmed');
+            modal.style.display = 'none';
+            onConfirm();
+        };
+        
+        modal.style.display = 'flex';
+    },
+
+    toggleRealStatus(type, id) {
+        console.log(`🛡️ Toggling Real Status for ${type}:${id}`);
+        let key = '';
+        if (type === 'order') key = 'ice_orders';
+        else if (type === 'cashflow') key = 'ice_cashflow';
+        else return;
+
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        const idx = data.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
+        
+        if (idx > -1) {
+            data[idx].is_real = !data[idx].is_real;
+            localStorage.setItem(key, JSON.stringify(data));
+            this.fetchRealStats(); // Refresh UI
         }
     },
 
@@ -69,6 +140,9 @@ const admin = {
             };
             localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
         }
+
+
+        // Purge button listener moved to onclick in HTML for robustness
 
         this.updateAlertCenter([]);
         this.startDataSync();
@@ -104,20 +178,132 @@ const admin = {
                 }
             });
         }
+
+        // Apply visual state if vacation mode is on
+        if (this.vacationMode) {
+            document.body.classList.add('vacation-active');
+            this.updateVacationUI();
+        }
     },
 
     handleIncomingOrder(order) {
         if (!order || !order.order_id) return;
         
         const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        // Prevent duplicates
-        if (!orders.find(o => o.order_id === order.order_id)) {
-            orders.unshift(order);
-            localStorage.setItem('ice_orders', JSON.stringify(orders));
-            console.log("💾 [Admin] Order persisted to LocalStorage:", order.order_id);
+        const existingIdx = orders.findIndex(o => o.order_id === order.order_id);
+        
+        // If order is new OR it exists but hasn't had supplies deducted yet
+        if (existingIdx === -1 || !orders[existingIdx].supplies_deducted) {
+            console.log("📦 [Admin] Processing supplies for order:", order.order_id);
             
+            if (existingIdx === -1) {
+                orders.unshift(order);
+            }
+            
+            // Mark as processed BEFORE saving to prevent recursion/double deduction
+            if (existingIdx > -1) {
+                orders[existingIdx].supplies_deducted = true;
+                // Merge items if they were missing in the local copy but present in the sync payload
+                if (!orders[existingIdx].items && order.items) {
+                    orders[existingIdx].items = order.items;
+                }
+            } else {
+                order.supplies_deducted = true;
+            }
+            
+            localStorage.setItem('ice_orders', JSON.stringify(orders));
+            
+            // Deduct supplies using the payload data (more reliable)
+            this.deductPackagingSupplies(order);
+
             this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
+            
+            // AUTOMATIC DISPATCH TRIGGER
+            if (this.vacationMode) {
+                console.log("✈️ [Vacation Mode] Triggering Auto-Dispatch for:", order.order_id);
+                setTimeout(() => {
+                    this.autoDispatch(order);
+                }, 2000);
+            }
+
             this.fetchRealStats();
+        } else {
+            console.log("⏭️ [Admin] Order already processed for supplies:", order.order_id);
+        }
+    },
+
+    deductPackagingSupplies(order) {
+        if (!order || !order.items) return;
+
+        const fd = order.items.fullDice || {};
+        const hd = order.items.halfDice || {};
+
+        const total3kg = (parseFloat(fd['3kg']) || 0) + (parseFloat(hd['3kg']) || 0);
+        const total1kg = (parseFloat(fd['1kg']) || 0) + (parseFloat(hd['1kg']) || 0);
+
+        if (total3kg === 0 && total1kg === 0) return;
+
+        console.log(`📦 [Packaging] Deducting supplies for Order ${order.order_id}: ${total3kg}x 3kg bags, ${total1kg}x 1kg bags`);
+
+        let updated = false;
+        
+        // Update 3kg bags
+        if (total3kg > 0) {
+            const item = this.consumables.packaging.find(i => i.id === 'bags3kg');
+            if (item) {
+                item.current = Math.max(0, item.current - total3kg);
+                updated = true;
+            }
+        }
+        
+        // Update 1kg bags
+        if (total1kg > 0) {
+            const item = this.consumables.packaging.find(i => i.id === 'bags1kg');
+            if (item) {
+                item.current = Math.max(0, item.current - total1kg);
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+            this.updateConsumablesUI();
+            console.log(`✅ [Packaging] Supplies updated in LocalStorage.`);
+        }
+    },
+
+    autoDispatch(order) {
+        if (this.autoDispatchType === 'broadcast') {
+            console.log("📢 [Auto-Dispatch] Broadcasting to all riders...");
+            this.dispatchOrder(order.id || order.order_id, 'Unassigned', order.order_id);
+        }
+    },
+
+    toggleVacationMode() {
+        this.vacationMode = !this.vacationMode;
+        localStorage.setItem('iceqube_vacation_mode', this.vacationMode);
+        
+        if (this.vacationMode) {
+            document.body.classList.add('vacation-active');
+            console.log("✈️ Vacation Mode ENABLED: Autopilot Active.");
+        } else {
+            document.body.classList.remove('vacation-active');
+            console.log("🏠 Vacation Mode DISABLED: Manual Control Restored.");
+        }
+        
+        this.updateVacationUI();
+    },
+
+    updateVacationUI() {
+        const btn = document.getElementById('vacation-btn');
+        if (!btn) return;
+
+        if (this.vacationMode) {
+            btn.innerHTML = '<span class="vacation-dot active"></span> VACATION MODE ON';
+            btn.classList.add('active');
+        } else {
+            btn.innerHTML = '<span class="vacation-dot"></span> VACATION MODE OFF';
+            btn.classList.remove('active');
         }
     },
 
@@ -320,19 +506,20 @@ const admin = {
 
         // Load Synced Orders from Local Storage
         const syncedOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const isPurged = localStorage.getItem('ice_system_purged') === 'true';
         
-        // Merge: Only use mocks if no synced orders exist
+        // Merge: Only use mocks if no synced orders exist AND system is NOT purged
         let combinedOrders = [];
         if (syncedOrders.length > 0) {
             combinedOrders = [...syncedOrders];
-        } else {
+        } else if (!isPurged) {
             combinedOrders = [...mockOrders];
         }
 
         // Populate the whole UI with combined data
         this.updateDashboardUI(combinedOrders);
         this.updateAlertCenter(combinedOrders);
-        console.log("🎨 Dashboard rendered with combined Sync + Mock data.");
+        console.log(`🎨 Dashboard rendered with ${combinedOrders.length} orders (Purged Mode: ${isPurged}).`);
     },
 
     animateCards() {
@@ -443,12 +630,13 @@ const admin = {
         const realCOGS = periodEntries.filter(e => e.type === 'OUT' && e.category === 'COGS').reduce((sum, e) => sum + e.amount, 0);
         const realRiderPayouts = periodEntries.filter(e => e.type === 'OUT' && e.category === 'Rider Payout').reduce((sum, e) => sum + e.amount, 0);
 
+        const isPurged = localStorage.getItem('ice_system_purged') === 'true';
         const p = {
-            revenue: realRevenue || (syncedOrders.length === 0 ? 124500 : 0), // Fallback only if totally empty
-            cogs: realCOGS || (syncedOrders.length === 0 ? 18500 : 0),
-            opex: realOpEx || (syncedOrders.length === 0 ? 45200 : 0),
+            revenue: realRevenue || ((syncedOrders.length === 0 && !isPurged) ? 124500 : 0), 
+            cogs: realCOGS || ((syncedOrders.length === 0 && !isPurged) ? 18500 : 0),
+            opex: realOpEx || ((syncedOrders.length === 0 && !isPurged) ? 45200 : 0),
             depreciation: monthlyDep * (period === 'ytd' ? ytdMonths : 1),
-            riderPayouts: realRiderPayouts || (syncedOrders.length === 0 ? 32000 : 0),
+            riderPayouts: realRiderPayouts || ((syncedOrders.length === 0 && !isPurged) ? 32000 : 0),
             utilities: totalOpEx * (period === 'ytd' ? ytdMonths : 1)
         };
         
@@ -583,7 +771,14 @@ const admin = {
                     <td style="text-align: center;">
                         <span class="source-${entry.source.toLowerCase()}">${entry.source}</span>
                     </td>
-                    <td style="text-align: right;">
+                    <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                        <button onclick="admin.toggleRealStatus('cashflow', '${entry.timestamp}')" 
+                                style="background: ${entry.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                       border: 1px solid ${entry.is_real ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                       color: ${entry.is_real ? '#22c55e' : '#64748b'}; 
+                                       padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
+                            ${entry.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                        </button>
                         ${entry.source === 'MANUAL' ? `<button onclick="admin.deleteManualEntry('${entry.timestamp}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
                     </td>
                 </tr>
@@ -714,6 +909,7 @@ const admin = {
                     <td><b>${o.customer_name}</b></td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
+                    <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
                     <td>
                         <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
@@ -724,7 +920,14 @@ const admin = {
                             ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
                         </select>
                     </td>
-                    <td style="text-align: right;">
+                    <td style="text-align: right; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                        <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
+                                style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                       border: 1px solid ${o.is_real ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                       color: ${o.is_real ? '#22c55e' : '#64748b'}; 
+                                       padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
+                            ${o.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                        </button>
                         <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')">
                             ${isAwaiting ? 'Re-Dispatch' : 'Dispatch'}
                         </button>
@@ -746,9 +949,19 @@ const admin = {
                     <td><b>${o.customer_name}</b></td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
+                    <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; color: #f59e0b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
+                    <td style="text-align: center;">
+                        <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
+                                style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                       border: 1px solid ${o.is_real ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                       color: ${o.is_real ? '#22c55e' : '#64748b'}; 
+                                       padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
+                            ${o.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                        </button>
+                    </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div class="rider-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">${(o.rider || 'U')[0]}</div>
@@ -791,11 +1004,11 @@ const admin = {
         const fd = o.items.fullDice || {};
         const hd = o.items.halfDice || {};
         const parts = [];
-        if (fd['3kg']) parts.push(`${fd['3kg']}×3kg (F)`);
-        if (fd['1kg']) parts.push(`${fd['1kg']}×1kg (F)`);
-        if (hd['3kg']) parts.push(`${hd['3kg']}×3kg (H)`);
-        if (hd['1kg']) parts.push(`${hd['1kg']}×1kg (H)`);
-        return parts.join(', ');
+        if (fd['3kg']) parts.push(`${fd['3kg']} bags - 3kg (Full Dice)`);
+        if (fd['1kg']) parts.push(`${fd['1kg']} bags - 1kg (Full Dice)`);
+        if (hd['3kg']) parts.push(`${hd['3kg']} bags - 3kg (Half Dice)`);
+        if (hd['1kg']) parts.push(`${hd['1kg']} bags - 1kg (Half Dice)`);
+        return parts.join('<br>');
     },
 
     async dispatchOrder(id, rider, orderId) {
@@ -1181,6 +1394,27 @@ const admin = {
 
         packagingList.innerHTML = this.consumables.packaging.map(item => renderItem(item, true)).join('');
         cleaningList.innerHTML = this.consumables.cleaning.map(item => renderItem(item, false)).join('');
+
+        // 4. Update Dashboard Card (if on home view)
+        const p1 = this.consumables.packaging[0];
+        const c1 = this.consumables.cleaning[0];
+        
+        if (p1 && document.getElementById('dash-inv-p1-val')) {
+            const p1Percent = Math.min((p1.current / p1.max) * 100, 100);
+            document.getElementById('dash-inv-p1-name').innerText = p1.name;
+            document.getElementById('dash-inv-p1-val').innerText = `${p1.current.toLocaleString()} ${p1.unit}`;
+            document.getElementById('dash-inv-p1-bar').style.width = `${p1Percent}%`;
+            document.getElementById('dash-inv-p1-bar').style.background = p1Percent < 20 ? '#ef4444' : 'var(--admin-accent)';
+        }
+
+        if (c1 && document.getElementById('dash-inv-c1-val')) {
+            const c1Percent = Math.min((c1.current / c1.max) * 100, 100);
+            document.getElementById('dash-inv-c1-name').innerText = c1.name;
+            document.getElementById('dash-inv-c1-val').innerText = `${c1.current.toLocaleString()} ${c1.unit}`;
+            document.getElementById('dash-inv-c1-bar').style.width = `${c1Percent}%`;
+            document.getElementById('dash-inv-c1-bar').style.background = c1Percent < 20 ? '#ef4444' : '#22c55e';
+            document.getElementById('dash-inv-warn').style.display = c1Percent < 20 ? 'block' : 'none';
+        }
 
         // 2. Update Dropdown Options (optional, but good for custom items)
         if (dropdown) {
@@ -1581,6 +1815,9 @@ const admin = {
         alert('Warehouse rent updated successfully!');
     }
 };
+
+// Explicitly attach to window
+window.admin = admin;
 
 // Add CSS shake animation dynamically
 const style = document.createElement('style');

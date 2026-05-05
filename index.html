@@ -42,8 +42,6 @@
             background-color: #f1f5f9;
             touch-action: manipulation;
             -webkit-text-size-adjust: 100%;
-            overscroll-behavior: none;
-            -ms-touch-action: manipulation;
         }
         /* Force 16px on ALL inputs to prevent iOS auto-zoom */
         input, select, textarea, .counter-input-small {
@@ -55,7 +53,7 @@
         }
         .app-shell {
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             height: 100vh;
             height: 100dvh;
             position: relative;
@@ -82,29 +80,9 @@
             opacity: 0;
         }
         .app-container {
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow-x: hidden !important;
-        }
-        .bottom-panel {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 100% !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            transform: translateX(100%) !important;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease !important;
-            z-index: 1001 !important;
-            background: white !important;
-            opacity: 0;
-            visibility: hidden;
-            overflow-x: hidden !important;
-        }
-        .bottom-panel.active {
-            transform: translateX(0) !important;
-            opacity: 1 !important;
-            visibility: visible !important;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
         }
         .step-content {
             display: none;
@@ -1384,23 +1362,24 @@
     <!-- About Our ICE Panel -->
     <div id="about-overlay" class="panel-overlay" onclick="app.togglePanel('about', false)"></div>
     <div id="about-panel" class="bottom-panel">
-        <div class="bottom-panel-handle"></div>
-        <div class="panel-header">
-            <button onclick="app.togglePanel('about', false)" class="close-btn back-btn" id="close-about-panel">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            </button>
-            <h2 style="flex: 1; margin-left: 8px;">About our ICE</h2>
-            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
-        </div>
-        <div class="about-tabs-container">
-            <div class="about-tabs-track">
-                <button class="about-tab-item active" id="tab-about-ice" onclick="app.switchAboutTab('tab-about-ice')">Ice Types</button>
-                <button class="about-tab-item" id="tab-about-water" onclick="app.switchAboutTab('tab-about-water')">Water Used</button>
-                <button class="about-tab-item" id="tab-about-delivery" onclick="app.switchAboutTab('tab-about-delivery')">Delivery</button>
-                <button class="about-tab-item" id="tab-about-payments" onclick="app.switchAboutTab('tab-about-payments')">Payments</button>
-                <button class="about-tab-item" id="tab-about-hub" onclick="app.switchAboutTab('tab-about-hub')">Hub</button>
+        <div class="mobile-app-wrapper">
+            <div class="bottom-panel-handle"></div>
+            <div class="panel-header">
+                <button onclick="app.togglePanel('about', false)" class="close-btn back-btn" id="close-about-panel">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h2 style="flex: 1; margin-left: 8px;">About our ICE</h2>
+                <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
             </div>
-        </div>
+            <div class="about-tabs-container">
+                <div class="about-tabs-track">
+                    <button class="about-tab-item active" id="tab-about-ice" onclick="app.switchAboutTab('tab-about-ice')">Ice Types</button>
+                    <button class="about-tab-item" id="tab-about-water" onclick="app.switchAboutTab('tab-about-water')">Water Used</button>
+                    <button class="about-tab-item" id="tab-about-delivery" onclick="app.switchAboutTab('tab-about-delivery')">Delivery</button>
+                    <button class="about-tab-item" id="tab-about-payments" onclick="app.switchAboutTab('tab-about-payments')">Payments</button>
+                    <button class="about-tab-item" id="tab-about-hub" onclick="app.switchAboutTab('tab-about-hub')">Hub</button>
+                </div>
+            </div>
         <div class="panel-content">
 
             <div class="about-content">
@@ -1739,7 +1718,8 @@
             </div>
         </div>
     </div>
-</div>
+    </div>
+    </div>
     <div id="reorderModal" class="modal-overlay" onclick="if(event.target === this) closeReorderModal()">
         <div class="modal-card">
             <h3>Confirm Your Order</h3>
@@ -1925,164 +1905,168 @@
     <!-- Debt Breakdown Bottom Sheet -->
     <div id="debt-overlay" class="sheet-overlay" onclick="app.toggleBottomSheet('debt', false)"></div>
     <div id="debt-sheet" class="bottom-sheet dark-sheet">
-        <div class="sheet-header">
-            <div class="handle"></div>
-            <h3>Total Debt Breakdown</h3>
-            <h1 class="total-debt-display">₱1,665.00</h1>
-        </div>
+        <div class="debt-breakdown-inner">
+            <div class="sheet-header">
+                <div class="handle"></div>
+                <h3>Total Debt Breakdown</h3>
+                <h1 class="total-debt-display">₱1,665.00</h1>
+            </div>
 
-        <!-- VIEW 1: LEDGER BREAKDOWN -->
-        <div id="ledger-view">
-            <div class="ledger-list">
-                <div class="ledger-item">
-                    <div class="l-info">
-                        <strong>Order #IQ-9801</strong>
-                        <span>Delivered Apr 22 • 5 Bags</span>
+            <!-- VIEW 1: LEDGER BREAKDOWN -->
+            <div id="ledger-view">
+                <div class="ledger-list">
+                    <div class="ledger-item">
+                        <div class="l-info">
+                            <strong>Order #IQ-9801</strong>
+                            <span>Delivered Apr 22 • 5 Bags</span>
+                        </div>
+                        <div class="l-action">
+                            <div class="l-amount">₱850.00</div>
+                        </div>
                     </div>
-                    <div class="l-action">
-                        <div class="l-amount">₱850.00</div>
+
+                    <div class="ledger-item">
+                        <div class="l-info">
+                            <strong>Order #IQ-9788</strong>
+                            <span>Delivered Apr 20 • 3 Bags</span>
+                            <span class="warning-text">Due Tomorrow</span>
+                        </div>
+                        <div class="l-action">
+                            <div class="l-amount">₱815.00</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="ledger-item">
-                    <div class="l-info">
-                        <strong>Order #IQ-9788</strong>
-                        <span>Delivered Apr 20 • 3 Bags</span>
-                        <span class="warning-text">Due Tomorrow</span>
+                <div class="sheet-footer">
+                    
+                    <div id="default-action-zone" class="button-row">
+                        <button class="pay-partial-btn" onclick="toggleCustomPay(true)">Pay Partial</button>
+                        <button class="pay-all-btn" onclick="showPaymentMethods()">Settle Full Balance</button>
                     </div>
-                    <div class="l-action">
-                        <div class="l-amount">₱815.00</div>
+
+                    <div id="custom-action-zone" class="custom-pay-wrapper" style="display: none;">
+                        <div class="input-group">
+                            <span class="currency-symbol">₱</span>
+                            <input type="number" id="custom-pay-amount" placeholder="Enter amount" min="1" max="1665" autofocus>
+                        </div>
+                        <div class="button-row">
+                            <button class="cancel-btn" onclick="toggleCustomPay(false)">Cancel</button>
+                            <button class="confirm-btn" onclick="showPaymentMethods()">Confirm</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="sheet-footer">
+            <!-- VIEW 2: PAYMENT METHODS -->
+            <div id="payment-methods-view" class="fade-in" style="display: none; padding: 0 20px 30px;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <h3 style="color: white; margin-bottom: 8px;">Select Payment Method</h3>
+                    <p class="amount-due" style="color: #94a3b8; font-weight: 700;">Total to Pay: <span style="color: #ef4444;">₱1,665.00</span></p>
+                </div>
                 
-                <div id="default-action-zone" class="action-row">
-                    <button class="pay-partial-btn" onclick="toggleCustomPay(true)">Pay Partial</button>
-                    <button class="pay-all-btn" onclick="showPaymentMethods()">Settle Full Balance</button>
+                <div class="payment-options" style="display: flex; flex-direction: column; gap: 12px;">
+                    <button class="btn-blue" onclick="openSecureCheckout('gcash')">Pay with GCash</button>
+                    <button class="btn-white" onclick="openSecureCheckout('qrph')">Show QR Code</button>
                 </div>
+                <button class="cancel-link" onclick="backToLedger()" style="background: transparent; border: none; color: #94a3b8; width: 100%; margin-top: 24px; font-weight: 700; cursor: pointer;">← Back to Breakdown</button>
+            </div>
 
-                <div id="custom-action-zone" class="custom-pay-wrapper" style="display: none;">
-                    <div class="input-group">
-                        <span class="currency-symbol">₱</span>
-                        <input type="number" id="custom-pay-amount" placeholder="Enter amount" min="1" max="1665" autofocus>
-                    </div>
-                    <div class="action-row">
-                        <button class="cancel-btn" onclick="toggleCustomPay(false)">Cancel</button>
-                        <button class="confirm-btn" onclick="showPaymentMethods()">Confirm</button>
-                    </div>
+            <!-- VIEW 3: CASH PENDING -->
+            <div id="cash-pending-view" class="fade-in" style="display: none; padding: 0 20px 30px; text-align: center;">
+                <div class="cash-icon" style="font-size: 48px; margin-bottom: 10px;">🛵</div>
+                <h3 style="color: white; margin-bottom: 8px;">Cash Collection Scheduled</h3>
+                <p style="color: #94a3b8; font-size: 0.9rem;">Please prepare the exact amount for your next delivery.</p>
+                
+                <div class="cash-ticket" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed #64748b; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Amount to Collect</span>
+                    <h2 style="color: #eab308; font-size: 28px; margin: 5px 0 15px; font-weight: 800;">₱1,665.00</h2>
+                    <div class="ticket-status" style="background: #334155; color: white; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;">Status: Awaiting Rider Verification</div>
                 </div>
+                
+                <button class="done-btn" onclick="activateProvisionalCredit()" style="width: 100%; background: #4382ec; color: white; border: none; padding: 16px; border-radius: 14px; font-weight: 800; cursor: pointer;">Understood</button>
             </div>
-        </div>
-
-        <!-- VIEW 2: PAYMENT METHODS -->
-        <div id="payment-methods-view" class="fade-in" style="display: none; padding: 0 20px 30px;">
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <h3 style="color: white; margin-bottom: 8px;">Select Payment Method</h3>
-                <p class="amount-due" style="color: #94a3b8; font-weight: 700;">Total to Pay: <span style="color: #ef4444;">₱1,665.00</span></p>
-            </div>
-            
-            <div class="payment-options" style="display: flex; flex-direction: column; gap: 12px;">
-                <button class="btn-blue" onclick="openSecureCheckout('gcash')">Pay with GCash</button>
-                <button class="btn-white" onclick="openSecureCheckout('qrph')">Show QR Code</button>
-            </div>
-            <button class="cancel-link" onclick="backToLedger()" style="background: transparent; border: none; color: #94a3b8; width: 100%; margin-top: 24px; font-weight: 700; cursor: pointer;">← Back to Breakdown</button>
-        </div>
-
-        <!-- VIEW 3: CASH PENDING -->
-        <div id="cash-pending-view" class="fade-in" style="display: none; padding: 0 20px 30px; text-align: center;">
-            <div class="cash-icon" style="font-size: 48px; margin-bottom: 10px;">🛵</div>
-            <h3 style="color: white; margin-bottom: 8px;">Cash Collection Scheduled</h3>
-            <p style="color: #94a3b8; font-size: 0.9rem;">Please prepare the exact amount for your next delivery.</p>
-            
-            <div class="cash-ticket" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed #64748b; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Amount to Collect</span>
-                <h2 style="color: #eab308; font-size: 28px; margin: 5px 0 15px; font-weight: 800;">₱1,665.00</h2>
-                <div class="ticket-status" style="background: #334155; color: white; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;">Status: Awaiting Rider Verification</div>
-            </div>
-            
-            <button class="done-btn" onclick="activateProvisionalCredit()" style="width: 100%; background: #4382ec; color: white; border: none; padding: 16px; border-radius: 14px; font-weight: 800; cursor: pointer;">Understood</button>
         </div>
     </div>
 
     <!-- Report Issue Bottom Sheet -->
     <div id="report-overlay" class="sheet-overlay" onclick="app.toggleBottomSheet('report', false)"></div>
     <div id="report-sheet" class="bottom-sheet">
-        <div class="sheet-header">
-            <div class="handle"></div>
-            <h3>Report an Issue</h3>
-            <p>We'll resolve this immediately.</p>
+        <div class="bottom-sheet-content">
+            <div class="sheet-header">
+                <div class="handle"></div>
+                <h3>Report an Issue</h3>
+                <p>We'll resolve this immediately.</p>
+            </div>
+
+            <div class="form-group" style="padding: 0 20px 10px;">
+                <select id="report-context" class="input-high-contrast" onchange="app.handleReportContextChange()" style="font-weight: 600;">
+                    <option value="order_issue">Issue with an Order</option>
+                    <option value="staff">Driver / Staff Feedback</option>
+                    <option value="billing_app">App, Payments & Billing</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="report-order-selection" style="padding: 0 20px 15px;">
+                <select id="report-order-id" class="input-high-contrast" onchange="app.validateReport()">
+                    <option value="" disabled selected>Which order is this for?</option>
+                    <option value="current">Current Active Delivery</option>
+                    <option value="9750">#IQ-9750 (Apr 20)</option>
+                    <option value="9688">#IQ-9688 (Apr 17)</option>
+                    <option value="9521">#IQ-9521 (Apr 12)</option>
+                </select>
+            </div>
+
+            <div class="issue-grid">
+                <button class="issue-btn" id="issue-melting" onclick="app.selectIssue('melting')">
+                    <span class="icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                    </span>
+                    <span>Melted</span>
+                </button>
+                <button class="issue-btn" id="issue-missing" onclick="app.selectIssue('missing')">
+                    <span class="icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v1.5"/><path d="M21 7.5 12 12 3 7.5"/><path d="M12 12v9"/><path d="m3 16.5 9 4.5 9-4.5"/><path d="M21 7.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5"/></svg>
+                    </span>
+                    <span>Missing</span>
+                </button>
+                <button class="issue-btn" id="issue-late" onclick="app.selectIssue('late')">
+                    <span class="icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </span>
+                    <span>Late</span>
+                </button>
+                <button class="issue-btn" id="issue-contamination" onclick="app.selectIssue('contamination')">
+                    <span class="icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </span>
+                    <span>Contamination</span>
+                </button>
+                <button class="issue-btn" id="issue-other" onclick="app.selectIssue('other')" style="grid-column: span 2;">
+                    <span class="icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    <span>Other / Notes</span>
+                </button>
+            </div>
+
+            <div id="critical-warning" style="display: none; padding: 0 20px 15px;"></div>
+
+            <div id="other-issue-container" style="display: none; padding: 0 20px 20px;">
+                <textarea id="other-issue-text" class="input-high-contrast" placeholder="Describe the issue..." style="height: 100px; padding: 15px !important; resize: none;" oninput="app.validateReport()"></textarea>
+            </div>
+
+            <div class="photo-upload-zone">
+                <button class="upload-trigger" id="report-upload-trigger" onclick="document.getElementById('report-photo-input').click()">
+                    <span id="upload-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                    </span>
+                    <span id="upload-text">Snap Photo of Product</span>
+                </button>
+                <input type="file" id="report-photo-input" accept="image/*" style="display: none;" onchange="app.handleReportPhoto(event)">
+            </div>
+
+            <button class="submit-issue-btn" id="btn-submit-report" disabled onclick="app.submitReport()">Send to IceQube Support</button>
         </div>
-
-        <div class="form-group" style="padding: 0 20px 10px;">
-            <select id="report-context" class="input-high-contrast" onchange="app.handleReportContextChange()" style="font-weight: 600;">
-                <option value="order_issue">Issue with an Order</option>
-                <option value="staff">Driver / Staff Feedback</option>
-                <option value="billing_app">App, Payments & Billing</option>
-            </select>
-        </div>
-
-        <div class="form-group" id="report-order-selection" style="padding: 0 20px 15px;">
-            <select id="report-order-id" class="input-high-contrast" onchange="app.validateReport()">
-                <option value="" disabled selected>Which order is this for?</option>
-                <option value="current">Current Active Delivery</option>
-                <option value="9750">#IQ-9750 (Apr 20)</option>
-                <option value="9688">#IQ-9688 (Apr 17)</option>
-                <option value="9521">#IQ-9521 (Apr 12)</option>
-            </select>
-        </div>
-
-        <div class="issue-grid">
-            <button class="issue-btn" id="issue-melting" onclick="app.selectIssue('melting')">
-                <span class="icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
-                </span>
-                <span>Melted</span>
-            </button>
-            <button class="issue-btn" id="issue-missing" onclick="app.selectIssue('missing')">
-                <span class="icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v1.5"/><path d="M21 7.5 12 12 3 7.5"/><path d="M12 12v9"/><path d="m3 16.5 9 4.5 9-4.5"/><path d="M21 7.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5"/></svg>
-                </span>
-                <span>Missing</span>
-            </button>
-            <button class="issue-btn" id="issue-late" onclick="app.selectIssue('late')">
-                <span class="icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </span>
-                <span>Late</span>
-            </button>
-            <button class="issue-btn" id="issue-contamination" onclick="app.selectIssue('contamination')">
-                <span class="icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </span>
-                <span>Contamination</span>
-            </button>
-            <button class="issue-btn" id="issue-other" onclick="app.selectIssue('other')" style="grid-column: span 2;">
-                <span class="icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                </span>
-                <span>Other / Notes</span>
-            </button>
-        </div>
-
-        <div id="critical-warning" style="display: none; padding: 0 20px 15px;"></div>
-
-        <div id="other-issue-container" style="display: none; padding: 0 20px 20px;">
-            <textarea id="other-issue-text" class="input-high-contrast" placeholder="Describe the issue..." style="height: 100px; padding: 15px !important; resize: none;" oninput="app.validateReport()"></textarea>
-        </div>
-
-        <div class="photo-upload-zone">
-            <button class="upload-trigger" id="report-upload-trigger" onclick="document.getElementById('report-photo-input').click()">
-                <span id="upload-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                </span>
-                <span id="upload-text">Snap Photo of Product</span>
-            </button>
-            <input type="file" id="report-photo-input" accept="image/*" style="display: none;" onchange="app.handleReportPhoto(event)">
-        </div>
-
-        <button class="submit-issue-btn" id="btn-submit-report" disabled onclick="app.submitReport()">Send to IceQube Support</button>
     </div>
 
 
@@ -2390,6 +2374,7 @@
                 <button class="ghost-link" onclick="app.togglePanel('receipt', false)">Close Receipt</button>
             </div>
         </div>
+    </div>
     </div>
     <script>
         if ('serviceWorker' in navigator) {

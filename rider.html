@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IceQube CDO | Rider App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             /* DARK MODE (Default) */
@@ -22,43 +22,6 @@
             --rider-card-shadow: 0 10px 30px rgba(0,0,0,0.3);
             --surface-gradient: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(56, 189, 248, 0.05) 100%);
             --tab-active-bg: rgba(56, 189, 248, 0.15);
-        }
-
-        /* LIGHT THEME (Class-based override or Auto) */
-        :root.light-theme {
-            --rider-bg: #f8fafc;
-            --rider-card: #ffffff;
-            --rider-accent: #0284c7;
-            --rider-text: #0f172a;
-            --rider-text-main: #0f172a;
-            --rider-label: #64748b;
-            --rider-blue: #0284c7;
-            --rider-red: #dc2626;
-            --rider-green: #16a34a;
-            --rider-surface: #f1f5f9;
-            --rider-border: #e2e8f0;
-            --rider-card-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-            --surface-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(2, 132, 199, 0.02) 100%);
-            --tab-active-bg: #ffffff;
-        }
-
-        @media (prefers-color-scheme: light) {
-            :root:not(.dark-theme) {
-                --rider-bg: #f8fafc;
-                --rider-card: #ffffff;
-                --rider-accent: #0284c7;
-                --rider-text: #0f172a;
-                --rider-text-main: #0f172a;
-                --rider-label: #64748b;
-                --rider-blue: #0284c7;
-                --rider-red: #dc2626;
-                --rider-green: #16a34a;
-                --rider-surface: #f1f5f9;
-                --rider-border: #e2e8f0;
-                --rider-card-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-                --surface-gradient: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(2, 132, 199, 0.02) 100%);
-                --tab-active-bg: #ffffff;
-            }
         }
 
         html {
@@ -143,6 +106,23 @@
         }
 
         /* Dashboard Earnings Carousel */
+        .carousel-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #475569;
+            letter-spacing: 0.1em;
+            opacity: 0.6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 4px 0;
+        }
+        .carousel-label.active {
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: var(--rider-accent);
+            opacity: 1;
+        }
+
         .earnings-carousel-container {
             width: 100%;
             overflow-x: auto;
@@ -234,7 +214,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 0.75rem;
         }
 
         .tab-content {
@@ -250,8 +230,8 @@
         .card {
             background: var(--rider-card);
             border-radius: 20px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
             border: 1px solid var(--rider-border);
             box-shadow: var(--rider-card-shadow);
             position: relative;
@@ -368,9 +348,9 @@
             position: relative;
             line-height: 1.4;
             display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
         }
         .items-list::after {
             content: "ICE ORDER";
@@ -493,6 +473,24 @@
             border-color: rgba(56, 189, 248, 0.4);
             transform: translateY(-2px);
         }
+
+        /* Open Dispatch Specific Card Style */
+        .queue-card.open-dispatch-card {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3);
+        }
+        .queue-card.open-dispatch-card::before {
+            background: white;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .queue-card.open-dispatch-card .queue-customer {
+            color: white;
+        }
+        .queue-card.open-dispatch-card .queue-payout {
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
         .queue-customer {
             font-size: 1.25rem;
             font-weight: 800;
@@ -604,6 +602,22 @@
             margin-bottom: 1rem;
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes success-flash {
+            0% { transform: scale(0.95); opacity: 0; }
+            50% { transform: scale(1.02); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-msg {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+            padding: 1.25rem;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 800;
+            animation: success-flash 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+        }
 
         /* Drawer Styles */
         .drawer-overlay {
@@ -724,8 +738,8 @@
 
     <div id="login-overlay" style="background: linear-gradient(180deg, #0f172a 0%, #020617 100%);">
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 3rem;">
-            <img src="./assets/logo.png" alt="IceQube Logo" style="height: 64px; margin-bottom: 1.5rem; filter: url(#remove-white); opacity: 0.95;">
-            <span style="color: white; font-weight: 800; font-size: 2.2rem; letter-spacing: -0.5px;">IceQube <span style="color: var(--rider-accent);">CDO</span></span>
+            <img src="./assets/logo2.png" alt="IceQube Logo" style="height: 64px; margin-bottom: 1.5rem; filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.4));">
+            <span style="color: white; font-weight: 500; font-size: 2.2rem; letter-spacing: -0.03em; font-family: 'Outfit', sans-serif;">IceQube <span style="color: var(--rider-accent);">CDO</span></span>
         </div>
         
         <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(56, 189, 248, 0.2); padding: 2.5rem 2rem; border-radius: 24px; width: 100%; max-width: 360px; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
@@ -785,20 +799,6 @@
             <button class="btn btn-accept" style="width: 100%; padding: 1.25rem;" onclick="confirmPayout()">Request Transfer</button>
         </div>
 
-        <div id="payout-history-section" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
-            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 1rem; font-weight: 700; display: flex; justify-content: space-between;">
-                <span>Recent Payouts</span>
-                <span style="font-size: 0.7rem; color: var(--rider-accent); cursor: pointer;" onclick="alert('Full history coming soon.')">View All</span>
-            </div>
-            <div id="payout-history-list">
-                <!-- Payout history items will appear here -->
-                <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 1rem; background: rgba(0,0,0,0.1); border-radius: 8px;">No recent payout requests.</div>
-            </div>
-            <!-- SIMULATION HELPER -->
-            <button id="sim-pay-btn" style="display: none; width: 100%; margin-top: 1rem; background: rgba(56, 189, 248, 0.1); border: 1px dashed var(--rider-accent); color: var(--rider-accent); padding: 8px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;" onclick="simulateAdminApproval()">
-                🛠️ DEBUG: Simulate Admin Pay
-            </button>
-        </div>
     </div>
     </div>
 
@@ -856,13 +856,12 @@
 
     <header>
         <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="./assets/logo.png" alt="IceQube Logo" style="height: 24px; filter: url(#remove-white); opacity: 0.95;">
-            <span style="color: white; font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px;">IceQube <span style="color: var(--rider-accent);">CDO</span></span>
+            <img src="./assets/logo2.png" alt="IceQube Logo" style="height: 42px; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));">
+            <span style="color: white; font-weight: 500; font-size: 1.5rem; letter-spacing: -0.03em; font-family: 'Outfit', sans-serif; white-space: nowrap;">IceQube <span style="color: var(--rider-accent);">CDO</span></span>
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
-            <button onclick="toggleTheme()" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 6px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Toggle Day/Night Mode">
-                <span id="theme-icon" style="font-size: 1.1rem;">🌗</span>
-            </button>
+
+
             <div class="notification-icon" style="position: relative; cursor: pointer;" onclick="alert('No new announcements.')">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -888,9 +887,9 @@
         <div class="earnings-panel">
             <div style="width: 100%;">
                 <!-- DUAL HEADER (Always Visible) -->
-                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-                    <span style="font-size: 0.75rem; font-weight: 900; color: var(--rider-accent); letter-spacing: 0.1em;">WALLET</span>
-                    <span style="font-size: 0.65rem; font-weight: 700; color: #475569; letter-spacing: 0.1em; opacity: 0.6;">LATEST PAYOUT</span>
+                <div id="carousel-header-1" style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                    <span class="carousel-label active" onclick="scrollToSlide(0)">WALLET</span>
+                    <span class="carousel-label" onclick="scrollToSlide(1)">LATEST PAYOUT</span>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
@@ -923,9 +922,9 @@
         <div class="earnings-panel" style="background: linear-gradient(135deg, #0f172a 0%, #111827 100%);">
             <div style="width: 100%;">
                 <!-- DUAL HEADER (Slide 2 Sync) -->
-                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-                    <span style="font-size: 0.65rem; font-weight: 700; color: #475569; letter-spacing: 0.1em; opacity: 0.6;">WALLET</span>
-                    <span style="font-size: 0.75rem; font-weight: 900; color: var(--rider-accent); letter-spacing: 0.1em;">LATEST PAYOUT</span>
+                <div id="carousel-header-2" style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                    <span class="carousel-label" onclick="scrollToSlide(0)">WALLET</span>
+                    <span class="carousel-label active" onclick="scrollToSlide(1)">LATEST PAYOUT</span>
                 </div>
 
                 <div id="carousel-payout-list" style="padding: 12px; background: rgba(56, 189, 248, 0.03); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.05);">
@@ -997,12 +996,12 @@
                         <a href="https://m.me/fatmonkcoffee" target="_blank" class="contact-btn">💬 Messenger</a>
                     </div>
 
-                    <div class="payment-method">💳 GCash</div>
+                    <div class="payment-method" id="dispatch-payment">💳 GCash</div>
 
                     <div class="items-list">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">5 bags -</span>
-                            <span style="color: var(--rider-accent);">3kg Half-Dice (H)</span>
+                            <span style="color: var(--rider-accent);">3kg (Half Dice)</span>
                         </div>
                     </div>
 
@@ -1045,67 +1044,75 @@
                     <div class="customer-name" id="active-customer">Fat Monk Coffee</div>
                     <div class="customer-addr" id="active-addr" style="margin-bottom: 0.5rem;">📍 Uptown CDO, Xavier Estates</div>
 
-                    <div style="background: var(--rider-surface); padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem; border-left: 2px solid var(--rider-accent);">
+                    <div style="background: var(--rider-surface); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; border-left: 2px solid var(--rider-accent);">
                         <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Receiver:</span> <span id="active-receiver">John Doe</span></div>
                         <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Contact:</span> <span id="active-contact">0917 123 4567</span></div>
                         <div style="color: #f59e0b;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Note:</span> <span id="active-notes">Leave at the lobby desk.</span></div>
                     </div>
 
-                    <div class="contact-group">
+                    <div class="contact-group" style="margin-bottom: 1rem;">
                         <a href="#" target="_blank" class="contact-btn map">🗺️ Open Map</a>
                         <a id="active-call" href="tel:+639171234567" class="contact-btn">📞 Call</a>
                         <a id="active-sms" href="sms:+639171234567" class="contact-btn">📱 SMS</a>
                         <a id="active-messenger" href="#" target="_blank" class="contact-btn">💬 Messenger</a>
                     </div>
 
-                    <div class="payment-method">💳 GCash (Paid)</div>
+                    <div class="payment-method" id="active-payment" style="margin-bottom: 0.75rem;">💳 GCash (Paid)</div>
 
                     <div class="items-list" id="active-items">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">5 bags -</span>
-                            <span style="color: var(--rider-accent);">3kg Half-Dice (H)</span>
+                            <span style="color: var(--rider-accent);">3kg (Half Dice)</span>
                         </div>
                     </div>
 
-                    <div id="fee-breakdown" style="margin-bottom: 1.5rem; background: var(--rider-surface); padding: 1rem; border-radius: 12px;">
+                    <div id="fee-breakdown" style="margin-bottom: 0.5rem; background: var(--rider-surface); padding: 0.75rem; border-radius: 12px;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-label); margin-bottom: 4px;">
                             <span>Items Total:</span>
                             <span id="active-items-price">₱850.00</span>
                         </div>
                         <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 8px 0;"></div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-label); margin-bottom: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: var(--rider-accent); font-weight: 800; margin-top: 4px;">
                             <span>Delivery Fee (Your Payout):</span>
-                            <span id="active-delivery-fee">₱80.00</span>
+                            <span id="active-delivery-fee" style="font-size: 1.1rem;">₱80.00</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-accent); font-weight: 700;">
+                        <div id="active-priority-row" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-accent); font-weight: 700;">
                             <span>Priority Tip (Your Payout):</span>
                             <span id="active-priority-fee">₱20.00</span>
                         </div>
                     </div>
+                </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
-                        <div style="color: var(--rider-label); font-size: 0.9rem;">To Collect:</div>
-                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--rider-text-main);">₱0.00</div>
-                        <!-- RECENT PAYOUTS DASHBOARD -->
-        <div id="dashboard-payout-history" style="display: none; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
-            <div style="font-size: 0.8rem; color: var(--rider-label); text-transform: uppercase; font-weight: 700; margin-bottom: 1rem; letter-spacing: 0.05em;">Latest Payout Status</div>
-            <div id="dashboard-payout-list">
-                <!-- Latest payout item will appear here -->
-            </div>
+                <div class="card" style="margin-top: 0.5rem; padding: 0.75rem 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: var(--rider-label); font-size: 0.9rem; font-weight: 600;">AMOUNT TO COLLECT</div>
+                        <div style="text-align: right;">
+                            <div id="active-to-collect" style="font-size: 1.8rem; font-weight: 800; color: var(--rider-text-main);">₱0.00</div>
+                            <div id="active-to-collect-tip" style="font-size: 0.8rem; color: var(--rider-accent); font-weight: 700; display: none;">+ ₱0.00 Priority Tip</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 0.5rem;">
+                    <!-- RECENT PAYOUTS DASHBOARD (Moved outside cards) -->
+                    <div id="dashboard-payout-history" style="display: none; margin-bottom: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                        <div style="font-size: 0.8rem; color: var(--rider-label); text-transform: uppercase; font-weight: 700; margin-bottom: 1rem; letter-spacing: 0.05em;">Latest Payout Status</div>
+                        <div id="dashboard-payout-list"></div>
                     </div>
 
                     <div id="accept-decline-group" style="display: none; gap: 10px; margin-bottom: 1.5rem;">
                         <button class="btn btn-decline" onclick="backToQueue()" style="flex: 1; height: 55px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-weight: 700; border-radius: 12px; cursor: pointer;">
                             DECLINE
                         </button>
-                        <button class="btn btn-accept" onclick="acceptBroadcastOrder()" style="flex: 2; height: 55px; background: #10b981; border: none; color: white; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);">
+                        <button class="btn btn-accept" onclick="acceptBroadcastOrder()" style="flex: 2; height: 55px; background: var(--rider-blue); border: none; color: white; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);">
                             ✅ ACCEPT DELIVERY
                         </button>
                     </div>
+                    <div id="success-flash-container" style="display: none; margin-bottom: 1.5rem;"></div>
 
-                    <button id="btn-confirm-delivery" class="btn btn-delivered" onclick="openCamera()" style="display: none; width: 100%; height: 60px; font-weight: 800; font-size: 1.1rem; border-radius: 15px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right: 4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                        Take POD Photo & Confirm
+                    <button id="btn-confirm-delivery" class="btn btn-delivered" onclick="openCamera()" style="display: none; width: 100%; height: 65px; font-weight: 800; font-size: 1.2rem; border-radius: 18px; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right: 8px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        Geotag to Confirm Delivery
                     </button>
                 </div>
             </div>
@@ -1131,53 +1138,81 @@
                 <button onclick="backToAdvanceQueue()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #94a3b8; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; padding: 6px 12px; transition: all 0.2s;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg> Back to Schedule
                 </button>
-                <div class="card" style="border: 2px solid var(--rider-accent); box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);">
+                <div class="card" style="border: 1px solid var(--rider-accent); box-shadow: 0 0 30px rgba(56, 189, 248, 0.05);">
                     <div class="card-header-flex">
                         <span class="card-label">📅 Scheduled Delivery</span>
-                        <div class="time-badge alarm">⏰ 2:00 PM Today</div>
+                        <div class="time-badge alarm" id="advance-time-badge">⏰ 2:00 PM Today</div>
                     </div>
                     
-                    <div class="order-id">#IQ-9760</div>
-                    <div class="customer-name">Event Center CDO</div>
-                    <div class="customer-addr" style="margin-bottom: 1rem;">📍 Limketkai Center</div>
+                    <div class="order-id" id="advance-id">#IQ-9760</div>
+                    <div class="customer-name" id="advance-customer">Event Center CDO</div>
+                    <div class="customer-addr" id="advance-addr" style="margin-bottom: 0.5rem;">📍 Limketkai Center</div>
 
-                    <div class="contact-group" style="margin-bottom: 1.5rem;">
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=IceQube+Macabalan+Hub&destination=8.4831,124.6517" target="_blank" class="contact-btn map" style="flex: 1; justify-content: center; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2);">🗺️ View Map & Route</a>
+                    <div style="background: var(--rider-surface); padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; border-left: 2px solid var(--rider-accent);">
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Receiver:</span> <span id="advance-receiver">John Doe</span></div>
+                        <div style="color: var(--rider-text-main); margin-bottom: 4px;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Contact:</span> <span id="advance-contact">0917 123 4567</span></div>
+                        <div style="color: #f59e0b;"><span style="color: var(--rider-label); display: inline-block; width: 65px;">Note:</span> <span id="advance-notes">No special notes.</span></div>
+                    </div>
+
+                    <div class="contact-group" style="margin-bottom: 1rem;">
+                        <a href="#" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a id="advance-call" href="tel:+639171234567" class="contact-btn">📞 Call</a>
+                        <a id="advance-sms" href="sms:+639171234567" class="contact-btn">📱 SMS</a>
+                        <a id="advance-messenger" href="#" target="_blank" class="contact-btn">💬 Messenger</a>
                     </div>
                     
-                    <div class="payment-method">💵 Cash on Delivery</div>
+                    <div class="payment-method" id="advance-payment" style="margin-bottom: 0.75rem;">💵 Cash on Delivery</div>
 
-                    <div class="items-list" style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px;">
+                    <div class="items-list" id="advance-items">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">20 bags -</span>
-                            <span style="color: var(--rider-accent);">3kg Full-Dice (F)</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="color: var(--rider-text-main); font-size: 1.5em; vertical-align: middle; line-height: 1;">1-</span>
-                            <span style="color: var(--rider-accent);">Ice Tub (Rental)</span>
+                            <span style="color: var(--rider-text-main); font-size: 1.2em; vertical-align: middle; line-height: 1.2;">20 bags - 3kg (Full Dice)</span>
                         </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--rider-label);">
-                        <span>Estimated Payout:</span>
-                        <span style="color: var(--rider-accent); font-weight: 700;">₱250.00</span>
+                    <div id="advance-fee-breakdown" style="margin-bottom: 0.5rem; background: var(--rider-surface); padding: 0.75rem; border-radius: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-label); margin-bottom: 4px;">
+                            <span>Items Total:</span>
+                            <span id="advance-items-price">₱850.00</span>
+                        </div>
+                        <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 8px 0;"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: var(--rider-accent); font-weight: 800; margin-top: 4px;">
+                            <span>Delivery Fee (Your Payout):</span>
+                            <span id="advance-delivery-fee" style="font-size: 1.1rem;">₱80.00</span>
+                        </div>
+                        <div id="advance-priority-row" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-accent); font-weight: 700;">
+                            <span>Priority Tip (Your Payout):</span>
+                            <span id="advance-priority-fee">₱20.00</span>
+                        </div>
                     </div>
+                </div>
 
-                    <div id="advance-actions-IQ9760">
-                        <button class="btn btn-accept" style="width: 100%;" onclick="claimAdvanceOrder('IQ9760')">
+                <div class="card" style="margin-top: 0.5rem; padding: 0.75rem 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: var(--rider-label); font-size: 0.9rem; font-weight: 600;">AMOUNT TO COLLECT</div>
+                        <div style="text-align: right;">
+                            <div id="advance-to-collect" style="font-size: 1.8rem; font-weight: 800; color: var(--rider-text-main);">₱0.00</div>
+                            <div id="advance-to-collect-tip" style="font-size: 0.8rem; color: var(--rider-accent); font-weight: 700; display: none;">+ ₱0.00 Priority Tip</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <div id="advance-actions-group">
+                        <button class="btn btn-accept" style="width: 100%; height: 60px; font-size: 1.1rem; font-weight: 800;" id="advance-claim-btn">
                             Claim Order
                         </button>
-                        <p style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 8px;">Claiming secures this slot in your schedule.</p>
+                        <p style="text-align: center; font-size: 0.75rem; color: #64748b; margin-top: 12px;">Claiming secures this slot in your schedule.</p>
                     </div>
-                    <div id="reserved-actions-IQ9760" style="display: none;">
+                    <div id="reserved-actions-group" style="display: none;">
                         <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; padding: 12px; border-radius: 12px; text-align: center; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem;">
                             ✔️ Order Reserved
                         </div>
-                        <button class="btn" style="background: rgba(255,255,255,0.05); color: #64748b; width: 100%; border: 1px solid rgba(255,255,255,0.1); cursor: not-allowed;" disabled>
-                            Start Delivery (At 1:30 PM)
+                        <button class="btn" style="background: rgba(255,255,255,0.05); color: #64748b; width: 100%; border: 1px solid rgba(255,255,255,0.1); cursor: not-allowed; height: 60px;" disabled>
+                            Start Delivery (Awaiting Time)
                         </button>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -1228,17 +1263,23 @@
 
         function formatOrderItems(o) {
             if (!o.items) return '1 Bag';
-            if (typeof o.items === 'string' || typeof o.items === 'number') return `${o.items} Bags`;
+            if (typeof o.items === 'string' || typeof o.items === 'number') {
+                // If it's a string with commas, replace them with line breaks
+                if (typeof o.items === 'string' && o.items.includes(',')) {
+                    return o.items.split(',').map(s => s.trim()).join('<br>');
+                }
+                return `${o.items} Bags`;
+            }
             
             const fd = o.items.fullDice || {};
             const hd = o.items.halfDice || {};
             const parts = [];
-            if (fd['3kg']) parts.push(`${fd['3kg']}×3kg (F)`);
-            if (fd['1kg']) parts.push(`${fd['1kg']}×1kg (F)`);
-            if (hd['3kg']) parts.push(`${hd['3kg']}×3kg (H)`);
-            if (hd['1kg']) parts.push(`${hd['1kg']}×1kg (H)`);
+            if (fd['3kg']) parts.push(`${fd['3kg']} bags - 3kg (Full Dice)`);
+            if (fd['1kg']) parts.push(`${fd['1kg']} bags - 1kg (Full Dice)`);
+            if (hd['3kg']) parts.push(`${hd['3kg']} bags - 3kg (Half Dice)`);
+            if (hd['1kg']) parts.push(`${hd['1kg']} bags - 1kg (Half Dice)`);
             
-            return parts.length > 0 ? parts.join(', ') : '1 Bag';
+            return parts.length > 0 ? parts.join('<br>') : '1 Bag';
         }
 
         function renderRiderQueue() {
@@ -1249,17 +1290,49 @@
             const advanceBadge = document.getElementById('advance-badge');
 
             if (!queueList || !advanceList) return;
-
+            
+            deduplicateOrders();
             const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
             
-            // Live Orders (Dispatched to me OR Unassigned)
+            // Get today's local date in YYYY-MM-DD format
+            const now = new Date();
+            const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            
+            const isFutureOrder = (o) => {
+                const sch = (o.delivery_schedule || 'Immediate');
+                if (sch.toLowerCase().includes('immediate')) return false;
+                const dateMatch = sch.match(/(\d{4}-\d{2}-\d{2})/);
+                // If it has a date, check if it's after today
+                return dateMatch && dateMatch[1] > todayStr;
+            };
+
+            // Live Orders (Dispatched to me OR Unassigned) AND (Today or Older OR Immediate)
             const myLive = allOrders.filter(o => {
                 const r = String(o.rider || 'Unassigned').trim();
                 const isAssignedToMe = r === currentRider || (currentRider && currentRider.startsWith(r));
                 const isOpenDispatch = r === 'Unassigned' || r === 'undefined' || !o.rider;
+                const isTodayOrOlder = !isFutureOrder(o);
                 
-                return (isAssignedToMe || isOpenDispatch) && 
+                return (isAssignedToMe || isOpenDispatch) && isTodayOrOlder &&
                        (o.delivery_status === 'Dispatched' || o.delivery_status === 'Awaiting Acceptance' || o.delivery_status === 'In Transit');
+            }).sort((a, b) => {
+                const getSortScore = (o) => {
+                    const sched = (o.delivery_schedule || 'Immediate').toLowerCase();
+                    if (sched.includes('immediate')) return 0;
+                    
+                    // Parse "10:30 AM" style strings
+                    const timeMatch = sched.match(/(\d+):(\d+)\s*(am|pm)/i);
+                    if (timeMatch) {
+                        let hours = parseInt(timeMatch[1]);
+                        const minutes = parseInt(timeMatch[2]);
+                        const ampm = timeMatch[3].toLowerCase();
+                        if (ampm === 'pm' && hours < 12) hours += 12;
+                        if (ampm === 'am' && hours === 12) hours = 0;
+                        return hours * 60 + minutes;
+                    }
+                    return 1440; // End of day fallback
+                };
+                return getSortScore(a) - getSortScore(b);
             });
             if (queueCount) queueCount.innerText = myLive.length;
 
@@ -1273,23 +1346,27 @@
                     const isInTransit = o.delivery_status === 'In Transit';
                     const isUnassigned = o.rider === 'Unassigned' || !o.rider || o.rider === 'undefined';
                     
+                    const cardClass = isUnassigned ? 'queue-card open-dispatch-card' : 'queue-card';
                     const cardStyle = isInTransit ? 
                         'border: 1px solid var(--rider-accent); background: rgba(56,189,248,0.1); box-shadow: 0 0 15px rgba(56,189,248,0.1);' : 
                         '';
                     
                     const badge = isInTransit ? 
                         '<span style="background: var(--rider-accent); color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 800;">ACTIVE</span>' : 
-                        (isUnassigned ? '<span style="background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;">📢 OPEN DISPATCH</span>' : '');
+                        (isUnassigned ? '<span style="background: white; color: var(--rider-blue); font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 800;">📢 OPEN DISPATCH</span>' : '');
+
+                    const infoColor = isUnassigned ? 'rgba(255,255,255,0.9)' : 'var(--rider-label)';
+                    const scheduleColor = isUnassigned ? 'white' : (isInTransit ? 'var(--rider-accent)' : '#38bdf8');
 
                     return `
-                        <div class="queue-card" style="${cardStyle}" onclick="openOrderDetails('${o.order_id}')">
+                        <div class="${cardClass}" style="${cardStyle}" onclick="openOrderDetails('${o.order_id}')">
                             <div style="padding-left: 8px;">
                                 <div class="queue-customer">
                                     ${o.customer_name} 
                                     ${badge}
                                 </div>
-                                <div class="queue-info">
-                                    <span style="color: ${isInTransit ? 'var(--rider-accent)' : '#38bdf8'}; font-weight: 700;">● ${o.delivery_schedule || 'Immediate'}</span>
+                                <div class="queue-info" style="color: ${infoColor};">
+                                    <span style="color: ${scheduleColor}; font-weight: 700;">● ${o.delivery_schedule || 'Immediate'}</span>
                                     <span>• ${formatOrderItems(o)}</span>
                                 </div>
                             </div>
@@ -1299,9 +1376,9 @@
                 }).join('');
             }
 
-            // Advance Bookings (Unassigned or assigned to me, with a schedule)
+            // Advance Bookings (Unassigned or assigned to me, with a schedule for TOMORROW or BEYOND)
             const myAdvance = allOrders.filter(o => 
-                (o.delivery_schedule && o.delivery_schedule !== 'Immediate') && 
+                isFutureOrder(o) && 
                 (o.rider === currentRider || !o.rider || o.rider === 'Unassigned') &&
                 o.delivery_status !== 'Delivered'
             );
@@ -1357,12 +1434,38 @@
             }, 2000);
         }
 
-        function openOrderDetails(orderId) {
-            // Hide mini-bar when opening full details
-            document.getElementById('minimized-order-bar').style.display = 'none';
-
+        function deduplicateOrders() {
             const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-            const cleanId = id => id ? String(id).replace('#', '').trim() : '';
+            const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+            
+            const uniqueMap = new Map();
+            allOrders.forEach(order => {
+                const id = cleanId(order.order_id || order.orderId);
+                if (!id) return;
+
+                const existing = uniqueMap.get(id);
+                // Priority: In Transit > Awaiting Acceptance > Pending/Dispatched
+                const getPriority = status => {
+                    if (status === 'Delivered') return 4;
+                    if (status === 'In Transit') return 3;
+                    if (status === 'Awaiting Acceptance') return 2;
+                    return 1;
+                };
+
+                if (!existing || getPriority(order.delivery_status) > getPriority(existing.delivery_status)) {
+                    uniqueMap.set(id, order);
+                }
+            });
+
+            const deduped = Array.from(uniqueMap.values());
+            localStorage.setItem('ice_orders', JSON.stringify(deduped));
+            return deduped;
+        }
+
+        function openOrderDetails(orderId) {
+            deduplicateOrders();
+            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
             const targetId = cleanId(orderId);
 
             const order = allOrders.find(o => cleanId(o.order_id) === targetId);
@@ -1379,9 +1482,26 @@
             const addrEl = document.getElementById('active-addr');
             const itemsEl = document.getElementById('active-items');
             
-            if (idEl) idEl.innerText = `#${order.order_id}`;
+            if (idEl) {
+                const id = String(order.order_id);
+                idEl.innerText = id.startsWith('#') ? id : `#${id}`;
+            }
             if (custEl) custEl.innerText = order.customer_name;
             if (addrEl) addrEl.innerText = `📍 ${order.delivery_address || 'Macabalan Hub'}`;
+            
+            // Update Status Badge
+            const statusBadge = document.querySelector('#active-delivery .time-badge');
+            if (statusBadge) {
+                const status = order.delivery_status || 'Dispatched';
+                statusBadge.innerHTML = `🕒 ${status}`;
+                if (status === 'In Transit') {
+                    statusBadge.style.background = 'var(--rider-accent)';
+                    statusBadge.style.color = 'white';
+                } else {
+                    statusBadge.style.background = 'rgba(56,189,248,0.15)';
+                    statusBadge.style.color = 'var(--rider-accent)';
+                }
+            }
             
             const receiverEl = document.getElementById('active-receiver');
             const contactEl = document.getElementById('active-contact');
@@ -1393,12 +1513,27 @@
 
             const callBtn = document.getElementById('active-call');
             const smsBtn = document.getElementById('active-sms');
-            if (callBtn) callBtn.href = `tel:${order.contact_number || ''}`;
-            if (smsBtn) smsBtn.href = `sms:${order.contact_number || ''}`;
+            const messengerBtn = document.getElementById('active-messenger');
+            const rawNumber = order.contact_number || order.customer_contact || '';
+            const cleanNumber = rawNumber.replace(/[^\d+]/g, '');
+            
+            if (callBtn) callBtn.href = cleanNumber ? `tel:${cleanNumber}` : '#';
+            if (smsBtn) smsBtn.href = cleanNumber ? `sms:${cleanNumber}` : '#';
+            if (messengerBtn) {
+                // If we have a number, we can try m.me/number, otherwise keep as placeholder or link to general support
+                messengerBtn.href = cleanNumber ? `https://m.me/${cleanNumber.startsWith('+') ? cleanNumber : '+63' + cleanNumber.replace(/^0/, '')}` : 'https://m.me/IceQubeCDO';
+            }
+            
+            const paymentEl = document.getElementById('active-payment');
+            if (paymentEl) {
+                const method = order.payment_method || 'GCash';
+                const isPaid = method === 'GCash' || method === 'Bank Transfer';
+                paymentEl.innerHTML = `💳 ${method}${isPaid ? ' (Paid)' : ''}`;
+            }
 
             if (itemsEl) {
-                itemsEl.innerHTML = `<div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="color: var(--rider-text-main); font-size: 1.2em; vertical-align: middle; line-height: 1.2;">${formatOrderItems(order)}</span>
+                itemsEl.innerHTML = `<div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="color: var(--rider-text-main); font-size: 1.2em; vertical-align: middle; line-height: 1.4;">${formatOrderItems(order)}</div>
                 </div>`;
             }
 
@@ -1412,10 +1547,34 @@
             if (priorityFeeEl) priorityFeeEl.innerText = `₱${parseFloat(order.priority_fee || 0).toLocaleString()}`;
 
             // To Collect
-            const collectEl = document.querySelector('#active-delivery .card > div:nth-last-child(2) > div:last-child');
+            const collectEl = document.getElementById('active-to-collect');
+            const collectTipEl = document.getElementById('active-to-collect-tip');
+            const priorityRow = document.getElementById('active-priority-row');
+            
+            const pFee = parseFloat(order.priority_fee || 0);
+            
+            if (priorityRow) {
+                priorityRow.style.display = pFee > 0 ? 'flex' : 'none';
+            }
+
             if (collectEl) {
-                const toCollect = order.payment_method === 'COD' ? order.total_price : 0;
-                collectEl.innerText = `₱${parseFloat(toCollect || 0).toLocaleString()}`;
+                const method = order.payment_method || 'GCash';
+                const isCOD = method === 'COD' || method === 'Cash on Delivery';
+                
+                if (isCOD) {
+                    const totalItems = parseFloat(order.total_price || 0);
+                    const deliveryFee = parseFloat(order.delivery_fee || 0);
+                    const totalToCollect = totalItems + deliveryFee + pFee;
+                    collectEl.innerText = `₱${totalToCollect.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    
+                    if (collectTipEl) {
+                        collectTipEl.style.display = pFee > 0 ? 'block' : 'none';
+                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Priority Tip`;
+                    }
+                } else {
+                    collectEl.innerText = `₱0.00`;
+                    if (collectTipEl) collectTipEl.style.display = 'none';
+                }
             }
 
             // Map & Call Links
@@ -1444,54 +1603,87 @@
         }
 
         function acceptBroadcastOrder() {
-            if (!activeOrder) return;
-            
-            // 1. Update order in localStorage
-            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-            const cleanId = id => id ? String(id).replace('#', '').trim() : '';
-            const targetId = cleanId(activeOrder.order_id || activeOrder.orderId);
+            try {
+                if (!activeOrder) return;
+                
+                // 1. Update order in localStorage
+                const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+                const targetId = cleanId(activeOrder.order_id || activeOrder.orderId);
 
-            const idx = allOrders.findIndex(o => cleanId(o.order_id) === targetId);
-            if (idx !== -1) {
-                allOrders[idx].rider = currentRider;
-                allOrders[idx].delivery_status = 'In Transit'; // Update status to move to next step
-                localStorage.setItem('ice_orders', JSON.stringify(allOrders));
+                const idx = allOrders.findIndex(o => cleanId(o.order_id) === targetId);
+                if (idx !== -1) {
+                    allOrders[idx].rider = currentRider;
+                    allOrders[idx].delivery_status = 'In Transit'; 
+                    localStorage.setItem('ice_orders', JSON.stringify(allOrders));
+                    console.log("✅ Order updated in LocalStorage:", targetId);
+                } else {
+                    console.warn("❌ Order not found in LocalStorage for update:", targetId);
+                    alert("⚠️ Order sync issue. Please refresh the app.");
+                    return;
+                }
+
+                // 2. Broadcast the claim
+                if (window.IceQubeSync) {
+                    window.IceQubeSync.publishDeliveryEvent({
+                        type: 'ORDER_CLAIMED',
+                        payload: {
+                            orderId: activeOrder.order_id || activeOrder.orderId,
+                            riderId: currentRider
+                        }
+                    });
+                }
+
+                // 3. Refresh UI State Immediately
+                activeOrder.rider = currentRider;
+                activeOrder.delivery_status = 'In Transit';
+                
+                // Explicitly update badge before flash
+                const statusBadge = document.querySelector('#active-delivery .time-badge');
+                if (statusBadge) {
+                    statusBadge.innerHTML = `🕒 In Transit`;
+                    statusBadge.style.background = 'var(--rider-accent)';
+                    statusBadge.style.color = 'white';
+                }
+
+                renderRiderQueue();
+                
+                // 4. Dynamic Success Flash
+                const acceptGroup = document.getElementById('accept-decline-group');
+                const deliverBtn = document.getElementById('btn-confirm-delivery');
+                const flashContainer = document.getElementById('success-flash-container');
+                
+                if (acceptGroup && flashContainer) {
+                    acceptGroup.style.display = 'none';
+                    if (deliverBtn) deliverBtn.style.display = 'flex'; // Show POD button immediately behind flash
+                    
+                    flashContainer.innerHTML = `
+                        <div class="success-msg">
+                            <div style="font-size: 1.2rem; margin-bottom: 4px;">✅ Delivery Accepted!</div>
+                            <div style="font-size: 0.9rem; opacity: 0.9; font-weight: 600; color: #fff;">Ride safely!</div>
+                        </div>
+                    `;
+                    flashContainer.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        deduplicateOrders();
+                        backToQueue();
+                        flashContainer.style.display = 'none';
+                    }, 2000);
+                } else {
+                    alert("✅ Delivery Accepted! Ride safely.");
+                    backToQueue();
+                }
+            } catch (err) {
+                console.error("Critical Error in acceptance:", err);
+                alert("⚠️ Error: " + err.message);
             }
-
-            // 2. Broadcast the claim so other riders see it's gone
-            if (window.IceQubeSync) {
-                window.IceQubeSync.publishDeliveryEvent({
-                    type: 'ORDER_CLAIMED',
-                    payload: {
-                        orderId: activeOrder.order_id || activeOrder.orderId,
-                        riderId: currentRider
-                    }
-                });
-            }
-
-            // 3. Refresh UI
-            activeOrder.rider = currentRider;
-            activeOrder.delivery_status = 'In Transit';
-            openOrderDetails(activeOrder.order_id || activeOrder.orderId);
-            renderRiderQueue();
-            
-            alert("✅ Delivery Accepted! Drive safely.");
         }
 
         function backToQueue() {
             document.getElementById('incoming-order').style.display = 'none';
             document.getElementById('active-delivery').style.display = 'none';
             document.getElementById('dispatch-queue').style.display = 'block';
-
-            // Show mini-bar if we have an active order
-            if (activeOrder && (activeOrder.delivery_status === 'Dispatched' || activeOrder.delivery_status === 'Awaiting Acceptance')) {
-                const bar = document.getElementById('minimized-order-bar');
-                const info = document.getElementById('mini-order-info');
-                if (bar && info) {
-                    info.innerText = `#${activeOrder.order_id} • ${activeOrder.customer_name}`;
-                    bar.style.display = 'flex';
-                }
-            }
         }
 
         function toggleStatus() {
@@ -1910,44 +2102,193 @@
             }
         }
 
+        function scrollToSlide(index) {
+            const container = document.getElementById('earnings-carousel');
+            const width = container.offsetWidth;
+            container.scrollTo({
+                left: width * index,
+                behavior: 'smooth'
+            });
+        }
+
         function updateCarouselDots() {
-            // Optional: Add logic to update dots based on scroll position if needed
-            // For now, simple scroll-snap handles the visual position
+            const container = document.getElementById('earnings-carousel');
+            const index = Math.round(container.scrollLeft / container.offsetWidth);
+            
+            // Update dots
+            const indicators = document.querySelectorAll('.carousel-indicator');
+            indicators.forEach((indicator) => {
+                const dots = indicator.querySelectorAll('.dot');
+                dots.forEach((dot, dotIndex) => {
+                    dot.classList.toggle('active', dotIndex === index);
+                });
+            });
+
+            // Update Labels
+            const headers = [document.getElementById('carousel-header-1'), document.getElementById('carousel-header-2')];
+            headers.forEach(header => {
+                if (header) {
+                    const labels = header.querySelectorAll('.carousel-label');
+                    labels.forEach((label, i) => {
+                        label.classList.toggle('active', i === index);
+                    });
+                }
+            });
         }
         
         function claimAdvanceOrder(orderId) {
-            document.getElementById('advance-actions-' + orderId).style.display = 'none';
-            document.getElementById('reserved-actions-' + orderId).style.display = 'block';
-            document.getElementById('advance-badge').style.display = 'none';
-            console.log("📅 Advance Order " + orderId + " Claimed by " + currentRider);
-            alert("Order Reserved!\nThis delivery is now locked to you. Please return to the hub by 1:30 PM to start.");
+            try {
+                // 1. Update localStorage
+                const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+                const targetId = cleanId(orderId);
+                
+                const idx = allOrders.findIndex(o => cleanId(o.order_id) === targetId);
+                if (idx !== -1) {
+                    allOrders[idx].rider = currentRider;
+                    allOrders[idx].delivery_status = 'In Transit'; // Treat as active once claimed
+                    localStorage.setItem('ice_orders', JSON.stringify(allOrders));
+                }
+
+                // 2. Broadcast
+                if (window.IceQubeSync) {
+                    window.IceQubeSync.publishDeliveryEvent({
+                        type: 'ORDER_CLAIMED',
+                        payload: { orderId: orderId, riderId: currentRider }
+                    });
+                }
+
+                // 3. UI Updates
+                if (document.getElementById('advance-actions-group')) document.getElementById('advance-actions-group').style.display = 'none';
+                if (document.getElementById('reserved-actions-group')) document.getElementById('reserved-actions-group').style.display = 'block';
+                const advanceBadge = document.getElementById('advance-badge');
+                if (advanceBadge) advanceBadge.style.display = 'none';
+                
+                deduplicateOrders();
+                renderRiderQueue();
+                
+                alert("✅ Advance Booking Claimed!\nCheck your live queue for this delivery.");
+                backToQueue();
+            } catch (err) {
+                alert("⚠️ Claim Error: " + err.message);
+            }
         }
 
         function openAdvanceDetails(orderId) {
             const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-            const order = allOrders.find(o => o.order_id === orderId);
+            const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+            const targetId = cleanId(orderId);
+            const order = allOrders.find(o => cleanId(o.order_id) === targetId);
             if (!order) return;
 
+            activeOrder = order;
+
             // Populate Advance Detail Card
-            const card = document.getElementById('advance-order');
-            if (card) {
-                card.querySelector('.time-badge').innerText = `⏰ ${order.delivery_schedule}`;
-                card.querySelector('.order-id').innerText = `#${order.order_id}`;
-                card.querySelector('.customer-name').innerText = order.customer_name;
-                card.querySelector('.customer-addr').innerText = `📍 ${order.delivery_location || 'Macabalan Hub'}`;
+            const idEl = document.getElementById('advance-id');
+            const custEl = document.getElementById('advance-customer');
+            const addrEl = document.getElementById('advance-addr');
+            const timeBadge = document.getElementById('advance-time-badge');
+            
+            if (idEl) {
+                const id = String(order.order_id);
+                idEl.innerText = id.startsWith('#') ? id : `#${id}`;
+            }
+            if (custEl) custEl.innerText = order.customer_name;
+            if (addrEl) addrEl.innerText = `📍 ${order.delivery_address || 'Macabalan Hub'}`;
+            if (timeBadge) timeBadge.innerText = `⏰ ${order.delivery_schedule}`;
+
+            // Receiver Info
+            const receiverEl = document.getElementById('advance-receiver');
+            const contactEl = document.getElementById('advance-contact');
+            const notesEl = document.getElementById('advance-notes');
+            
+            if (receiverEl) receiverEl.innerText = order.receiver_name || order.customer_name;
+            if (contactEl) contactEl.innerText = order.contact_number || 'N/A';
+            if (notesEl) notesEl.innerText = order.delivery_notes || 'No special notes.';
+
+            // Communication Buttons
+            const callBtn = document.getElementById('advance-call');
+            const smsBtn = document.getElementById('advance-sms');
+            const messengerBtn = document.getElementById('advance-messenger');
+            const rawNumber = order.contact_number || order.customer_contact || '';
+            const cleanNumber = rawNumber.replace(/[^\d+]/g, '');
+            
+            if (callBtn) callBtn.href = cleanNumber ? `tel:${cleanNumber}` : '#';
+            if (smsBtn) smsBtn.href = cleanNumber ? `sms:${cleanNumber}` : '#';
+            if (messengerBtn) {
+                messengerBtn.href = cleanNumber ? `https://m.me/${cleanNumber.startsWith('+') ? cleanNumber : '+63' + cleanNumber.replace(/^0/, '')}` : 'https://m.me/IceQubeCDO';
+            }
+            
+            // Payment
+            const paymentEl = document.getElementById('advance-payment');
+            if (paymentEl) {
+                const method = order.payment_method || 'GCash';
+                const isPaid = method === 'GCash' || method === 'Bank Transfer';
+                paymentEl.innerHTML = (method === 'COD' || method.includes('Cash')) ? `💵 ${method}` : `💳 ${method}${isPaid ? ' (Paid)' : ''}`;
+            }
+
+            // Items
+            const itemsEl = document.getElementById('advance-items');
+            if (itemsEl) {
+                itemsEl.innerHTML = `<div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="color: var(--rider-text-main); font-size: 1.2em; vertical-align: middle; line-height: 1.4;">${formatOrderItems(order)}</div>
+                </div>`;
+            }
+
+            // Payouts
+            const itemsPriceEl = document.getElementById('advance-items-price');
+            const deliveryFeeEl = document.getElementById('advance-delivery-fee');
+            const priorityFeeEl = document.getElementById('advance-priority-fee');
+            const priorityRow = document.getElementById('advance-priority-row');
+            
+            if (itemsPriceEl) itemsPriceEl.innerText = `₱${parseFloat(order.total_price || 0).toLocaleString()}`;
+            if (deliveryFeeEl) deliveryFeeEl.innerText = `₱${parseFloat(order.delivery_fee || 0).toLocaleString()}`;
+            if (priorityFeeEl) priorityFeeEl.innerText = `₱${parseFloat(order.priority_fee || 0).toLocaleString()}`;
+            
+            const pFee = parseFloat(order.priority_fee || 0);
+            if (priorityRow) priorityRow.style.display = pFee > 0 ? 'flex' : 'none';
+
+            // Amount to Collect
+            const collectEl = document.getElementById('advance-to-collect');
+            const collectTipEl = document.getElementById('advance-to-collect-tip');
+            
+            if (collectEl) {
+                const method = order.payment_method || 'GCash';
+                const isCOD = method === 'COD' || method === 'Cash on Delivery' || method.includes('Cash');
                 
-                // Map Link
-                const mapBtn = card.querySelector('.contact-btn.map');
-                if (mapBtn) mapBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`;
-                
-                // Payout
-                card.querySelector('span[style*="font-weight: 700"]').innerText = `₱${parseFloat(order.delivery_fee || 0).toFixed(2)}`;
-                
-                // Update Claim Button ID
-                const claimBtn = card.querySelector('.btn-accept');
-                if (claimBtn) {
-                    claimBtn.setAttribute('onclick', `claimAdvanceOrder('${order.order_id}')`);
+                if (isCOD) {
+                    const totalItems = parseFloat(order.total_price || 0);
+                    const deliveryFee = parseFloat(order.delivery_fee || 0);
+                    const totalToCollect = totalItems + deliveryFee + pFee;
+                    collectEl.innerText = `₱${totalToCollect.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    
+                    if (collectTipEl) {
+                        collectTipEl.style.display = pFee > 0 ? 'block' : 'none';
+                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Priority Tip`;
+                    }
+                } else {
+                    collectEl.innerText = `₱0.00`;
+                    if (collectTipEl) collectTipEl.style.display = 'none';
                 }
+            }
+
+            // Map Link
+            const mapLink = document.querySelector('#advance-order .contact-btn.map');
+            if (mapLink) mapLink.href = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`;
+
+            // Action Buttons
+            const actionsGroup = document.getElementById('advance-actions-group');
+            const reservedGroup = document.getElementById('reserved-actions-group');
+            const claimBtn = document.getElementById('advance-claim-btn');
+            
+            const isClaimedByMe = order.rider === currentRider;
+            if (isClaimedByMe) {
+                if (actionsGroup) actionsGroup.style.display = 'none';
+                if (reservedGroup) reservedGroup.style.display = 'block';
+            } else {
+                if (actionsGroup) actionsGroup.style.display = 'block';
+                if (reservedGroup) reservedGroup.style.display = 'none';
+                if (claimBtn) claimBtn.setAttribute('onclick', `claimAdvanceOrder('${order.order_id}')`);
             }
 
             document.getElementById('advance-queue').style.display = 'none';
@@ -1960,20 +2301,7 @@
             document.getElementById('advance-queue').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        function toggleTheme() {
-            const root = document.documentElement;
-            const icon = document.getElementById('theme-icon');
-            
-            if (root.classList.contains('light-theme')) {
-                root.classList.remove('light-theme');
-                root.classList.add('dark-theme');
-                icon.innerText = '🌙';
-            } else {
-                root.classList.remove('dark-theme');
-                root.classList.add('light-theme');
-                icon.innerText = '☀️';
-            }
-        }
+
         function openCamera() {
             document.getElementById('camera-overlay').style.display = 'flex';
         }
@@ -2039,16 +2367,5 @@
         <div id="camera-flash" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1002; display: none;"></div>
     </div>
 
-    <!-- PERSISTENT MINI-BAR FOR MINIMIZED ORDER -->
-    <div id="minimized-order-bar" onclick="openOrderDetails(activeOrder.order_id)" style="display: none; position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #0284c7; color: white; padding: 14px 20px; z-index: 2000; border-top-left-radius: 16px; border-top-right-radius: 16px; box-shadow: 0 -8px 24px rgba(0,0,0,0.4); justify-content: space-between; align-items: center; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.2);">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem;">🛵</div>
-            <div>
-                <div style="font-size: 0.65rem; opacity: 0.9; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">Ongoing Delivery</div>
-                <div id="mini-order-info" style="font-weight: 700; font-size: 0.95rem;">#IQ-0000 • Customer Name</div>
-            </div>
-        </div>
-        <div style="background: white; color: #0284c7; padding: 6px 14px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">OPEN</div>
-    </div>
 </body>
 </html>
