@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-v3';
+const CACHE_NAME = 'iceqube-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -10,7 +10,13 @@ const ASSETS = [
   './js/app_header.js',
   './css/style_v10.css',
   './assets/logo.png',
-  './assets/hero.jpeg'
+  './assets/logo2.png',
+  './assets/hero.jpeg',
+  './assets/full_dice.png',
+  './assets/half_dice.png',
+  './assets/full_dice_macro.png',
+  './assets/half_dice_macro.png',
+  './assets/gcash-qr-iceqube.png'
 ];
 
 self.addEventListener('install', (event) => {

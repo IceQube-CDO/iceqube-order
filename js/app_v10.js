@@ -175,6 +175,13 @@ const app = {
     deferredPrompt: null,
 
     installPWA() {
+        const isMessenger = /FBAN|FBAV|Messenger/i.test(navigator.userAgent);
+        
+        if (isMessenger) {
+            alert('📱 In-App Browser Detected\n\nInstallation is not supported inside Messenger/Facebook.\n\nPlease tap the (⋮) or (⋯) menu and select "Open in System Browser" or "Open in Chrome" to install IceQube.');
+            return;
+        }
+
         if (this.deferredPrompt) {
             // Show the install prompt
             this.deferredPrompt.prompt();
@@ -190,8 +197,12 @@ const app = {
                 this.deferredPrompt = null;
             });
         } else {
-            // Fallback for iOS or if prompt is not available
-            alert('To add IceQube to your Home Screen:\n\n1. Tap the Share button (square with arrow up) at the bottom of your browser.\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add" in the top right corner.');
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                alert('To add IceQube to your Home Screen:\n\n1. Tap the Share button (square with arrow up) at the bottom of your browser.\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add" in the top right corner.');
+            } else {
+                alert('To install IceQube:\n\n1. Tap the browser menu (three dots ⋮).\n2. Select "Install app" or "Add to Home screen".');
+            }
         }
     },
 
