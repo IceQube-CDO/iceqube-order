@@ -73,13 +73,17 @@ const app = {
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
-            this.showInstallButtons(true);
+            // Only show if not already in standalone mode
+            if (!this.isStandalone) {
+                this.showInstallButtons(true);
+            }
         });
 
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        // Detect if app is running in standalone mode (installed PWA)
+        this.isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone || false;
 
-        if (!isStandalone) {
+        if (!this.isStandalone) {
             this.showInstallButtons(true);
             if (isIOS) {
                 const btn2 = document.getElementById('btn-install-pwa-account');
@@ -88,6 +92,9 @@ const app = {
                     if (span) span.innerText = 'Add to Home Screen';
                 }
             }
+        } else {
+            // If already standalone, ensure all install UI is hidden
+            this.showInstallButtons(false);
         }
 
         window.addEventListener('appinstalled', (evt) => {
@@ -246,6 +253,9 @@ const app = {
     },
 
     showInstallButtons(visible) {
+        // Force hidden if app is already running in standalone mode
+        if (this.isStandalone) visible = false;
+
         const btn2 = document.getElementById('btn-install-pwa-account');
         const banner = document.getElementById('pwa-install-banner');
         const display = visible ? 'flex' : 'none';
@@ -255,7 +265,7 @@ const app = {
         // Show banner only if it wasn't explicitly closed by user in this session
         if (banner && visible && !sessionStorage.getItem('pwa-banner-closed')) {
             banner.style.display = 'flex';
-        } else if (banner && !visible) {
+        } else if (banner && (!visible || sessionStorage.getItem('pwa-banner-closed'))) {
             banner.style.display = 'none';
         }
     },
@@ -636,11 +646,11 @@ const app = {
         this.lastStepIndex = index;
         this.updateProgress();
 
-        // Show PWA install banner only on the landing page (step 0)
+        // Show PWA install banner only on the landing page (step 0) and ONLY if not already installed
         const pwaBanner = document.getElementById('pwa-install-banner');
         if (pwaBanner) {
-            if (index === 0 && !sessionStorage.getItem('pwa-banner-closed')) {
-                pwaBanner.style.display = '';
+            if (index === 0 && !this.isStandalone && !sessionStorage.getItem('pwa-banner-closed')) {
+                pwaBanner.style.display = 'flex';
             } else {
                 pwaBanner.style.display = 'none';
             }
