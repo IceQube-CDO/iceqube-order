@@ -1432,16 +1432,26 @@
 
         function formatOrderItems(o) {
             if (!o.items) return '1 Bag';
-            if (typeof o.items === 'string' || typeof o.items === 'number') {
-                // If it's a string with commas, replace them with line breaks
-                if (typeof o.items === 'string' && o.items.includes(',')) {
-                    return o.items.split(',').map(s => s.trim()).join('<br>');
+            
+            let items = o.items;
+            // Handle String inputs that might be JSON
+            if (typeof items === 'string') {
+                try {
+                    const parsed = JSON.parse(items);
+                    if (parsed && (parsed.fullDice || parsed.halfDice)) items = parsed;
+                } catch (e) {}
+            }
+
+            if (typeof items === 'string' || typeof items === 'number') {
+                if (typeof items === 'string' && items.includes(',')) {
+                    return items.split(',').map(s => s.trim()).join('<br>');
                 }
-                return `${o.items} Bags`;
+                const str = String(items);
+                return str.includes('Bag') ? str : `${str} Bags`;
             }
             
-            const fd = o.items.fullDice || {};
-            const hd = o.items.halfDice || {};
+            const fd = items.fullDice || {};
+            const hd = items.halfDice || {};
             const parts = [];
             if (fd['3kg']) parts.push(`${fd['3kg']} bags - 3kg (Full Dice)`);
             if (fd['1kg']) parts.push(`${fd['1kg']} bags - 1kg (Full Dice)`);
@@ -1573,6 +1583,23 @@
                         <div class="queue-payout">₱${o.delivery_fee || 0}</div>
                     </div>
                 `).join('');
+            }
+
+            // --- AUTO-TRIGGER MISSED DISPATCH CALLS ---
+            if (isOnline && currentRider !== '') {
+                const missedDispatches = myLive.filter(o => 
+                    o.delivery_status === 'Awaiting Acceptance' && 
+                    !sessionStorage.getItem('seen_dispatch_' + o.order_id)
+                );
+
+                if (missedDispatches.length > 0) {
+                    const latest = missedDispatches[0]; 
+                    // Mark as seen so it doesn't ring again in this session
+                    sessionStorage.setItem('seen_dispatch_' + latest.order_id, 'true');
+                    
+                    console.log("🔔 [Rider] Triggering missed dispatch call UI for:", latest.order_id);
+                    handleIncomingDispatch({ orderId: latest.order_id });
+                }
             }
         }
 

@@ -265,8 +265,9 @@ var admin = {
     deductPackagingSupplies(order) {
         if (!order || !order.items) return;
 
-        const fd = order.items.fullDice || {};
-        const hd = order.items.halfDice || {};
+        const items = this.parseItems(order.items);
+        const fd = items.fullDice || {};
+        const hd = items.halfDice || {};
 
         const total3kg = (parseFloat(fd['3kg']) || 0) + (parseFloat(hd['3kg']) || 0);
         const total1kg = (parseFloat(fd['1kg']) || 0) + (parseFloat(hd['1kg']) || 0);
@@ -302,10 +303,10 @@ var admin = {
         }
     },
 
-    autoDispatch(order) {
+    autoDispatch(order, silent = false) {
         if (this.autoDispatchType === 'broadcast') {
             console.log("📢 [Auto-Dispatch] Broadcasting to all riders...");
-            this.dispatchOrder(order.id || order.order_id, 'Unassigned', order.order_id);
+            this.dispatchOrder(order.id || order.order_id, 'Unassigned', order.order_id, silent);
         }
     },
 
@@ -485,9 +486,11 @@ var admin = {
         let bags = 0;
         orders.forEach(o => {
             if (o.items) {
-                const fd = o.items.fullDice || {};
-                const hd = o.items.halfDice || {};
-                bags += (fd['3kg'] || 0) + (fd['1kg'] || 0) + (hd['3kg'] || 0) + (hd['1kg'] || 0);
+                const items = this.parseItems(o.items);
+                const fd = items.fullDice || {};
+                const hd = items.halfDice || {};
+                bags += (parseFloat(fd['3kg']) || 0) + (parseFloat(fd['1kg']) || 0) + 
+                        (parseFloat(hd['3kg']) || 0) + (parseFloat(hd['1kg']) || 0);
             }
         });
         const bagsEl = document.getElementById('ops-bags');
@@ -510,6 +513,16 @@ var admin = {
         this.updateOperationFeed(orders);
         this.updateCashflowView(orders);
         this.updateAlertCenter(orders);
+
+        // 6. Vacation Mode Auto-Dispatch (On-Load Check)
+        if (this.vacationMode) {
+            orders.forEach(order => {
+                if (order.delivery_status === 'Pending' && (order.rider === 'Unassigned' || !order.rider)) {
+                    console.log("✈️ [Vacation Mode] Found pending order on load:", order.order_id);
+                    this.autoDispatch(order, true); // silent = true
+                }
+            });
+        }
     },
 
     updateOperationFeed(orders) {
@@ -1033,19 +1046,63 @@ var admin = {
     },
 
 
+    parseItems(items) {
+        if (!items) return { fullDice: {}, halfDice: {} };
+        
+        // Handle String inputs
+        if (typeof items === 'string') {
+            try {
+                const parsed = JSON.parse(items);
+                // If it's a valid structured object, return it
+                if (parsed && (parsed.fullDice || parsed.halfDice)) return parsed;
+                // If it's just a number string or other JSON, fall through
+            } catch (e) {
+                // Not JSON, continue
+            }
+
+            // Handle comma-separated strings or simple bag counts
+            if (items.includes(',')) {
+                return { fullDice: {}, halfDice: {}, raw: items };
+            }
+            if (!isNaN(items)) {
+                return { fullDice: { '3kg': parseInt(items) }, halfDice: {} };
+            }
+            return { fullDice: {}, halfDice: {}, raw: items };
+        }
+
+        // Handle Number inputs
+        if (typeof items === 'number') {
+            return { fullDice: { '3kg': items }, halfDice: {} };
+        }
+
+        return items;
+    },
+
     formatOrderItems(o) {
-        if (!o.items) return '';
-        const fd = o.items.fullDice || {};
-        const hd = o.items.halfDice || {};
+        if (!o.items) return '1 Bag';
+        const items = this.parseItems(o.items);
+        
+        // If we have a raw string from fallback
+        if (items.raw) {
+            if (items.raw.includes(',')) {
+                return items.raw.split(',').map(s => s.trim()).join('<br>');
+            }
+            return items.raw.includes('Bag') ? items.raw : `${items.raw} Bags`;
+        }
+
+        const fd = items.fullDice || {};
+        const hd = items.halfDice || {};
         const parts = [];
+        
         if (fd['3kg']) parts.push(`${fd['3kg']} bags - 3kg (Full Dice)`);
         if (fd['1kg']) parts.push(`${fd['1kg']} bags - 1kg (Full Dice)`);
         if (hd['3kg']) parts.push(`${hd['3kg']} bags - 3kg (Half Dice)`);
         if (hd['1kg']) parts.push(`${hd['1kg']} bags - 1kg (Half Dice)`);
-        return parts.join('<br>');
+        
+        return parts.length > 0 ? parts.join('<br>') : (typeof o.items === 'object' ? '1 Bag' : o.items);
     },
 
-    async dispatchOrder(id, rider, orderId) {
+    async dispatchOrder(id, rider, orderId, silent = false) {
         // If rider is Unassigned, it becomes a Broadcast/Open Dispatch
         const isBroadcast = rider === 'Unassigned';
 
@@ -1084,7 +1141,7 @@ var admin = {
         try {
             await this.updateOrderStatus(id, 'Awaiting Acceptance');
             const msg = isBroadcast ? `Order ${orderId} broadcasted to ALL riders!` : `Order ${orderId} dispatched! Notification sent to ${rider}.`;
-            alert(msg);
+            if (!silent) alert(msg);
         } catch (err) {
             console.error('Dispatch failed:', err);
         }
