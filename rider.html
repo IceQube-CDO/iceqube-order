@@ -910,6 +910,13 @@
             </div>
             
             <button class="btn btn-accept" style="width: 100%; max-width: 100%; flex: none; height: 54px; font-size: 1.1rem; margin-top: 0.5rem;" onclick="login()">Secure Login</button>
+            
+            <div id="login-install-option" style="display: none; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 0.5rem; padding-top: 1.5rem; text-align: center;">
+                <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.75rem;">Get the app for faster access:</p>
+                <button class="btn" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--rider-accent); width: 100%; font-size: 0.9rem;" onclick="handleInstallClick()">
+                    <span>📲</span> Install Rider App
+                </button>
+            </div>
         </div>
         
         <div style="margin-top: 3rem; color: #64748b; font-size: 0.8rem; text-align: center; line-height: 1.5;">
@@ -2672,10 +2679,16 @@
         window.addEventListener('load', () => {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             
-            if (isIOS() && !isStandalone && !sessionStorage.getItem('installBannerDismissed')) {
-                setTimeout(() => {
-                    installBanner.classList.add('visible');
-                }, 4000);
+            if (!isStandalone) {
+                // Show the install option on the login screen if not already installed
+                const loginInstall = document.getElementById('login-install-option');
+                if (loginInstall) loginInstall.style.display = 'block';
+
+                if (isIOS() && !sessionStorage.getItem('installBannerDismissed')) {
+                    setTimeout(() => {
+                        installBanner.classList.add('visible');
+                    }, 4000);
+                }
             }
         });
 
