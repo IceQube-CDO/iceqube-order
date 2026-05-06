@@ -435,8 +435,8 @@ const app = {
                     const query = input.value.trim();
                     if (!query) return;
 
-                    const addrElem = document.getElementById('map-address-text');
-                    if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Searching...</span>`;
+                    const badgeElem = document.getElementById('map-badge-container');
+                    if (badgeElem) badgeElem.innerHTML = `<span class="scanning-badge">Searching...</span>`;
 
                     try {
                         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=ph`);
@@ -460,11 +460,13 @@ const app = {
                         this._tempLat = lat;
                         this._tempLng = lng;
                         
-                        if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${query}`;
+                        const badgeElem = document.getElementById('map-badge-container');
+                        if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+                        if (input) input.value = query;
                         
                         const satLabel = document.querySelector(".sat-label");
                         if (satLabel) {
-                            satLabel.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${query}`;
+                            satLabel.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span> ${query}`;
                             satLabel.parentElement.style.background = '#ebf5ff';
                             satLabel.parentElement.style.border = '2px solid #4382ec';
                         }
@@ -477,7 +479,9 @@ const app = {
                         // Network error, just lock it anyway
                         this._lockedPlace = query;
                         this._tempAddress = query;
-                        if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${query}`;
+                        const badgeElem = document.getElementById('map-badge-container');
+                        if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+                        if (input) input.value = query;
                     }
                 }
             });
@@ -515,9 +519,10 @@ const app = {
             this._tempAddress = this._lockedPlace;
             this._tempLat = lat;
             this._tempLng = lng;
-
-            const addrElem = document.getElementById('map-address-text');
-            if (addrElem) addrElem.innerText = this._tempAddress;
+            const addrInput = document.getElementById('map-search-input');
+            if (addrInput) addrInput.value = place.formatted_address || place.name;
+            const badgeElem = document.getElementById('map-badge-container');
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 SEARCH</span>`;
         });
     },
 
@@ -853,8 +858,8 @@ const app = {
         this._googleTimeout = setTimeout(() => {
             if (!this.googleMap || !this.googleMap.getBounds()) {
                 console.warn('Google Map failing to render. Falling back to High-Precision Satellite...');
-                const addrElem = document.getElementById('map-address-text');
-                if (addrElem) addrElem.innerHTML = '<span class="scanning-badge">Switching to Satellite Backup...</span>';
+                const badgeElem = document.getElementById('map-badge-container');
+                if (badgeElem) badgeElem.innerHTML = '<span class="scanning-badge">Switching to Satellite Backup...</span>';
                 this.initMap();
             }
         }, 3000);
@@ -906,8 +911,8 @@ const app = {
             this.googleMap.addListener('click', (e) => {
                 if (e.placeId) {
                     e.stop(); // Stop Google's default info window
-                    const addrElem = document.getElementById('map-address-text');
-                    if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Locking Business...</span>`;
+                    const badgeElem = document.getElementById('map-badge-container');
+                    if (badgeElem) badgeElem.innerHTML = `<span class="scanning-badge">Locking Business...</span>`;
                     
                     const placesService = new google.maps.places.PlacesService(this.googleMap);
                     placesService.getDetails({ placeId: e.placeId, fields: ['name', 'geometry'] }, (place, status) => {
@@ -920,7 +925,7 @@ const app = {
                             this.googleMap.setZoom(18);
                             
                             // Finalize instantly, bypassing all guessing logic
-                            this.finalizeAddress(place, addrElem, place.geometry.location.lat(), place.geometry.location.lng());
+                            this.finalizeAddress(place, place.geometry.location.lat(), place.geometry.location.lng());
                         }
                     });
                 }
@@ -975,9 +980,10 @@ const app = {
             return;
         }
 
-        const addrElem = document.getElementById('map-address-text');
-        const originalText = addrElem ? addrElem.innerText : '';
-        if (addrElem && !silent) addrElem.innerText = 'Locating you...';
+        const badgeElem = document.getElementById('map-badge-container');
+        const addrInput = document.getElementById('map-search-input');
+        const originalText = addrInput ? addrInput.value : '';
+        if (badgeElem && !silent) badgeElem.innerHTML = '<span class="scanning-badge">Locating...</span>';
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -997,7 +1003,7 @@ const app = {
                 }
             },
             (error) => {
-                if (addrElem && !silent) addrElem.innerText = originalText;
+                if (addrInput && !silent) addrInput.value = originalText;
                 if (!silent) console.warn("Geolocation Error:", error);
             },
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -1026,9 +1032,8 @@ const app = {
             return;
         }
 
-        const addrElem = document.getElementById('map-address-text');
-        const originalText = addrElem.innerText;
-        addrElem.innerText = 'Searching...';
+        const badgeElem = document.getElementById('map-badge-container');
+        if (badgeElem) badgeElem.innerHTML = '<span class="scanning-badge">Searching...</span>';
 
         try {
             // Restriction to CDO helps prevent irrelevant results
@@ -1049,18 +1054,23 @@ const app = {
                     
                     const parts = display_name.split(',');
                     const shortAddr = parts.slice(0, 3).join(',').trim();
-                    addrElem.innerText = shortAddr;
+                    const badgeElem = document.getElementById('map-badge-container');
+                    const addrInput = document.getElementById('map-search-input');
+                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 SEARCH</span>`;
+                    if (addrInput) addrInput.value = shortAddr;
                     
                     this._tempAddress = shortAddr;
                     this._tempLat = latitude;
                     this._tempLng = longitude;
                 }
             } else {
-                addrElem.innerText = 'Location not found. Try adding a street or village.';
-                setTimeout(() => { if(addrElem.innerText.includes('not found')) addrElem.innerText = originalText; }, 3500);
+                const badgeElem = document.getElementById('map-badge-container');
+                if (badgeElem) badgeElem.innerHTML = '<span class="scanning-badge">Not found</span>';
+                setTimeout(() => { if(badgeElem && badgeElem.innerText.includes('Not found')) badgeElem.innerHTML = ''; }, 3500);
             }
         } catch (e) {
-            addrElem.innerText = 'Search error. Please try again.';
+            const badgeElem = document.getElementById('map-badge-container');
+            if (badgeElem) badgeElem.innerHTML = '<span class="scanning-badge">Error!</span>';
             console.error("Search Error:", e);
         }
     },
@@ -1187,9 +1197,10 @@ const app = {
         this._tempLat = lat;
         this._tempLng = lng;
         
-        const addrElem = document.getElementById('map-address-text');
+        const addrInput = document.getElementById('map-search-input');
+        const badgeElem = document.getElementById('map-badge-container');
         const coordsStr = `(${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-        if (addrElem) addrElem.innerHTML = `<span class="scanning-badge">Engine V3 ${coordsStr}</span>`;
+        if (badgeElem) badgeElem.innerHTML = `<span class="scanning-badge">Engine V3 ${coordsStr}</span>`;
         
         let resolved = false;
 
@@ -1197,7 +1208,8 @@ const app = {
         // If the user tapped a POI or searched a specific name, respect it entirely.
         if (this._lockedPlace) {
             resolved = true;
-            if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT MATCH</span> ${this._lockedPlace}`;
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+            if (addrInput) addrInput.value = this._lockedPlace;
             
             const satLabel = document.querySelector(".sat-label");
             if (satLabel) satLabel.innerText = this._lockedPlace;
@@ -1228,7 +1240,8 @@ const app = {
 
         if (landmark) {
             resolved = true;
-            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 v3.0.1 ${coordsStr}</span> ${landmark}`;
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 v3.0.1</span>`;
+            if (addrInput) addrInput.value = landmark;
             this._tempAddress = landmark;
             this._tempLat = lat;
             this._tempLng = lng;
@@ -1253,7 +1266,7 @@ const app = {
 
                     if (bestMatch) {
                         resolved = true;
-                        this.finalizeAddress(bestMatch, addrElem, lat, lng);
+                        this.finalizeAddress(bestMatch, lat, lng);
                     } else {
                         // 2. DEEP POI SCAN: If only a street is found, look for nearby businesses within 20m
                         const placesService = new google.maps.places.PlacesService(document.createElement('div'));
@@ -1281,7 +1294,8 @@ const app = {
                                 });
 
                                 const poi = closestPoi;
-                                if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 ESTABLISHMENT</span> ${poi.name}`;
+                                if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
+                                if (addrInput) addrInput.value = poi.name;
                                 
                                 // Also update the satellite label if it exists (for the bottom bar)
                                 const satLabel = document.querySelector(".sat-label");
@@ -1294,7 +1308,7 @@ const app = {
                             } else {
                                 // 3. Last Fallback: Use the original street address
                                 resolved = true;
-                                this.finalizeAddress(results[0], addrElem, lat, lng);
+                                this.finalizeAddress(results[0], lat, lng);
                             }
                         });
                     }
@@ -1342,27 +1356,32 @@ const app = {
                     
                     if (name.includes('Unnamed Road')) name = 'Spot in Macabalan';
                     
-                    if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:var(--accent)">🛰️ SATELLITE</span> ${name}`;
+                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:var(--accent)">🛰️ SAT</span>`;
+                    if (addrInput) addrInput.value = name;
                     this._tempAddress = name;
                     this._tempLat = lat;
                     this._tempLng = lng;
                 }
             } catch (e) {
-                if (!resolved && addrElem) addrElem.innerText = 'Spot: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
+                if (!resolved && addrInput) addrInput.value = 'Spot: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
             }
         }, 2000);
     },
-    
-    finalizeAddress(target, addrElem, lat, lng) {
+    finalizeAddress(target, lat, lng) {
         let name = target.name || target.formatted_address.split(',').slice(0, 2).join(',').trim();
         const isPOI = target.types && (target.types.includes('establishment') || target.types.includes('point_of_interest'));
         
+        const addrInput = document.getElementById('map-search-input');
+        const badgeElem = document.getElementById('map-badge-container');
+
         if (isPOI) {
             const parts = target.formatted_address ? target.formatted_address.split(',') : [name];
             name = parts[0].trim();
-            if (addrElem) addrElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 ESTABLISHMENT</span> ${name}`;
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
+            if (addrInput) addrInput.value = name;
         } else {
-            if (addrElem) addrElem.innerHTML = `<span class="live-badge">📍 LIVE</span> ${name}`;
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 LIVE</span>`;
+            if (addrInput) addrInput.value = name;
         }
 
         // Synchronize with the bottom Satellite label

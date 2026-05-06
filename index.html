@@ -1028,12 +1028,7 @@
                 </button>
             </div>
 
-            <div class="map-search-wrapper-minimal">
-                <div class="map-search-bar-minimal">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="map-search-input" placeholder="Search street or landmark..." onkeyup="if(event.key === 'Enter') app.searchLocation(this.value)">
-                </div>
-            </div>
+
 
             <div class="map-card-container">
                 <div id="map-container" class="hub-style-map"></div>
@@ -1047,9 +1042,12 @@
             </div>
 
             <div class="map-footer-minimal">
-                <div class="address-display-hub">
-                    <div class="pin-indicator"></div>
-                    <span id="map-address-text">Drag pin to your location...</span>
+                <div class="address-display-hub unified-search">
+                    <div id="map-badge-container" class="badge-container-minimal"></div>
+                    <input type="text" id="map-search-input" placeholder="Search or drag pin to your location..." onkeyup="if(event.key === 'Enter') app.searchLocation(this.value)">
+                    <div class="search-indicator-minimal">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    </div>
                 </div>
                 
                 <div class="map-actions-grid">
