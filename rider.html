@@ -1615,7 +1615,7 @@
             document.getElementById('active-delivery').style.display = 'block';
         }
 
-        function acceptBroadcastOrder() {
+        async function acceptBroadcastOrder() {
             try {
                 if (!activeOrder) return;
                 
@@ -1634,6 +1634,31 @@
                     console.warn("❌ Order not found in LocalStorage for update:", targetId);
                     alert("⚠️ Order sync issue. Please refresh the app.");
                     return;
+                }
+
+                // 2. Sync to Supabase Cloud
+                // Demo Mode Check
+                if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                    console.log(`📡 Syncing acceptance of ${targetId} to Supabase...`);
+                    try {
+                        const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${targetId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=minimal'
+                            },
+                            body: JSON.stringify({ 
+                                delivery_status: 'In Transit',
+                                rider: currentRider 
+                            })
+                        });
+                        if (!response.ok) throw new Error('Cloud sync failed');
+                        console.log('✅ Cloud Sync Successful');
+                    } catch (err) {
+                        console.warn('⚠️ Cloud Sync Failed (Offline Mode):', err);
+                    }
                 }
 
                 // 2. Broadcast the claim
@@ -1803,6 +1828,24 @@
 
             // 2. Sync to Supabase for Dispute Archive
             await syncGeotagToSupabase(currentOrderId, simulatedLat, simulatedLng, currentRider);
+
+            // 2.5 Update Order Status in Cloud
+            if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                try {
+                    await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${currentOrderId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ delivery_status: 'Delivered' })
+                    });
+                    console.log('✅ Main Order Table Updated to Delivered');
+                } catch (err) {
+                    console.warn('⚠️ Main Table Update Failed:', err);
+                }
+            }
             
             // 3. Complete UI Updates
             if (overlay) overlay.style.display = 'none';

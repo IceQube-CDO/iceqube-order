@@ -1119,7 +1119,7 @@ var admin = {
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ assigned_rider: riderName })
+                body: JSON.stringify({ rider: riderName })
             });
             console.log('✅ Rider Assigned to Supabase');
         } catch (err) {
