@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-v10.0.9';
+const CACHE_NAME = 'iceqube-v10.2.2';
 const ASSETS = [
   './',
   './index.html',
@@ -25,9 +25,20 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // BYPASS CACHE FOR JS FILES DURING DEBUGGING
-  if (event.request.url.includes('.js')) {
-    return event.respondWith(fetch(event.request));
+  // NETWORK-FIRST strategy for HTML, CSS, and JS to ensure latest updates
+  if (event.request.mode === 'navigate' || 
+      event.request.url.includes('.css') || 
+      event.request.url.includes('.js')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const clonedResponse = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clonedResponse));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
   }
 
   event.respondWith(

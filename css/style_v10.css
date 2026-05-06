@@ -2210,9 +2210,10 @@ input:checked + .slider:before {
 .bottom-panel .panel-content {
     flex: 1;
     overflow-y: auto;
-    padding: 0 1rem 0.75rem; /* Reduced top padding to 0 */
-    display: flex; /* Added for vertical stretch */
+    padding: 0 1rem 0.75rem;
+    display: flex;
     flex-direction: column;
+    min-height: 300px; /* Prevent collapse */
 }
 
 .bottom-panel .panel-content .pill-btn {
@@ -2282,6 +2283,8 @@ input:checked + .slider:before {
 .about-tab-pane.active { 
     display: flex; 
     flex-direction: column;
+    min-height: 400px; /* Ensure content area is visible */
+    animation: fadeIn 0.4s ease;
 }
 
 /* Ice Showcase Sliding Carousel */
