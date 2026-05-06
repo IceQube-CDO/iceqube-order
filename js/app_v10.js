@@ -2388,8 +2388,23 @@ const app = {
     },
 
     openGCash() {
-        // GCash Deep Link or Payment Portal logic
-        window.open('https://m.gcash.com/', '_blank');
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // Attempt to open the GCash app directly via deep link
+            window.location.href = 'gcash://';
+            
+            // Fallback to a safe landing page if the app doesn't open after a delay
+            setTimeout(() => {
+                if (document.hasFocus()) {
+                    window.open('https://www.gcash.com/get-the-app', '_blank');
+                }
+            }, 2500);
+        } else {
+            // On desktop, opening the app doesn't make sense, so go to the informational page
+            window.open('https://www.gcash.com/get-the-app', '_blank');
+            this.showToast('GCash App is only available on mobile. Use your phone to scan the QR code.', 'info');
+        }
     },
 
     async processFinalOrder() {
