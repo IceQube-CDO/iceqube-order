@@ -30,7 +30,7 @@ window.IceQubeSync = {
             existingOrders.unshift(orderData);
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
-
+        ordersChannel.postMessage({
             type: 'NEW_ORDER',
             payload: orderData
         });

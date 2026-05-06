@@ -618,7 +618,7 @@ const app = {
     showEliteUpgrade() {
         // Premium looking alert using SweetAlert or custom logic
         // For this demo, we use a styled alert or just a clean prompt
-        alert("🔒 Elite Feature\n\nAutomated delivery schedules are reserved for our Elite Partners.\n\nTo upgrade your account, please contact your Hub Manager or message us on Facebook.");
+        this.showToast("🔒 Elite Feature: Reserved for Elite Partners.", 'info');
     },
 
     renderDashboard(userRole) {
@@ -3002,7 +3002,7 @@ const app = {
 
         const order = orders[orderId];
         if (!order) {
-            alert('Receipt not found for Order #' + orderId);
+            this.showToast('Receipt not found for Order #' + orderId, 'error');
             return;
         }
 
@@ -3132,7 +3132,7 @@ const app = {
             const end = document.getElementById('soa-end-date').value;
             
             if (!start || !end) {
-                alert('Please select both start and end dates.');
+                this.showToast('Please select both start and end dates.', 'error');
                 return;
             }
 
@@ -3392,9 +3392,9 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             this.toggleBottomSheet('report', false);
             
             if (isCritical) {
-                alert(`🚨 EMERGENCY ESCALATION SUCCESSFUL\n\nCase ID: QC-${Math.floor(1000 + Math.random() * 9000)}\nOrder: #${orderId}\n\nA Quality Control officer is being dispatched to your location. Do not discard the samples.`);
+                this.showToast(`🚨 EMERGENCY ESCALATION SUCCESSFUL. Case ID: QC-${Math.floor(1000 + Math.random() * 9000)}`, 'success');
             } else {
-                alert(`✅ Report Submitted\n\nIssue: ${issueType.toUpperCase()}\nOrder: #${orderId}\n\nOur support team has been notified and will reach out via Messenger within 15 minutes.`);
+                this.showToast(`✅ Report Submitted. Issue: ${issueType.toUpperCase()}`, 'success');
             }
             
             // Reset button for next time
@@ -3808,7 +3808,7 @@ async function submitTopUp(amount) {
     const finalAmt = parseFloat(amount || customAmt);
     
     if (!finalAmt || finalAmt < 1) {
-        alert('Please enter a valid amount to recharge.');
+        this.showToast('Please enter a valid amount to recharge.', 'error');
         return;
     }
     
@@ -3944,7 +3944,7 @@ function submitCustomTopUp() {
     if (amt && amt > 0) {
         submitTopUp(amt); // Calls the FIFO backend function
     } else {
-        alert('Please enter a valid amount.');
+        this.showToast('Please enter a valid amount.', 'error');
     }
 }
 
