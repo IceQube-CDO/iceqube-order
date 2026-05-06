@@ -1,56 +1,38 @@
-const CACHE_NAME = 'iceqube-v7';
+const CACHE_NAME = 'iceqube-v10.0.3';
 const ASSETS = [
+  './',
   './index.html',
-  './manifest.json',
-  './rider.html',
   './admin.html',
-  './js/app_v10.js',
-  './js/admin.js',
-  './js/sync.js',
-  './js/app_header.js',
+  './rider.html',
   './css/style_v10.css',
-  './assets/logo-192.png',
-  './assets/logo-512.png',
-  './assets/logo.png',
-  './assets/logo2.png',
-  './ice_bg.png',
-  './assets/hero.jpeg',
-  './assets/full_dice.png',
-  './assets/half_dice.png',
-  './assets/full_dice_macro.png',
-  './assets/half_dice_macro.png',
-  './assets/gcash-qr-iceqube.png'
+  './manifest.json',
+  './assets/logo-192.png'
 ];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    ))
   );
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
+  // BYPASS CACHE FOR JS FILES DURING DEBUGGING
+  if (event.request.url.includes('.js')) {
+    return event.respondWith(fetch(event.request));
+  }
+
   event.respondWith(
-    fetch(event.request).then((response) => {
-      // Network succeeded — update cache and return fresh response
-      const clone = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-      return response;
-    }).catch(() => {
-      // Network failed — fall back to cache (ignore query strings for versioned assets)
-      return caches.match(event.request, { ignoreSearch: true });
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });
