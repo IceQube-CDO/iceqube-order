@@ -1521,7 +1521,15 @@
             try {
                 // Try multiple ID formats for maximum compatibility
                 const cleanId = orderId.replace('#', '').replace('IQ-', '').trim();
-                const query = `or=(order_id.eq.${cleanId},order_id.eq.%23${cleanId},order_id.eq.%23IQ-${cleanId},id.eq.${cleanId},id.eq.%23${cleanId})`;
+                const queryParts = [
+                    `order_id.eq.${cleanId}`,
+                    `order_id.eq.%23${cleanId}`,
+                    `order_id.eq.IQ-${cleanId}`,
+                    `order_id.eq.%23IQ-${cleanId}`,
+                    `id.eq.${cleanId}`,
+                    `id.eq.%23${cleanId}`
+                ];
+                const query = `or=(${queryParts.join(',')})`;
                 
                 const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${query}`, {
                     headers: {
@@ -1679,12 +1687,16 @@
 
                     const infoColor = isUnassigned ? 'rgba(255,255,255,0.9)' : 'var(--rider-label)';
                     const scheduleColor = isUnassigned ? 'white' : (isInTransit ? 'var(--rider-accent)' : '#38bdf8');
+                    
+                    const displayName = o.customer_name === 'External Order' ? 
+                        '<span style="color: #fbbf24; font-size: 0.8em; font-weight: 400; font-style: italic;">⌛ Syncing details...</span>' : 
+                        o.customer_name;
 
                     return `
                         <div class="${cardClass}" style="${cardStyle}" onclick="openOrderDetails('${o.order_id}')">
                             <div style="padding-left: 8px;">
                                 <div class="queue-customer">
-                                    ${o.customer_name} 
+                                    ${displayName} 
                                     ${badge}
                                 </div>
                                 <div class="queue-info" style="color: ${infoColor};">
