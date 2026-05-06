@@ -2483,7 +2483,11 @@ const app = {
 
 
     async supabaseUpdate(orderId) {
-        if (!this.orderData) return;
+        alert("🚀 SYNC STARTING: Attempting to save order to Cloud...");
+        if (!this.orderData) {
+            alert("❌ SYNC ABORTED: No order data found in memory.");
+            return;
+        }
         
         const isPO = this.orderData.payment === 'Purchase Order';
         let paymentStatus = 'Pending';
