@@ -1519,19 +1519,9 @@
             console.log(`🔍 [Rider] Fetching missing details for ${orderId}...`);
             
             try {
-                // Try multiple ID formats for maximum compatibility
-                const cleanId = orderId.replace('#', '').replace('IQ-', '').trim();
-                const queryParts = [
-                    `order_id.eq.${cleanId}`,
-                    `order_id.eq.%23${cleanId}`,
-                    `order_id.eq.IQ-${cleanId}`,
-                    `order_id.eq.%23IQ-${cleanId}`,
-                    `id.eq.${cleanId}`,
-                    `id.eq.%23${cleanId}`
-                ];
-                const query = `or=(${queryParts.join(',')})`;
-                
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${query}`, {
+                // Fetch ALL recent orders (like Admin does) and find the match in JS
+                // This is much more reliable than complex Supabase queries
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=50`, {
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
@@ -1540,10 +1530,14 @@
                 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    const fullOrder = data[0];
-                    console.log(`✅ [Rider] Details found for ${orderId}:`, fullOrder.customer_name);
+                const cloudOrders = await response.json();
+                const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+                const target = clean(orderId);
+                
+                const fullOrder = cloudOrders.find(o => clean(o.order_id) === target || clean(o.id) === target);
+
+                if (fullOrder) {
+                    console.log(`✅ [Rider] Details resolved for ${orderId}:`, fullOrder.customer_name);
                     alert(`✅ [Rider] Found details for ${orderId}: ${fullOrder.customer_name}`);
                     
                     const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
@@ -1562,9 +1556,18 @@
                         existingOrders[idx].delivery_status = currentStatus;
                         existingOrders[idx].rider = currentRiderField;
                         
+                    localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+                    renderRiderQueue();
+                } else {
+                    console.warn(`❌ [Rider] No cloud data found for ${orderId} in recent 50 orders.`);
+                    // Mark as failed locally so we don't stay in "Syncing..." state
+                    const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                    const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+                    const target = clean(orderId);
+                    const idx = existingOrders.findIndex(o => clean(o.order_id) === target || clean(o.id) === target);
+                    if (idx > -1) {
+                        existingOrders[idx].fetchFailed = true;
                         localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
-                        
-                        // Re-render only if needed to avoid infinite loops
                         renderRiderQueue();
                     }
                 }
@@ -1689,7 +1692,9 @@
                     const scheduleColor = isUnassigned ? 'white' : (isInTransit ? 'var(--rider-accent)' : '#38bdf8');
                     
                     const displayName = o.customer_name === 'External Order' ? 
-                        '<span style="color: #fbbf24; font-size: 0.8em; font-weight: 400; font-style: italic;">⌛ Syncing details...</span>' : 
+                        (o.fetchFailed ? 
+                            '<span style="color: #ef4444; font-size: 0.8em;">❌ Cloud Sync Failed</span>' : 
+                            '<span style="color: #fbbf24; font-size: 0.8em; font-weight: 400; font-style: italic;">⌛ Syncing details...</span>') : 
                         o.customer_name;
 
                     return `
