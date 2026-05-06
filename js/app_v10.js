@@ -2560,7 +2560,8 @@ const app = {
             console.log('✅ Order successfully synced to Supabase Cloud.');
         } catch (err) {
             console.error('❌ Supabase Cloud Sync Failed:', err);
-            // We use a console warning for the user so they can check their dev tools on mobile if needed
+            // Show alert on mobile for debugging
+            alert(`⚠️ SYNC ERROR: ${err.message}\n\nPlease check your Supabase RLS policies and Table Schema.`);
             console.warn('CRITICAL: Order was NOT saved to Cloud. Check Supabase Config and RLS policies.');
         }
     },
