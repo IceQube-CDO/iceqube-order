@@ -1536,6 +1536,7 @@
                 if (data && data.length > 0) {
                     const fullOrder = data[0];
                     console.log(`✅ [Rider] Details found for ${orderId}:`, fullOrder.customer_name);
+                    alert(`✅ [Rider] Found details for ${orderId}: ${fullOrder.customer_name}`);
                     
                     const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
                     // Match by order_id or id

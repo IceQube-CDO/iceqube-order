@@ -1132,7 +1132,10 @@ var admin = {
         };
 
         if (!fullOrder.customer_name) {
-            console.warn(`⚠️ Warning: Dispatching ${orderId} without metadata! (Found in local cache? ${!!fullOrder})`);
+            console.warn(`⚠️ Warning: Dispatching ${orderId} without metadata!`);
+            alert(`⚠️ Warning: No metadata found for Order ${orderId}. The Rider may see "External Order".`);
+        } else {
+            console.log(`✅ Dispatching ${orderId} with metadata for: ${fullOrder.customer_name}`);
         }
 
         // Local Sync (BroadcastChannel)
