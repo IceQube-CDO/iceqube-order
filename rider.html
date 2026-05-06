@@ -439,6 +439,15 @@
             transform: scale(0.95);
         }
 
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
         /* --- Queue List --- */
         .queue-header {
             font-size: 0.85rem;
@@ -1120,9 +1129,15 @@
 
             <!-- DISPATCH QUEUE -->
             <div id="dispatch-queue" style="display: none;">
-                <div class="queue-header">
-                    <span>Pending Dispatches</span>
-                    <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;">5</span>
+                <div class="queue-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>Pending Dispatches</span>
+                        <span style="background: rgba(56,189,248,0.2); color: var(--rider-accent); padding: 2px 8px; border-radius: 10px;" id="live-queue-count">0</span>
+                    </div>
+                    <button onclick="syncAllOrders(event)" id="manual-sync-btn" style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 6px; color: var(--rider-accent); font-size: 0.7rem; font-weight: 700; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                        Cloud Sync
+                    </button>
                 </div>
                 
                 <div class="queue-list-container" id="rider-queue-list" style="max-height: 380px; overflow-y: auto; padding-right: 4px; margin-right: -4px; scrollbar-width: none;">
@@ -1433,6 +1448,67 @@
         // Track orders being fetched to avoid duplicate calls
         const pendingOrderFetches = new Set();
 
+        async function syncAllOrders(event) {
+            if (event) event.stopPropagation();
+            const btn = document.getElementById('manual-sync-btn');
+            if (!btn) return;
+
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="spin">⌛</span> Syncing...';
+            btn.disabled = true;
+            
+            console.log("🔄 [Rider] Manual Sync triggered...");
+            
+            try {
+                if (!SUPABASE_CONFIG.URL) throw new Error("Cloud not configured");
+
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=50`, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const cloudOrders = await response.json();
+                console.log(`✅ [Rider] Received ${cloudOrders.length} orders from cloud.`);
+                
+                const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+
+                cloudOrders.forEach(co => {
+                    const coId = clean(co.order_id) || clean(co.id);
+                    const idx = localOrders.findIndex(lo => (clean(lo.order_id) || clean(lo.id)) === coId);
+                    
+                    if (idx > -1) {
+                        // Merge but keep local rider/status if we are already handling it
+                        const s = localOrders[idx].delivery_status;
+                        const r = localOrders[idx].rider;
+                        localOrders[idx] = { ...localOrders[idx], ...co };
+                        
+                        // Only overwrite if cloud status is more "advanced"
+                        const prio = { 'Delivered': 4, 'In Transit': 3, 'Awaiting Acceptance': 2, 'Pending': 1 };
+                        if ((prio[s] || 0) > (prio[co.delivery_status] || 0)) {
+                            localOrders[idx].delivery_status = s;
+                            localOrders[idx].rider = r;
+                        }
+                    } else {
+                        localOrders.unshift(co);
+                    }
+                });
+                
+                localStorage.setItem('ice_orders', JSON.stringify(localOrders));
+                renderRiderQueue();
+                console.log("✅ [Rider] Manual Sync Success");
+            } catch (err) {
+                console.error("Sync Failed:", err);
+                alert('Sync Failed: ' + err.message);
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
         async function fetchOrderDetails(orderId) {
             if (!orderId || !SUPABASE_CONFIG.URL || pendingOrderFetches.has(orderId)) return;
             

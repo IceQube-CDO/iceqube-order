@@ -1114,8 +1114,11 @@ var admin = {
 
         // Get full order details from local state/storage for synchronization
         // Check memory cache first, then localStorage
-        const fullOrder = (this.allOrders || []).find(o => o.id === id || o.order_id === orderId) || 
-                          JSON.parse(localStorage.getItem('ice_orders') || '[]').find(o => o.id === id || o.order_id === orderId) || {};
+        const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+        const targetClean = clean(orderId) || clean(id);
+        
+        const fullOrder = (this.allOrders || []).find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || 
+                          JSON.parse(localStorage.getItem('ice_orders') || '[]').find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || {};
 
         const dispatchData = {
             orderId: orderId,
