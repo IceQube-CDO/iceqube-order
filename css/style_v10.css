@@ -2174,7 +2174,8 @@ input:checked + .slider:before {
 
 .bottom-panel .panel-header {
     padding: 0 20px;
-    height: 60px;
+    padding-top: env(safe-area-inset-top);
+    height: calc(60px + env(safe-area-inset-top));
     border-bottom: none;
     display: flex;
     align-items: center;
