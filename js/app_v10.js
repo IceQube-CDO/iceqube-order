@@ -607,26 +607,29 @@ const app = {
                 if (isInitial) {
                     step.classList.add('active');
                 } else {
-                    // Delay slightly to ensure display:block is painted before animation
+                    // Entry Animation
+                    const entryClass = direction === 'next' ? 'step-slide-in-right' : 'step-slide-in-left';
+                    step.classList.add(entryClass, 'active');
+                    
+                    // Cleanup after animation
                     setTimeout(() => {
-                        step.classList.add('active');
-                        step.classList.remove('fade-in', 'fade-out');
-                        step.classList.add('fade-in');
-                    }, 10);
+                        step.classList.remove('step-slide-in-right', 'step-slide-in-left');
+                    }, 500);
                 }
             } else if (i === prevIndex && !isInitial) {
-                step.classList.remove('fade-in', 'fade-out');
-                step.classList.add('fade-out');
+                // Exit Animation
+                const exitClass = direction === 'next' ? 'step-slide-out-left' : 'step-slide-out-right';
+                step.classList.add(exitClass);
                 
                 setTimeout(() => {
                     if (this.currentStep !== i) {
                         step.style.display = 'none';
-                        step.classList.remove('active');
+                        step.classList.remove('active', exitClass);
                     }
-                }, 500);
+                }, 450);
             } else {
                 step.style.display = 'none';
-                step.classList.remove('active', 'fade-in', 'fade-out');
+                step.classList.remove('active', 'step-slide-in-right', 'step-slide-in-left', 'step-slide-out-left', 'step-slide-out-right');
             }
         });
         
@@ -3374,7 +3377,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
             if (overlay) overlay.classList.add('active');
             if (panel) panel.classList.add('active');
-            if (appEl) appEl.classList.add('panel-push');
+            // if (appEl) appEl.classList.add('panel-push');
             document.body.style.overflow = 'hidden'; // Prevent background scroll
 
             // Hide PWA banner when any panel is open
@@ -3393,10 +3396,10 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 }
             }
         } else {
-            document.querySelectorAll('.panel-overlay').forEach(o => o.classList.remove('active'));
+            document.querySelectorAll('.panel-overlay, .global-dimmer').forEach(o => o.classList.remove('active'));
             document.querySelectorAll('.bottom-sheet, .sheet-overlay').forEach(s => s.classList.remove('active')); // Antigravity: Clean up sheets too
             document.querySelectorAll('.bottom-panel, .side-panel').forEach(p => p.classList.remove('active'));
-            if (appEl) appEl.classList.remove('panel-push');
+            // if (appEl) appEl.classList.remove('panel-push');
             document.body.style.overflow = '';
 
             // Restore PWA banner only if back on landing page (step 0)
