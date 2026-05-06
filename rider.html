@@ -1556,8 +1556,9 @@
                         existingOrders[idx].delivery_status = currentStatus;
                         existingOrders[idx].rider = currentRiderField;
                         
-                    localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
-                    renderRiderQueue();
+                        localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+                        renderRiderQueue();
+                    }
                 } else {
                     console.warn(`❌ [Rider] No cloud data found for ${orderId} in recent 50 orders.`);
                     // Mark as failed locally so we don't stay in "Syncing..." state
