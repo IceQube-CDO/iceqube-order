@@ -2378,12 +2378,20 @@
     </div>
     </div>
     <script>
+        // PWA Service Worker Registration with Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Service Worker registered:', reg);
-                }).catch(err => {
-                    console.log('Service Worker registration failed:', err);
+                // Force unregister old workers to clear any corruption
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                    }
+                    // Register the new worker
+                    navigator.serviceWorker.register('./sw.js').then(reg => {
+                        console.log('Service Worker v7 registered successfully:', reg);
+                    }).catch(err => {
+                        console.log('Service Worker registration failed:', err);
+                    });
                 });
             });
         }

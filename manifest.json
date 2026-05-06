@@ -1,14 +1,14 @@
 {
-  "id": "iceqube-cdo-v1",
   "name": "IceQube CDO",
   "short_name": "IceQube",
   "description": "Premium Crystal Clear Ice Delivery in Cagayan de Oro",
-  "start_url": "./index.html",
+  "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#007DFE",
+  "categories": ["food", "shopping"],
   "icons": [
     {
       "src": "assets/logo-192.png",
@@ -26,6 +26,13 @@
       "src": "assets/logo-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Order",
+      "url": "index.html",
+      "icons": [{ "src": "assets/logo-192.png", "sizes": "192x192" }]
     }
   ]
 }

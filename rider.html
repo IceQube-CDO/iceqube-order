@@ -1225,6 +1225,7 @@
 
     </div>
 
+    <script src="js/app_header.js?v=10.0.0"></script>
     <script src="js/sync.js?v=1.0.0"></script>
     <script>
         let currentRider = '';
@@ -1744,10 +1745,13 @@
         async function syncGeotagToSupabase(orderId, lat, lng, riderId) {
             console.log(`☁️ Syncing POD and Geotag to Supabase for Order ${orderId}...`);
             
-            // To implement actual Supabase sync:
-            /*
-            const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co/rest/v1/delivery_logs';
-            const SUPABASE_KEY = 'YOUR_ANON_KEY';
+            if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                console.warn('Supabase not configured for Rider App. Local storage used.');
+                return new Promise(resolve => setTimeout(resolve, 800));
+            }
+            
+            const SUPABASE_URL = `${SUPABASE_CONFIG.URL}/rest/v1/delivery_logs`;
+            const SUPABASE_KEY = SUPABASE_CONFIG.ANON_KEY;
             
             try {
                 const response = await fetch(SUPABASE_URL, {
@@ -1762,7 +1766,7 @@
                         rider_id: riderId,
                         geotag_lat: lat,
                         geotag_lng: lng,
-                        pod_photo_url: 'https://storage.supabase.co/ice_deliveries/pod_' + orderId + '.jpg',
+                        pod_photo_url: `${SUPABASE_CONFIG.URL}/storage/v1/object/public/ice_deliveries/pod_${orderId}.jpg`,
                         status: 'Delivered',
                         delivered_at: new Date().toISOString()
                     })
@@ -1772,12 +1776,9 @@
                 console.log('✅ Supabase Sync Successful');
             } catch (error) {
                 console.error('❌ Supabase Sync Error:', error);
-                // Handle offline caching here if needed
             }
-            */
             
-            // Simulating network delay for prototype
-            return new Promise(resolve => setTimeout(resolve, 800));
+            return new Promise(resolve => setTimeout(resolve, 300));
         }
 
         async function completeOrder() {

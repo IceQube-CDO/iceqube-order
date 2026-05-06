@@ -1,7 +1,4 @@
-// Ensure SUPABASE_CONFIG exists (may not be loaded on admin.html)
-if (typeof SUPABASE_CONFIG === 'undefined') {
-    var SUPABASE_CONFIG = { URL: '', ANON_KEY: '' };
-}
+// SUPABASE_CONFIG is provided by js/app_header.js
 
 var admin = {
     _syncIntervalId: null,

@@ -1,7 +1,7 @@
-const CACHE_NAME = 'iceqube-v6';
+const CACHE_NAME = 'iceqube-v7';
 const ASSETS = [
-  './',
   './index.html',
+  './manifest.json',
   './rider.html',
   './admin.html',
   './js/app_v10.js',
