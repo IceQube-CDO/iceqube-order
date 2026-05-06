@@ -1430,6 +1430,65 @@
             renderRiderQueue();
         });
 
+        // Track orders being fetched to avoid duplicate calls
+        const pendingOrderFetches = new Set();
+
+        async function fetchOrderDetails(orderId) {
+            if (!orderId || !SUPABASE_CONFIG.URL || pendingOrderFetches.has(orderId)) return;
+            
+            // Limit to real orders only
+            if (orderId.includes('mock')) return;
+
+            pendingOrderFetches.add(orderId);
+            console.log(`🔍 [Rider] Fetching missing details for ${orderId}...`);
+            
+            try {
+                // Try both id and order_id fields for robustness
+                const cleanId = orderId.replace('#', '').trim();
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(order_id.eq.${cleanId},id.eq.${cleanId})`, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const fullOrder = data[0];
+                    console.log(`✅ [Rider] Details found for ${orderId}:`, fullOrder.customer_name);
+                    
+                    const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                    // Match by order_id or id
+                    const idx = existingOrders.findIndex(o => 
+                        (o.order_id && o.order_id === orderId) || 
+                        (o.id && o.id === orderId)
+                    );
+                    
+                    if (idx > -1) {
+                        // Merge details but keep current status and rider
+                        const currentStatus = existingOrders[idx].delivery_status;
+                        const currentRiderField = existingOrders[idx].rider;
+                        
+                        existingOrders[idx] = { ...existingOrders[idx], ...fullOrder };
+                        existingOrders[idx].delivery_status = currentStatus;
+                        existingOrders[idx].rider = currentRiderField;
+                        
+                        localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+                        
+                        // Re-render only if needed to avoid infinite loops
+                        renderRiderQueue();
+                    }
+                }
+            } catch (err) {
+                console.warn(`[Rider] Could not fetch details for ${orderId}:`, err);
+            } finally {
+                // Remove from pending set after a delay to allow UI to settle
+                setTimeout(() => pendingOrderFetches.delete(orderId), 5000);
+            }
+        }
+
         function formatOrderItems(o) {
             if (!o.items) return '1 Bag';
             
@@ -1522,6 +1581,11 @@
                 document.getElementById('empty-state').style.display = 'none';
                 document.getElementById('dispatch-queue').style.display = 'block';
                 queueList.innerHTML = myLive.map(o => {
+                    // AUTO-FETCH: If this is an "External Order" stub, fetch the real details from the cloud
+                    if (o.customer_name === "External Order" || !o.delivery_address) {
+                        fetchOrderDetails(o.order_id);
+                    }
+
                     const isInTransit = o.delivery_status === 'In Transit';
                     const isUnassigned = o.rider === 'Unassigned' || !o.rider || o.rider === 'undefined';
                     
@@ -1571,7 +1635,13 @@
             if (myAdvance.length === 0) {
                 advanceList.innerHTML = '<div style="color: #475569; font-size: 0.9rem; text-align: center; padding: 2rem;">No upcoming bookings.</div>';
             } else {
-                advanceList.innerHTML = myAdvance.map(o => `
+                advanceList.innerHTML = myAdvance.map(o => {
+                    // AUTO-FETCH: If this is an "External Order" stub, fetch the real details from the cloud
+                    if (o.customer_name === "External Order" || !o.delivery_address) {
+                        fetchOrderDetails(o.order_id);
+                    }
+
+                    return `
                     <div class="queue-card" onclick="openAdvanceDetails('${o.order_id}')">
                         <div style="padding-left: 8px;">
                             <div class="queue-customer">${o.customer_name}</div>
@@ -1582,7 +1652,8 @@
                         </div>
                         <div class="queue-payout">₱${o.delivery_fee || 0}</div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
 
             // --- AUTO-TRIGGER MISSED DISPATCH CALLS ---

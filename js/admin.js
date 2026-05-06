@@ -8,6 +8,7 @@ if (typeof MESSENGER_CONFIG === 'undefined') {
 
 var admin = {
     _syncIntervalId: null,
+    allOrders: [],
     pin: '',
     correctPin: '2026', 
     manualEntries: JSON.parse(localStorage.getItem('ice_cashflow') || '[]'),
@@ -468,6 +469,7 @@ var admin = {
 
     updateDashboardUI(orders) {
         if (!orders) return;
+        this.allOrders = orders;
         console.log("🔄 Updating Dashboard UI...");
         
         // 1. Priority: Update Order Queue
@@ -1111,8 +1113,9 @@ var admin = {
         const isBroadcast = rider === 'Unassigned';
 
         // Get full order details from local state/storage for synchronization
-        const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        const fullOrder = existingOrders.find(o => o.id === id || o.order_id === orderId) || {};
+        // Check memory cache first, then localStorage
+        const fullOrder = (this.allOrders || []).find(o => o.id === id || o.order_id === orderId) || 
+                          JSON.parse(localStorage.getItem('ice_orders') || '[]').find(o => o.id === id || o.order_id === orderId) || {};
 
         const dispatchData = {
             orderId: orderId,
