@@ -2225,6 +2225,10 @@ const app = {
             const qrContainer = document.getElementById('modal-qr-container');
             const qrImage = document.getElementById('qr-image');
             const verificationText = document.getElementById('verification-text-top');
+            const totalAmountEl = document.getElementById('modal-total-amount');
+
+            const total = this.orderData.total + (this.orderData.deliveryFee || 0);
+            if (totalAmountEl) totalAmountEl.innerText = `₱${total.toFixed(2)}`;
 
             // Reset modal classes
             modal.classList.remove('modal-gcash', 'modal-bank-transfer');
@@ -2388,6 +2392,18 @@ const app = {
     },
 
     openGCash() {
+        const total = this.orderData.total + (this.orderData.deliveryFee || 0);
+        const amountStr = total.toFixed(2);
+        
+        // Copy amount to clipboard for easy pasting in GCash
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(amountStr).then(() => {
+                this.showToast(`Amount ₱${amountStr} copied! Paste it in GCash.`, 'success');
+            }).catch(err => {
+                console.warn('Clipboard copy failed:', err);
+            });
+        }
+
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
         if (isMobile) {
