@@ -4,8 +4,8 @@ var MESSENGER_CONFIG = window.MESSENGER_CONFIG || {
 };
 
 var SUPABASE_CONFIG = window.SUPABASE_CONFIG || {
-    URL: 'https://your-project-id.supabase.co',
-    ANON_KEY: 'your-anon-key'
+    URL: 'https://tbbezmpobjdkwpoflfcs.supabase.co',
+    ANON_KEY: 'sb_publishable_EcCGzl4oN7_rSmkUIZoYLA_WWbTE7iA'
 };
 
 var GOOGLE_CONFIG = window.GOOGLE_CONFIG || {

@@ -165,7 +165,28 @@ var admin = {
                 badge.style.background = 'rgba(34, 197, 94, 0.1)';
                 badge.style.color = '#22c55e';
                 badge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
-                badge.innerHTML = '<span id="sync-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> SYNC ONLINE';
+                badge.innerHTML = '<span id="sync-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> LOCAL SYNC';
+            }
+            
+            // Check Cloud Sync Status
+            const cloudBadge = document.getElementById('cloud-sync-badge');
+            const cloudDot = document.getElementById('cloud-dot');
+            if (cloudBadge && cloudDot) {
+                if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                    cloudBadge.style.background = 'rgba(34, 197, 94, 0.1)';
+                    cloudBadge.style.color = '#22c55e';
+                    cloudBadge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                    cloudDot.style.background = '#22c55e';
+                    cloudDot.style.boxShadow = '0 0 8px #22c55e';
+                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> CLOUD LIVE';
+                } else {
+                    cloudBadge.style.background = 'rgba(245, 158, 11, 0.1)';
+                    cloudBadge.style.color = '#f59e0b';
+                    cloudBadge.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+                    cloudDot.style.background = '#f59e0b';
+                    cloudDot.style.boxShadow = '0 0 8px #f59e0b';
+                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; box-shadow: 0 0 8px #f59e0b;"></span> MOCK MODE';
+                }
             }
 
             window.IceQubeSync.onOrderEvent((event) => {
@@ -431,8 +452,12 @@ var admin = {
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                 }
             });
-            if (!response.ok) throw new Error('Fetch failed');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || `HTTP ${response.status}`);
+            }
             const orders = await response.json();
+            console.log(`✅ Received ${orders.length} orders from Supabase.`);
             this.updateDashboardUI(orders);
         } catch (err) {
             console.warn('Live fetch failed, falling back to mock:', err);

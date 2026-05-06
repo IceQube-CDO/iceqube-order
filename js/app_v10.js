@@ -2517,13 +2517,15 @@ const app = {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Supabase Insert Failed');
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || `HTTP ${response.status}`);
             }
 
-            console.log('✅ Order synced successfully to Command Center.');
+            console.log('✅ Order successfully synced to Supabase Cloud.');
         } catch (err) {
-            console.error('❌ Supabase Sync Failed:', err);
+            console.error('❌ Supabase Cloud Sync Failed:', err);
+            // We use a console warning for the user so they can check their dev tools on mobile if needed
+            console.warn('CRITICAL: Order was NOT saved to Cloud. Check Supabase Config and RLS policies.');
         }
     },
 
