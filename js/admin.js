@@ -1120,6 +1120,8 @@ var admin = {
         const fullOrder = (this.allOrders || []).find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || 
                           JSON.parse(localStorage.getItem('ice_orders') || '[]').find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || {};
 
+        console.log(`📦 Preparing Dispatch Payload for ${orderId}:`, fullOrder);
+
         const dispatchData = {
             orderId: orderId,
             id: id,
@@ -1128,6 +1130,10 @@ var admin = {
             status: 'Awaiting Acceptance',
             orderDetails: fullOrder
         };
+
+        if (!fullOrder.customer_name) {
+            console.warn(`⚠️ Warning: Dispatching ${orderId} without metadata! (Found in local cache? ${!!fullOrder})`);
+        }
 
         // Local Sync (BroadcastChannel)
         if (window.IceQubeSync) {

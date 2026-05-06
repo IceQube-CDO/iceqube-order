@@ -138,10 +138,10 @@ window.IceQubeSync = {
                     // Fallback: If not found, add it
                     const newOrder = {
                         order_id: payload.orderId,
-                        customer_name: "External Order",
+                        customer_name: (payload.orderDetails && payload.orderDetails.customer_name) ? payload.orderDetails.customer_name : "External Order",
                         delivery_status: 'Awaiting Acceptance',
                         rider: payload.riderId,
-                        items: { fullDice: {'3kg': 1} },
+                        items: (payload.orderDetails && payload.orderDetails.items) ? payload.orderDetails.items : { fullDice: {'3kg': 1} },
                         created_at: new Date().toISOString(),
                         ...(payload.orderDetails || {})
                     };

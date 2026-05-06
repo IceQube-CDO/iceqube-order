@@ -1519,9 +1519,11 @@
             console.log(`🔍 [Rider] Fetching missing details for ${orderId}...`);
             
             try {
-                // Try both id and order_id fields for robustness
-                const cleanId = orderId.replace('#', '').trim();
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(order_id.eq.${cleanId},id.eq.${cleanId})`, {
+                // Try multiple ID formats for maximum compatibility
+                const cleanId = orderId.replace('#', '').replace('IQ-', '').trim();
+                const query = `or=(order_id.eq.${cleanId},order_id.eq.%23${cleanId},order_id.eq.%23IQ-${cleanId},id.eq.${cleanId},id.eq.%23${cleanId})`;
+                
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${query}`, {
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
