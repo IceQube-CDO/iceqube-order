@@ -102,22 +102,31 @@ const app = {
         this.initAdminSecret();
 
         // --- PWA Installation Logic ---
+        const ua = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+        const isMessenger = /FBAN|FBAV|Messenger/i.test(ua);
+        const isChromeIOS = /CriOS/i.test(ua);
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
-            // Only show if not already in standalone mode
             if (!this.isStandalone) {
                 this.showInstallButtons(true);
             }
         });
 
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        // Detect if app is running in standalone mode (installed PWA)
         this.isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone || false;
 
         if (!this.isStandalone) {
             this.showInstallButtons(true);
-            if (isIOS) {
+            
+            // Adjust banner text for Messenger
+            if (isMessenger) {
+                const bannerTitle = document.querySelector('#pwa-install-banner strong');
+                const bannerBtn = document.querySelector('.pwa-install-btn');
+                if (bannerTitle) bannerTitle.innerText = 'Get the IceQube App';
+                if (bannerBtn) bannerBtn.innerText = 'How?';
+            } else if (isIOS) {
                 const btn2 = document.getElementById('btn-install-pwa-account');
                 if (btn2) {
                     const span = btn2.querySelector('span');
@@ -125,7 +134,6 @@ const app = {
                 }
             }
         } else {
-            // If already standalone, ensure all install UI is hidden
             this.showInstallButtons(false);
         }
 
@@ -253,34 +261,58 @@ const app = {
     deferredPrompt: null,
 
     installPWA() {
-        const isMessenger = /FBAN|FBAV|Messenger/i.test(navigator.userAgent);
-        
+        const ua = navigator.userAgent;
+        const isMessenger = /FBAN|FBAV|Messenger/i.test(ua);
+        const isChromeIOS = /CriOS/i.test(ua);
+        const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+
         if (isMessenger) {
-            alert('📱 In-App Browser Detected\n\nInstallation is not supported inside Messenger/Facebook.\n\nPlease tap the (⋮) or (⋯) menu and select "Open in System Browser" or "Open in Chrome" to install IceQube.');
+            this.showBreakoutOverlay();
             return;
         }
 
         if (this.deferredPrompt) {
-            // Show the install prompt
             this.deferredPrompt.prompt();
-            
-            // Wait for the user to respond to the prompt
             this.deferredPrompt.userChoice.then((choiceResult) => {
                 if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
                     this.showInstallButtons(false);
-                } else {
-                    console.log('User dismissed the install prompt');
                 }
                 this.deferredPrompt = null;
             });
-        } else {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) {
-                alert('To add IceQube to your Home Screen:\n\n1. Tap the Share button (square with arrow up) at the bottom of your browser.\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add" in the top right corner.');
+        } else if (isIOS) {
+            if (isChromeIOS) {
+                alert('📱 Install on Chrome (iOS):\n\n1. Tap the Share icon (square with arrow up) in the TOP RIGHT (next to the address bar).\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add" in the top right.');
             } else {
-                alert('To install IceQube:\n\n1. Tap the browser menu (three dots ⋮).\n2. Select "Install app" or "Add to Home screen".');
+                alert('📱 Install on Safari (iOS):\n\n1. Tap the Share button (square with arrow up) at the BOTTOM of your screen.\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add" in the top right.');
             }
+        } else {
+            alert('📱 To install IceQube:\n\n1. Tap the browser menu (three dots ⋮).\n2. Select "Install app" or "Add to Home screen".');
+        }
+    },
+
+    showBreakoutOverlay() {
+        // Create a premium breakout overlay if it doesn't exist
+        let overlay = document.getElementById('messenger-breakout-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'messenger-breakout-overlay';
+            overlay.className = 'modal-overlay active';
+            overlay.style.zIndex = '200000';
+            overlay.innerHTML = `
+                <div class="modal-content" style="max-width: 320px; text-align: center; padding: 30px;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">📱</div>
+                    <h2 style="margin-bottom: 10px; font-weight: 800;">Messenger Detected</h2>
+                    <p style="color: #64748b; font-size: 0.9rem; line-height: 1.5; margin-bottom: 25px;">
+                        Facebook Messenger prevents app installation. To get the IceQube app on your home screen:
+                    </p>
+                    <div style="text-align: left; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+                        <div style="margin-bottom: 8px;"><strong>1. Tap the (⋯) or (⋮)</strong> menu in the corner.</div>
+                        <div><strong>2. Select "Open in Browser"</strong> or "Open in Chrome/Safari".</div>
+                    </div>
+                    <button class="btn-primary" onclick="document.getElementById('messenger-breakout-overlay').remove()">Got it!</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
         }
     },
 
