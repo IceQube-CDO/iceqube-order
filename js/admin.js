@@ -1079,7 +1079,11 @@ var admin = {
     },
 
     formatOrderItems(o) {
-        if (!o.items) return '1 Bag';
+        if (!o.items) {
+            console.log(`⚠️ Missing items for order ${o.order_id}`);
+            return '1 Bag';
+        }
+        console.log(`🔍 Formatting items for ${o.order_id}:`, o.items);
         const items = this.parseItems(o.items);
         
         // If we have a raw string from fallback
