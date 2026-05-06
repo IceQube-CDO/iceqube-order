@@ -19,6 +19,38 @@ window.initIceQubeMap = function() {
 };
 
 const app = {
+    showToast(message, type = 'info') {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✅';
+        if (type === 'error') icon = '⚠️';
+        
+        toast.innerHTML = `
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-message">${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                toast.remove();
+                if (container.children.length === 0) container.remove();
+            }, 400);
+        }, 4000);
+    },
+
     // INITIALIZATION
     init() {
         console.log("IceQube Engine V3.0.0 Initializing...");
@@ -2086,7 +2118,7 @@ const app = {
     sendVerificationCode() {
         const phone = document.getElementById('cod-phone-input').value;
         if (!phone) {
-            alert('Please enter a contact number.');
+            this.showToast('Please enter a contact number.', 'error');
             return;
         }
 
@@ -2280,7 +2312,7 @@ const app = {
 
             // 3. IF EXISTS: Alert user
             if (isDuplicate) {
-                alert(`This receipt (Ref No: ${refNo}) has already been used. Please upload a new one.`);
+                this.showToast(`This receipt (Ref No: ${refNo}) has already been used.`, 'error');
                 overlay.classList.remove('active');
                 return false;
             }
@@ -2299,7 +2331,7 @@ const app = {
         } catch (error) {
             console.error('OCR Error:', error);
             overlay.classList.remove('active');
-            alert('Verification failed. Please try again or ensure the image is clear.');
+            this.showToast('Verification failed. Please try again.', 'error');
             return false;
         }
     },
@@ -2453,7 +2485,7 @@ const app = {
                 completeStep.classList.add('slide-in-right');
             } else {
                 console.error('CRITICAL: #step-complete element not found!');
-                alert('Success! Your order was placed, but we had trouble showing the confirmation page.');
+                this.showToast('Order placed! But we had trouble showing the confirmation.', 'success');
             }
 
             // 5. RUN BACKGROUND TASKS (Sync & Notification)
@@ -2475,7 +2507,7 @@ const app = {
 
         } catch (error) {
             console.error('CRITICAL ERROR in processFinalOrder:', error);
-            alert('Something went wrong. Please check your connection or try again. Error: ' + error.message);
+            this.showToast('Something went wrong. Please check your connection.', 'error');
             if (btn) {
                 btn.disabled = false;
                 btn.innerText = originalText;
@@ -2496,9 +2528,9 @@ const app = {
 
 
     async supabaseUpdate(orderId) {
-        alert("🚀 SYNC STARTING: Attempting to save order to Cloud...");
+        console.log("🚀 SYNC STARTING: Attempting to save order to Cloud...");
         if (!this.orderData) {
-            alert("❌ SYNC ABORTED: No order data found in memory.");
+            console.error("❌ SYNC ABORTED: No order data found in memory.");
             return;
         }
         
@@ -2577,8 +2609,8 @@ const app = {
             console.log('✅ Order successfully synced to Supabase Cloud.');
         } catch (err) {
             console.error('❌ Supabase Cloud Sync Failed:', err);
-            // Show alert on mobile for debugging
-            alert(`⚠️ SYNC ERROR: ${err.message}\n\nPlease check your Supabase RLS policies and Table Schema.`);
+            // Show toast for non-blocking error feedback
+            this.showToast(`⚠️ Sync Issue: ${err.message}. Order saved locally.`, 'error');
             console.warn('CRITICAL: Order was NOT saved to Cloud. Check Supabase Config and RLS policies.');
         }
     },
@@ -2722,14 +2754,13 @@ const app = {
             start: new Date().toISOString() // In a real app, parse this.orderData.schedule
         };
 
-        // For demo purposes, we show an alert. 
-        // In a real environment, this would trigger a .ics download
-        alert(`Calendar Event Created!\n\n${event.title}\n${timing}\n\nSet a reminder to be ready for the rider.`);
+        // For demo purposes, we show a toast. 
+        this.showToast(`Calendar Event Created! ${event.title}`, 'success');
     },
 
     viewWeeklyStatement() {
         console.log('Navigating to Account Running Balance / Weekly Statement...');
-        alert('Navigating to Weekly Statement (Mock Dashboard)');
+        this.showToast('Navigating to Weekly Statement (Mock)', 'info');
     },
 
     goToAutomate(fromAccount = false) {
@@ -2845,7 +2876,7 @@ const app = {
         } catch (e) {
             btnSave.disabled = false;
             btnSave.innerText = originalText;
-            alert('Failed to save schedule');
+            this.showToast('Failed to save schedule', 'error');
         }
     },
 
