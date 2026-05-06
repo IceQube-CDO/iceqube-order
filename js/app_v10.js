@@ -94,6 +94,42 @@ const app = {
             this.showInstallButtons(false);
             this.deferredPrompt = null;
         });
+
+        // --- Sync Status Diagnostics ---
+        this.updateSyncBadges();
+    },
+
+    updateSyncBadges() {
+        const localBadge = document.getElementById('sync-status-badge');
+        const localDot = document.getElementById('sync-dot');
+        const cloudBadge = document.getElementById('cloud-sync-badge');
+        const cloudDot = document.getElementById('cloud-dot');
+
+        // Local Sync (BroadcastChannel)
+        if (window.IceQubeSync && localBadge && localDot) {
+            localBadge.style.background = 'rgba(34, 197, 94, 0.1)';
+            localBadge.style.color = '#22c55e';
+            localBadge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+            localDot.style.background = '#22c55e';
+            localBadge.innerHTML = '<span id="sync-dot" style="width: 5px; height: 5px; background: #22c55e; border-radius: 50%;"></span> LOCAL LIVE';
+        }
+
+        // Cloud Sync (Supabase)
+        if (cloudBadge && cloudDot) {
+            if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                cloudBadge.style.background = 'rgba(34, 197, 94, 0.1)';
+                cloudBadge.style.color = '#22c55e';
+                cloudBadge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                cloudDot.style.background = '#22c55e';
+                cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 5px; height: 5px; background: #22c55e; border-radius: 50%;"></span> CLOUD LIVE';
+            } else {
+                cloudBadge.style.background = 'rgba(245, 158, 11, 0.1)';
+                cloudBadge.style.color = '#f59e0b';
+                cloudBadge.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+                cloudDot.style.background = '#f59e0b';
+                cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 5px; height: 5px; background: #f59e0b; border-radius: 50%;"></span> CLOUD (OFF)';
+            }
+        }
     },
 
     initAdminSecret() {
