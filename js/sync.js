@@ -122,19 +122,37 @@ window.IceQubeSync = {
                     if (!currentStatus || currentStatus === 'Pending' || currentStatus === 'Dispatched') {
                         existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
                         existingOrders[orderIdx].rider = payload.riderId;
+                        
+                        // Also merge in any fresh details that might have been missing
+                        if (payload.orderDetails) {
+                            existingOrders[orderIdx] = { ...existingOrders[orderIdx], ...payload.orderDetails };
+                            // Ensure status and rider are preserved if merged from old details
+                            existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
+                            existingOrders[orderIdx].rider = payload.riderId;
+                        }
+
                         localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
-                        console.log("✅ [Sync] Status set to Awaiting Acceptance:", payload.orderId);
+                        console.log("✅ [Sync] Status updated with details:", payload.orderId);
                     }
                 } else {
                     // Fallback: If not found, add it
-                    existingOrders.unshift({
+                    const newOrder = {
                         order_id: payload.orderId,
                         customer_name: "External Order",
                         delivery_status: 'Awaiting Acceptance',
                         rider: payload.riderId,
-                        items: { fullDice: {'3kg': 1} }
-                    });
+                        items: { fullDice: {'3kg': 1} },
+                        created_at: new Date().toISOString(),
+                        ...(payload.orderDetails || {})
+                    };
+                    
+                    // Force the status and rider to match the dispatch
+                    newOrder.delivery_status = 'Awaiting Acceptance';
+                    newOrder.rider = payload.riderId;
+
+                    existingOrders.unshift(newOrder);
                     localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+                    console.log("✅ [Sync] New order added from dispatch details:", payload.orderId);
                 }
             } else if (data.type === 'ORDER_CLAIMED') {
                 const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');

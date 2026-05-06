@@ -1110,12 +1110,17 @@ var admin = {
         // If rider is Unassigned, it becomes a Broadcast/Open Dispatch
         const isBroadcast = rider === 'Unassigned';
 
+        // Get full order details from local state/storage for synchronization
+        const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const fullOrder = existingOrders.find(o => o.id === id || o.order_id === orderId) || {};
+
         const dispatchData = {
             orderId: orderId,
             id: id,
             riderId: (rider === 'undefined' || !rider) ? 'Unassigned' : rider,
             dispatchedAt: new Date().toISOString(),
-            status: 'Awaiting Acceptance'
+            status: 'Awaiting Acceptance',
+            orderDetails: fullOrder
         };
 
         // Local Sync (BroadcastChannel)
