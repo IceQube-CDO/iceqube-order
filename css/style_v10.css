@@ -2129,12 +2129,16 @@ input:checked + .slider:before {
 
 /* Bottom Panels & Overlays */
 .panel-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg-primary);
+    position: fixed;
+    top: 0; left: 50%; width: 100%; height: 100%;
+    max-width: var(--app-max-width);
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.4s ease, visibility 0.4s;
     z-index: 1000;
 }
 .panel-overlay.active {
@@ -2154,7 +2158,7 @@ input:checked + .slider:before {
     transform: translateX(-50%);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, visibility 0.4s;
     display: flex;
     flex-direction: column;
     will-change: opacity;
