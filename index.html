@@ -247,6 +247,78 @@
                 transform: translate(-50%, 0);
             }
         }
+        /* GCash Optimization Styles */
+        .btn-copy-small {
+            background: rgba(0, 125, 254, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(0, 125, 254, 0.2);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-copy-small:active {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(0.95);
+        }
+        .payment-steps-guide {
+            display: flex;
+            justify-content: space-between;
+            margin: 1.5rem 0;
+            padding: 0 0.5rem;
+            position: relative;
+        }
+        .payment-steps-guide::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: var(--border-color);
+            z-index: 1;
+        }
+        .guide-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            z-index: 2;
+            width: 33%;
+        }
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        .guide-step.active .step-number {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 125, 254, 0.3);
+        }
+        .step-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .guide-step.active .step-label {
+            color: var(--primary-color);
+        }
     </style>
 </head>
 <body>
@@ -808,6 +880,32 @@
                         <div id="modal-amount-display" class="modal-amount-card" style="margin: 1.25rem 0; padding: 1.25rem; background: var(--surface-secondary); border-radius: 16px; border: 1px solid var(--border-color); text-align: center;">
                             <span style="font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Total Amount to Pay</span>
                             <div id="modal-total-amount" style="font-size: 2.25rem; font-weight: 800; color: var(--text-primary); margin-top: 0.5rem; letter-spacing: -0.02em;">₱0.00</div>
+                        </div>
+
+                        <!-- NEW: 3-Step Payment Guide -->
+                        <div class="payment-steps-guide">
+                            <div class="guide-step active">
+                                <div class="step-number">1</div>
+                                <div class="step-label">Copy Number</div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-number">2</div>
+                                <div class="step-label">Open GCash</div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-number">3</div>
+                                <div class="step-label">Paste & Pay</div>
+                            </div>
+                        </div>
+
+                        <!-- NEW: Recipient Details Card -->
+                        <div id="gcash-recipient-card" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">GCash Recipient</span>
+                                <button class="btn-copy-small" onclick="app.copyGCashNumber()">Copy Number</button>
+                            </div>
+                            <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">LAWRENCE FE BACAYO</div>
+                            <div style="font-size: 1.15rem; font-family: monospace; color: var(--text-primary); margin-top: 0.25rem; letter-spacing: 0.05em;">0961 039 1173</div>
                         </div>
 
                         <!-- QR Container (Conditionally shown for Bank Transfer) -->

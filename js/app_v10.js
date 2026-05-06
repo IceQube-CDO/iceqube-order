@@ -2399,6 +2399,7 @@ const app = {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(amountStr).then(() => {
                 this.showToast(`Amount ₱${amountStr} copied! Paste it in GCash.`, 'success');
+                this.updatePaymentGuide(3);
             }).catch(err => {
                 console.warn('Clipboard copy failed:', err);
             });
@@ -2421,6 +2422,26 @@ const app = {
             window.open('https://www.gcash.com/get-the-app', '_blank');
             this.showToast('GCash App is only available on mobile. Use your phone to scan the QR code.', 'info');
         }
+    },
+
+    copyGCashNumber() {
+        const number = '09610391173';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(number).then(() => {
+                this.showToast('Number 09610391173 copied!', 'success');
+                this.updatePaymentGuide(2);
+            }).catch(err => {
+                console.warn('Clipboard copy failed:', err);
+            });
+        }
+    },
+
+    updatePaymentGuide(step) {
+        const steps = document.querySelectorAll('.guide-step');
+        steps.forEach((s, i) => {
+            if (i + 1 <= step) s.classList.add('active');
+            else s.classList.remove('active');
+        });
     },
 
     async processFinalOrder() {
