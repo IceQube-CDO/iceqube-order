@@ -3476,7 +3476,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         const provider = this.selectedProvider || 'GCash'; // Default to GCash if not clicked
         
         // Show success state
-        alert(`Successfully linked ${provider} with a ₱${limit} weekly limit!`);
+        this.showToast(`Linked ${provider} with ₱${limit} limit!`, 'success');
         this.togglePanel('auto-settle', false);
         
         // Update the UI if needed
@@ -3517,11 +3517,11 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             
             // If there's a pending order, release it
             if (this.orderData.status === 'Pending Payment') {
-                alert("Payment Verified! Releasing Order #IQ-22037...");
+                this.showToast("Payment Verified! Releasing Order...", 'success');
                 this.togglePanel('billing', false);
                 this.processFinalOrder(); // Re-trigger to finish
             } else {
-                alert("Account Settled. Thank you!");
+                this.showToast("Account Settled. Thank you!", 'success');
                 this.togglePanel('billing', false);
             }
             
@@ -3620,7 +3620,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
     confirmCancelOrder() {
         if (confirm('Are you sure you want to cancel this order? This cannot be undone.')) {
-            alert('Order cancelled successfully.');
+            this.showToast('Order cancelled successfully.', 'info');
             location.reload();
         }
     },
@@ -3792,7 +3792,7 @@ function closeReorderModal() {
 
 function processOrder() {
     app.processOrder();
-    alert("Order Confirmed! Your 15 bags are scheduled.");
+    this.showToast("Order Confirmed! Your bags are scheduled.", 'success');
     closeReorderModal();
 }
 
@@ -3831,7 +3831,7 @@ async function submitTopUp(amount) {
 
     if (result.success) {
         app.toggleBottomSheet('debt', false);
-        alert(`✅ Payment of ₱${finalAmt} applied!\n\nOldest invoices were settled first (FIFO). Your credit battery has been recharged.`);
+        this.showToast(`✅ Payment of ₱${finalAmt} applied!`, 'success');
         
         // Refresh local UI state
         if (app.user.balance <= 0) {
@@ -4041,7 +4041,7 @@ function activateProvisionalCredit() {
         reorderBtn.style.filter = 'none';
     }
     
-    alert("🚀 Overdraft Active: You can now place new orders while your cash payment is in transit.");
+    this.showToast("🚀 Overdraft Active: You can place new orders now.", 'success');
 }
 
 /**
@@ -4201,7 +4201,7 @@ function saveQRToGallery() {
     link.click();
     document.body.removeChild(link);
     
-    alert("📲 QR Code saved to gallery (if supported) or downloaded.");
+    this.showToast("📲 QR Code saved/downloaded.", 'success');
 }
 
 // Function called when the AI returns 'approved'

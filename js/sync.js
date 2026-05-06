@@ -6,7 +6,7 @@ const DELIVERIES_CHANNEL_NAME = 'iceqube_deliveries_sync';
 
 // Initialize Channels
 if (!window.BroadcastChannel) {
-    alert("Warning: This browser does not support real-time sync (BroadcastChannel). Please use a modern browser.");
+    console.warn("Warning: This browser does not support real-time sync (BroadcastChannel). Please use a modern browser.");
     console.error("BroadcastChannel not supported.");
 }
 
@@ -21,7 +21,6 @@ window.IceQubeSync = {
     // Called by Customer App when a new order is placed
     publishNewOrder: function(orderData) {
         console.log("📡 [Sync] Publishing New Order:", orderData.order_id);
-        alert("📡 SYNC: Order Published! Check Command Center.");
         
         // Also save to localStorage to persist state across reloads
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
@@ -32,11 +31,9 @@ window.IceQubeSync = {
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
 
-        ordersChannel.postMessage({
             type: 'NEW_ORDER',
             payload: orderData
         });
-        alert("📡 SYNC: Order broadcasted to Command Center!");
     },
 
     // Called by Command Center when dispatching an order to a rider
@@ -68,7 +65,6 @@ window.IceQubeSync = {
             payload: dispatchData
         });
 
-        alert("🚀 SYNC: Dispatch signal sent to riders!");
     },
 
     // Called by Rider App when delivery is completed
@@ -101,9 +97,6 @@ window.IceQubeSync = {
     onOrderEvent: function(callback) {
         ordersChannel.onmessage = function(event) {
             console.log("📥 [Sync] Received Order Event:", event.data.type);
-            if (event.data.type === 'NEW_ORDER') {
-                alert("📥 SYNC: New Order Received! (" + event.data.payload.order_id + ")");
-            }
             callback(event.data);
         };
     },
