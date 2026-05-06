@@ -243,51 +243,28 @@ body {
     opacity: 1;
 }
 
-/* Horizontal Push Animations */
-.slide-in-right {
-    animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Smooth Fade Transitions */
+.fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.slide-out-left {
-    animation: slideOutLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.fade-out {
+    animation: fadeOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     position: absolute;
-    top: 3rem;
+    top: 0;
     left: 0;
     width: 100%;
     z-index: 0;
 }
 
-.slide-in-left {
-    animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
 }
 
-.slide-out-right {
-    animation: slideOutRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    position: absolute;
-    top: 3rem;
-    left: 0;
-    width: 100%;
-    z-index: 0;
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(30px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideOutLeft {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(-30px); opacity: 0; }
-}
-
-@keyframes slideInLeft {
-    from { transform: translateX(-30px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideOutRight {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(30px); opacity: 0; }
+@keyframes fadeOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(1.02); }
 }
 
 /* Typography */
@@ -2174,14 +2151,17 @@ input:checked + .slider:before {
     height: 100%;
     background: #ffffff;
     z-index: 1001;
-    transform: translateX(100%) translateX(50%); /* Start off-screen right */
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
     display: flex;
     flex-direction: column;
-    will-change: transform;
+    will-change: opacity;
 }
 .bottom-panel.active {
-    transform: translateX(-50%);
+    opacity: 1;
+    visibility: visible;
 }
 
 .bottom-panel-handle {

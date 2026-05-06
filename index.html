@@ -73,12 +73,12 @@
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+            transition: opacity 0.4s ease;
             background: white;
         }
         #app.panel-push {
-            transform: translateX(-100%);
             opacity: 0;
+            pointer-events: none;
         }
         .app-container {
             width: 100%;

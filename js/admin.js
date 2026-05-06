@@ -1,4 +1,10 @@
 // SUPABASE_CONFIG is provided by js/app_header.js
+if (typeof SUPABASE_CONFIG === 'undefined') {
+    var SUPABASE_CONFIG = { URL: '', ANON_KEY: '' };
+}
+if (typeof MESSENGER_CONFIG === 'undefined') {
+    var MESSENGER_CONFIG = { PAGE_ACCESS_TOKEN: '', RECIPIENT_ID: '' };
+}
 
 var admin = {
     _syncIntervalId: null,
@@ -119,7 +125,8 @@ var admin = {
     },
 
     init() {
-        console.log('--- COMMAND CENTER INITIALIZED (Bypass Mode) ---');
+        try {
+            console.log('--- COMMAND CENTER INITIALIZED ---');
         
         // Data Migration/Validation for Consumables
         if (!this.consumables.packaging || !this.consumables.cleaning) {
@@ -181,7 +188,12 @@ var admin = {
             document.body.classList.add('vacation-active');
             this.updateVacationUI();
         }
-    },
+    } catch (err) {
+        console.error('❌ Admin Initialization Failed:', err);
+        // Ensure the UI is still interactive even if sync fails
+        if (document.body) document.body.classList.remove('loading'); 
+    }
+},
 
     handleIncomingOrder(order) {
         if (!order || !order.order_id) return;
@@ -1828,7 +1840,13 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-document.addEventListener('DOMContentLoaded', () => admin.init());
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        admin.init();
+    } catch (e) {
+        console.error('Fatal Initialization Error:', e);
+    }
+});
 
 // Drawer Controls
 function openCustomerDrawer(customerId) {

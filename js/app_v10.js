@@ -1,3 +1,6 @@
+if (typeof SUPABASE_CONFIG === 'undefined') { var SUPABASE_CONFIG = { URL: '', ANON_KEY: '' }; }
+if (typeof MESSENGER_CONFIG === 'undefined') { var MESSENGER_CONFIG = { PAGE_ACCESS_TOKEN: '', RECIPIENT_ID: '' }; }
+
 // GLOBAL CALLBACK FOR GOOGLE MAPS
 window.initIceQubeMap = function() {
     let retries = 0;
@@ -571,13 +574,13 @@ const app = {
                     // Delay slightly to ensure display:block is painted before animation
                     setTimeout(() => {
                         step.classList.add('active');
-                        step.classList.remove('slide-in-right', 'slide-in-left', 'slide-out-left', 'slide-out-right');
-                        step.classList.add(direction === 'next' ? 'slide-in-right' : 'slide-in-left');
+                        step.classList.remove('fade-in', 'fade-out');
+                        step.classList.add('fade-in');
                     }, 10);
                 }
             } else if (i === prevIndex && !isInitial) {
-                step.classList.remove('slide-in-right', 'slide-in-left', 'slide-out-left', 'slide-out-right');
-                step.classList.add(direction === 'next' ? 'slide-out-left' : 'slide-out-right');
+                step.classList.remove('fade-in', 'fade-out');
+                step.classList.add('fade-out');
                 
                 setTimeout(() => {
                     if (this.currentStep !== i) {
@@ -587,7 +590,7 @@ const app = {
                 }, 500);
             } else {
                 step.style.display = 'none';
-                step.classList.remove('active', 'slide-in-right', 'slide-in-left', 'slide-out-left', 'slide-out-right');
+                step.classList.remove('active', 'fade-in', 'fade-out');
             }
         });
         
