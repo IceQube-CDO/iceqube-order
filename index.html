@@ -938,6 +938,14 @@
                             <div style="background: white; padding: 15px; border-radius: 12px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
                                 <img id="qr-image" src="./assets/gcash-qr-iceqube.png" alt="Payment QR Code" style="width: 100%; max-width: 220px; margin: 0 auto; display: block; border-radius: 0;">
                             </div>
+
+                            <!-- NEW: Save QR Button -->
+                            <div style="margin-top: 0.75rem;">
+                                <button id="btn-save-qr" onclick="app.downloadQR()" style="background: var(--surface-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <span>📥</span> Download QR Code
+                                </button>
+                                <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.4rem;">Tip: Long-press image to Save to Gallery</div>
+                            </div>
                             
                             <div id="qr-fallback-ui" class="qr-fallback-card" style="display: none; padding: 10px; margin-top: 10px;">
                                 <div class="qr-fallback-title" style="font-size: 0.8rem;">QR Failed to Load</div>

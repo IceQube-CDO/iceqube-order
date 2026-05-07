@@ -2553,6 +2553,30 @@ const app = {
         return finalQR;
     },
 
+    downloadQR() {
+        const qrImage = document.getElementById('qr-image');
+        if (!qrImage || !qrImage.src || qrImage.src.includes('placeholder')) {
+            this.showToast('QR code is still generating...', 'info');
+            return;
+        }
+
+        try {
+            const link = document.createElement('a');
+            link.href = qrImage.src;
+            const method = this.orderData.payment === 'GCash' ? 'GCash' : 'Bank';
+            const total = (this.orderData.total + (this.orderData.deliveryFee || 0)).toFixed(2);
+            link.download = `IceQube-Pay-${method}-P${total}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showToast('QR Code Downloaded! Upload this in your bank app.', 'success');
+        } catch (err) {
+            console.error('Download error:', err);
+            this.showToast('Download failed. Please long-press the QR image to save.', 'error');
+        }
+    },
+
     computeCRC16(str) {
         let crc = 0xFFFF;
         for (let i = 0; i < str.length; i++) {
