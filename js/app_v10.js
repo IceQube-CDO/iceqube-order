@@ -345,6 +345,7 @@ const app = {
     },
 
     openDebtSheet() {
+        if (typeof disablePaymentMethods === 'function') disablePaymentMethods();
         this.toggleBottomSheet('debt', true);
     },
 
@@ -4333,40 +4334,203 @@ let lastActivePanel = 'debt-sheet';
 function openSecureCheckout(methodType) {
     const overlay = document.getElementById('secure-checkout-overlay');
     const qrImg = document.getElementById('payment-qr-image');
+    const bankNameEl = document.getElementById('checkout-bank-name');
+    const recipientNameEl = document.getElementById('checkout-recipient-name');
+    const recipientNumberEl = document.getElementById('checkout-recipient-number');
+    const gcashAppLink = document.getElementById('gcash-app-link');
+    const amountToTransferEl = document.getElementById('amount-to-transfer');
     
-    // Toggle Views
-    const gcashView = document.getElementById('gcash-details-view');
-    const bankView = document.getElementById('bank-details-view');
+    // Get the amount from the debt display (ensure we handle commas and whitespace)
+    const debtDisplay = document.querySelector('.total-debt-display');
+    const debtText = debtDisplay ? debtDisplay.innerText : "₱0";
+    const amount = parseFloat(debtText.replace(/[^\d.]/g, '')) || 0;
+    
+    if (amountToTransferEl) amountToTransferEl.innerText = `Transfer exactly: ₱${amount.toFixed(2)}`;
+
+    const qrMethod = methodType === 'gcash' ? 'gcash' : 'gotyme';
+    const qrData = app.generateQRPhString(amount, qrMethod);
+    
+    // Use the verified buffer rendering technique
+    const buffer = document.getElementById('qrcode-buffer');
+    if (buffer && qrData) {
+        buffer.innerHTML = '';
+        try {
+            new QRCode(buffer, {
+                text: qrData,
+                width: 256,
+                height: 256,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            // Wait for canvas to render
+            setTimeout(() => {
+                const canvas = buffer.querySelector('canvas');
+                const img = buffer.querySelector('img');
+                if (canvas) {
+                    qrImg.src = canvas.toDataURL("image/png");
+                } else if (img && img.src) {
+                    qrImg.src = img.src;
+                }
+            }, 150);
+        } catch (e) {
+            console.error("Checkout QR Generation failed:", e);
+        }
+    }
 
     if (methodType === 'gcash') {
-        qrImg.src = 'assets/gcash-qr-iceqube.png';
-        gcashView.style.display = 'block';
-        bankView.style.display = 'none';
-        
-    } else if (methodType === 'qrph') {
-        // Switch to the QR Ph standard image
-        qrImg.src = 'assets/gotyme-qr.png'; 
-        gcashView.style.display = 'none';
-        bankView.style.display = 'block';
+        if (bankNameEl) {
+            bankNameEl.innerText = 'GCash';
+            bankNameEl.style.color = '#60a5fa'; // Brighter Blue (Contrast)
+            bankNameEl.style.textShadow = '0 0 10px rgba(96, 165, 250, 0.4)';
+        }
+        if (recipientNameEl) recipientNameEl.innerText = 'LAWRENCE FE BACAYO';
+        if (recipientNumberEl) recipientNumberEl.innerText = '0961 039 1173';
+        if (gcashAppLink) gcashAppLink.style.display = 'block';
+    } else {
+        if (bankNameEl) {
+            bankNameEl.innerText = 'GoTyme Bank';
+            bankNameEl.style.color = '#f87171'; // Brighter Red (Contrast)
+            bankNameEl.style.textShadow = '0 0 10px rgba(248, 113, 113, 0.4)';
+        }
+        if (recipientNameEl) recipientNameEl.innerText = 'LAWRENCE FE BACAYO';
+        if (recipientNumberEl) recipientNumberEl.innerText = '0176 3092 9031';
+        if (gcashAppLink) gcashAppLink.style.display = 'none';
     }
 
     overlay.style.display = 'flex';
 }
 
-function closeCheckout() {
-    document.getElementById('secure-checkout-overlay').style.display = 'none';
+function downloadCheckoutQR() {
+    const qrImg = document.getElementById('payment-qr-image');
+    if (!qrImg || !qrImg.src) return;
     
-    if (lastActivePanel === 'debt-sheet') {
-        const debtSheet = document.getElementById('debt-sheet');
-        if (debtSheet) debtSheet.style.display = 'block';
-    } else if (lastActivePanel === 'billing-panel') {
-        app.togglePanel('billing', true);
+    const link = document.createElement('a');
+    link.href = qrImg.src;
+    link.download = `IceQube-Payment-QR.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    if (typeof app !== 'undefined' && app.showToast) {
+        app.showToast('QR Code saved to Gallery!', 'success');
     }
 }
 
+function closeCheckout() {
+    document.getElementById('secure-checkout-overlay').style.display = 'none';
+    
+    const debtSheet = document.getElementById('debt-sheet');
+    if (debtSheet) debtSheet.style.display = 'block';
+}
+
+function showPaymentMethods() {
+    // Obsolete in unified view, but kept as a pass-through if needed
+}
+
+function backToLedger() {
+    // Obsolete in unified view
+}
+
+function resetToFullBalance() {
+    const originalAmount = 1665.00;
+    const displays = document.querySelectorAll('.total-debt-display');
+    displays.forEach(el => {
+        el.innerText = `₱${originalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    });
+    
+    // Toggle active class
+    document.getElementById('btn-choice-full')?.classList.add('active');
+    document.getElementById('btn-choice-partial')?.classList.remove('active');
+    
+    enablePaymentMethods();
+    
+    if (typeof app !== 'undefined' && app.showToast) app.showToast('Full balance selected', 'success');
+}
+
+function selectPaymentMethod(method) {
+    // Toggle active classes
+    const gcashBtn = document.getElementById('btn-pay-gcash-unified');
+    const qrBtn = document.getElementById('btn-pay-qr-unified');
+    
+    if (method === 'gcash') {
+        gcashBtn?.classList.add('active');
+        qrBtn?.classList.remove('active');
+    } else {
+        qrBtn?.classList.add('active');
+        gcashBtn?.classList.remove('active');
+    }
+    
+    // Open the checkout after a tiny delay to show the "pick"
+    setTimeout(() => {
+        openSecureCheckout(method);
+    }, 150);
+}
+
+function enablePaymentMethods() {
+    const zone = document.getElementById('payment-selection-zone');
+    if (zone) {
+        zone.style.opacity = '1';
+        zone.style.pointerEvents = 'auto';
+    }
+}
+
+function disablePaymentMethods() {
+    const zone = document.getElementById('payment-selection-zone');
+    if (zone) {
+        zone.style.opacity = '0.4';
+        zone.style.pointerEvents = 'none';
+        
+        // Clear active states
+        document.getElementById('btn-choice-full')?.classList.remove('active');
+        document.getElementById('btn-choice-partial')?.classList.remove('active');
+        document.getElementById('btn-pay-gcash-unified')?.classList.remove('active');
+        document.getElementById('btn-pay-qr-unified')?.classList.remove('active');
+    }
+}
+
+function toggleCustomPay(show) {
+    const customZone = document.getElementById('custom-action-zone');
+    
+    if (show) {
+        customZone.style.display = 'block';
+        document.getElementById('custom-pay-amount').focus();
+        
+        // Toggle active class
+        document.getElementById('btn-choice-partial')?.classList.add('active');
+        document.getElementById('btn-choice-full')?.classList.remove('active');
+    } else {
+        customZone.style.display = 'none';
+    }
+}
+
+function updatePartialAmount() {
+    const input = document.getElementById('custom-pay-amount');
+    const amount = parseFloat(input.value);
+    
+    if (isNaN(amount) || amount <= 0) {
+        if (typeof app !== 'undefined' && app.showToast) app.showToast('Please enter a valid amount', 'error');
+        return;
+    }
+    
+    // Update the main display
+    const displays = document.querySelectorAll('.total-debt-display');
+    displays.forEach(el => {
+        el.innerText = `₱${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    });
+    
+    // Hide the input and enable payments
+    toggleCustomPay(false);
+    enablePaymentMethods();
+    
+    if (typeof app !== 'undefined' && app.showToast) app.showToast(`Total updated to ₱${amount.toFixed(2)}`, 'success');
+}
+
 function copyAccountNumber() {
-    const accText = document.getElementById('account-number').innerText;
-    copyToClipboard(accText);
+    const numEl = document.getElementById('checkout-recipient-number');
+    if (numEl) {
+        const text = numEl.innerText.replace(/\s/g, '');
+        copyToClipboard(text);
+    }
 }
 
 function copyText(text) {
@@ -4376,7 +4540,7 @@ function copyText(text) {
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
     
-    const btn = document.querySelector('.copy-btn');
+    const btn = document.getElementById('btn-copy-checkout') || document.querySelector('.copy-btn');
     const originalContent = btn.innerHTML;
     btn.innerHTML = '<span>Copied!</span>';
     btn.style.background = '#22c55e';
