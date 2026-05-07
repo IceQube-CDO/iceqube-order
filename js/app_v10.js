@@ -2233,7 +2233,12 @@ const app = {
             // Reset modal classes
             modal.classList.remove('modal-gcash', 'modal-bank-transfer');
 
-            const bankDetailsText = document.getElementById('modal-bank-details-text');
+            // Removed redundant bankDetailsText variable
+
+            const step2Label = document.getElementById('step-2-label');
+            const bankNameEl = document.getElementById('modal-bank-name');
+            const recipientName = document.getElementById('modal-recipient-name');
+            const recipientNumber = document.getElementById('modal-recipient-number');
 
             if (method === 'GCash') {
                 modal.classList.add('modal-gcash');
@@ -2241,22 +2246,39 @@ const app = {
                 instructionsText.innerText = 'Pay to our GCash merchant account and upload the receipt.';
                 openAppBtn.style.display = 'flex';
                 openAppBtnText.innerText = 'Open GCash App';
-                qrContainer.style.display = 'block'; 
-                qrImage.src = './assets/gcash-qr-iceqube.png';
+                
+                if (step2Label) step2Label.innerText = 'Open GCash';
+                if (bankNameEl) {
+                    bankNameEl.innerText = 'GCash';
+                    bankNameEl.style.color = '#0055ff'; // GCash Blue
+                }
+                if (recipientName) recipientName.innerText = 'LAWRENCE FE BACAYO';
+                if (recipientNumber) recipientNumber.innerText = '0961 039 1173';
+                
+                // NEW: Generate Dynamic QR with Amount (GCash Blueprint)
+                this.updateDynamicQR(total, 'gcash');
+                
                 if (verificationText) verificationText.innerText = 'Please upload your GCash screenshot.';
-                if (bankDetailsText) bankDetailsText.style.display = 'none';
             } else {
                 modal.classList.add('modal-bank-transfer');
                 title.innerText = 'Bank Transfer';
                 instructionsText.innerText = 'Scan the QR code below using your banking app (InstaPay) or Maya.';
                 openAppBtn.style.display = 'none';
-                qrContainer.style.display = 'block';
-                qrImage.src = './assets/gotyme-qr.png'; 
-                qrImage.style.display = 'block';
+                
+                if (step2Label) step2Label.innerText = 'Open Bank App';
+                if (bankNameEl) {
+                    bankNameEl.innerText = 'GoTyme Bank';
+                    bankNameEl.style.color = '#ff3b30'; // GoTyme Red
+                }
+                if (recipientName) recipientName.innerText = 'LAWRENCE FE BACAYO';
+                if (recipientNumber) recipientNumber.innerText = '0176 3092 9031';
+                
+                // NEW: Generate Dynamic QR with Amount (GoTyme Blueprint)
+                this.updateDynamicQR(total, 'bank');
+                
                 const fallbackUI = document.getElementById('qr-fallback-ui');
                 if (fallbackUI) fallbackUI.style.display = 'none';
                 if (verificationText) verificationText.innerText = 'Please upload your Bank Transfer/InstaPay screenshot.';
-                if (bankDetailsText) bankDetailsText.style.display = 'block';
             }
             
             // Reset modal state
@@ -2424,11 +2446,14 @@ const app = {
         }
     },
 
-    copyGCashNumber() {
-        const number = '09610391173';
+    copyPaymentNumber() {
+        const method = this.orderData.payment;
+        const number = method === 'GCash' ? '09610391173' : '017630929031';
+        const label = method === 'GCash' ? 'Mobile Number' : 'Account Number';
+        
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(number).then(() => {
-                this.showToast('Number 09610391173 copied!', 'success');
+                this.showToast(`${label} ${number} copied!`, 'success');
                 this.updatePaymentGuide(2);
             }).catch(err => {
                 console.warn('Clipboard copy failed:', err);
@@ -2442,6 +2467,106 @@ const app = {
             if (i + 1 <= step) s.classList.add('active');
             else s.classList.remove('active');
         });
+    },
+
+    updateDynamicQR(amount, method = 'gcash') {
+        const qrContainer = document.getElementById('modal-qr-container');
+        const qrImage = document.getElementById('qr-image');
+        const buffer = document.getElementById('qrcode-buffer');
+        
+        if (!qrImage || !buffer) return;
+
+        // 1. Generate QR Ph String
+        const qrData = this.generateQRPhString(amount, method);
+        
+        // 2. Clear buffer
+        buffer.innerHTML = '';
+        
+        // 3. Render to buffer
+        try {
+            const qrcode = new QRCode(buffer, {
+                text: qrData,
+                width: 256,
+                height: 256,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+
+            // 4. Wait for rendering and update image src
+            setTimeout(() => {
+                const canvas = buffer.querySelector('canvas');
+                const img = buffer.querySelector('img');
+                if (canvas) {
+                    qrImage.src = canvas.toDataURL("image/png");
+                    qrContainer.style.display = 'block';
+                } else if (img && img.src) {
+                    qrImage.src = img.src;
+                    qrContainer.style.display = 'block';
+                }
+            }, 100);
+        } catch (e) {
+            console.error("QR Generation failed:", e);
+        }
+    },
+
+    generateQRPhString(amount, method = 'gcash') {
+        // Shared Header
+        let payload = "000201";
+        payload += "010212"; // Dynamic Initiation Mode (Enables pre-filled amount)
+        
+        if (method === 'gcash') {
+            // GCash Specific Blueprint (Tag 27 length 83)
+            payload += "27830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDO9EW6SH";
+            payload += "52046016"; // Category: Service Provider
+            payload += "5303608"; // Currency: PHP
+            
+            // Amount Tag
+            const amtStr = parseFloat(amount).toFixed(2);
+            payload += "54" + String(amtStr.length).padStart(2, '0') + amtStr;
+            
+            payload += "5802PH";
+            payload += "5914LA*****E F* B."; // Masked name as provided by user
+            payload += "6009Macabalan";
+            payload += "61041234";
+        } else {
+            // GoTyme Specific Blueprint (Tag 27 length 59)
+            payload += "27590012com.p2pqrpay0111GOTYPHM2XXX0208999644030412017630929031";
+            payload += "52046016"; // Category: Service Provider
+            payload += "5303608"; // Currency: PHP
+            
+            // Amount Tag
+            const amtStr = parseFloat(amount).toFixed(2);
+            payload += "54" + String(amtStr.length).padStart(2, '0') + amtStr;
+            
+            payload += "5802PH";
+            payload += "5918LAWRENCE FE BACAYO"; // Exact name from GoTyme string
+            payload += "6015Cagayan De Oro "; // Exact city from GoTyme string (incl. trailing space)
+        }
+        
+        // Final Checksum
+        payload += "6304";
+        const crc = this.computeCRC16(payload);
+        const finalQR = payload + crc;
+        
+        console.log(`Generated Dynamic QR (${method.toUpperCase()}):`, finalQR);
+        return finalQR;
+    },
+
+    computeCRC16(str) {
+        let crc = 0xFFFF;
+        for (let i = 0; i < str.length; i++) {
+            let byte = str.charCodeAt(i);
+            crc ^= (byte << 8);
+            for (let j = 0; j < 8; j++) {
+                if ((crc & 0x8000) !== 0) {
+                    crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+                } else {
+                    crc = (crc << 1) & 0xFFFF;
+                }
+            }
+        }
+        return crc.toString(16).toUpperCase().padStart(4, '0');
     },
 
     async processFinalOrder() {

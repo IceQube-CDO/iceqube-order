@@ -1625,9 +1625,11 @@ input:checked + .slider:before {
 .modal-content {
     background: white;
     border-radius: 32px;
-    padding: 2.5rem 2rem;
-    width: 90%;
+    padding: 1.25rem 1rem;
+    width: 92%;
     max-width: 420px;
+    max-height: 90vh; /* Prevent overflow on small screens */
+    overflow-y: auto; /* Allow scrolling if content is too tall */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     transform: translateY(20px);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1706,15 +1708,15 @@ input:checked + .slider:before {
 .upload-box-dashed {
     border: 2px dashed #cbd5e1;
     border-radius: 20px;
-    padding: 2rem 1.5rem;
+    padding: 1rem 0.75rem; /* Reduced from 2rem 1.5rem */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: 0.5rem; /* Reduced from 0.75rem */
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem; /* Reduced from 2rem */
     position: relative;
     background: #ffffff;
 }
