@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IceQube CDO | Command Center</title>
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
@@ -26,11 +26,18 @@
             box-sizing: border-box;
         }
 
+        html {
+            overflow-x: hidden;
+            overscroll-behavior-x: none;
+        }
+
         body.admin-mode {
             background: var(--admin-bg) !important;
             color: var(--admin-text) !important;
             font-family: 'Inter', sans-serif;
             overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior-x: none;
             height: 100vh;
             margin: 0;
         }

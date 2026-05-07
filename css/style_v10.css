@@ -3,6 +3,8 @@
 html {
     -webkit-text-size-adjust: none;
     text-size-adjust: none;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
 }
 
 /* ── iOS Auto-Zoom Prevention ── */
@@ -70,6 +72,8 @@ body {
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
     display: flex;
     justify-content: center;
     touch-action: manipulation;
