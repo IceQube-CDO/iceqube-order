@@ -211,6 +211,8 @@
             align-items: center;
             margin-bottom: 2rem;
             padding-top: 1rem;
+            position: relative;
+            z-index: 1001;
         }
 
         .cc-title {
@@ -892,7 +894,11 @@
             cursor: pointer;
             outline: none;
         }
-        .status-select:focus { border-color: var(--admin-accent); }
+        .status-select:focus { 
+            border-color: var(--admin-accent);
+            background: rgba(255,255,255,0.1); /* Slightly brighter but still dark */
+            color: white !important;
+        }
         .btn-dispatch {
             background: #22c55e;
             color: white;
@@ -1000,7 +1006,7 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             display: none;
             flex-direction: column;
-            z-index: 1000;
+            z-index: 2000;
             overflow: hidden;
             animation: fadeInScale 0.2s ease-out;
         }
@@ -1274,14 +1280,13 @@
                 <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
                     <img src="assets/logo2.png" alt="IceQube" style="height: 52px; filter: drop-shadow(0 0 15px var(--admin-accent)); flex-shrink: 0;">
                     <div style="color: white; font-weight: 500; font-size: 2.2rem; letter-spacing: -0.03em; font-family: 'Outfit', sans-serif; flex-shrink: 0;">IceQube <span style="color: var(--admin-accent);">CDO</span></div>
-                    <button id="purge-test-data-btn" 
-                            onclick="admin.purgeTestData()"
-                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #f87171; font-size: 9px; font-weight: 800; padding: 4px 8px; cursor: pointer !important; margin-left: 10px; text-transform: uppercase; flex-shrink: 0; position: relative; z-index: 9999;">Purge Test Data</button>
                 </div>
 
                 <!-- CENTER: STATUS & TITLE -->
                 <div style="text-align: center; flex: 2; flex-shrink: 0;">
-                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--admin-accent); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 2px;">• SYSTEM ONLINE • v1.1.10</div>
+                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--admin-accent); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 2px;">
+                        • SYSTEM ONLINE • <span id="current-date"></span> • v1.1.10
+                    </div>
                     <h1 style="margin: 0; font-size: 2.25rem; font-weight: 900; color: white; letter-spacing: 0.05em; line-height: 1;">CONTROL ROOM</h1>
                 </div>
 
@@ -1292,9 +1297,14 @@
                     LOCAL SYNC
                 </div>
 
-                <div id="cloud-sync-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                    <span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span>
-                    CLOUD SYNC (OFF)
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                    <div id="cloud-sync-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span>
+                        CLOUD SYNC (OFF)
+                    </div>
+                    <button id="purge-test-data-btn" 
+                            onclick="admin.purgeTestData()"
+                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #f87171; font-size: 8px; font-weight: 800; padding: 2px 6px; cursor: pointer !important; text-transform: uppercase; white-space: nowrap; transition: all 0.2s ease;">Purge Test Data</button>
                 </div>
 
                 <button id="vacation-btn" class="vacation-btn" onclick="admin.toggleVacationMode()">
@@ -1454,7 +1464,8 @@
                                 <th>CUSTOMER</th>
                                 <th>DELIVERY ADDRESS</th>
                                 <th>ITEMS</th>
-                                <th>PAYMENT</th>
+                                <th>PAYMENT METHOD</th>
+                                <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
                                 <th>PRIORITY FEE</th>
                                 <th>RIDER ASSIGNMENT</th>
@@ -1472,7 +1483,7 @@
             <div class="cc-card full-width">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.2rem;">📋</span> ACTIVE ORDER LEDGER
+                        <span style="font-size: 1.2rem;">📋</span> ACTIVE ORDER LEDGER <span id="ledger-date-badge" style="font-size: 0.7rem; opacity: 0.5; font-weight: 600; margin-left: 8px; letter-spacing: 0.05em;"></span>
                     </div>
                     <span id="ledger-count-badge" style="background: var(--admin-accent); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">0 Orders</span>
                 </div>
@@ -1485,8 +1496,8 @@
                                 <th>CUSTOMER</th>
                                 <th>DELIVERY ADDRESS</th>
                                 <th>ITEMS</th>
-                                <th>PAYMENT</th>
-                                <th>TOTAL</th>
+                                <th>PAYMENT METHOD</th>
+                                <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
                                 <th>PRIORITY FEE</th>
                                 <th style="text-align: center;">TYPE</th>

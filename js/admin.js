@@ -108,7 +108,7 @@ var admin = {
         modal.style.display = 'flex';
     },
 
-    toggleRealStatus(type, id) {
+    async toggleRealStatus(type, id) {
         console.log(`🛡️ Toggling Real Status for ${type}:${id}`);
         let key = '';
         if (type === 'order') key = 'ice_orders';
@@ -118,10 +118,30 @@ var admin = {
         const data = JSON.parse(localStorage.getItem(key) || '[]');
         const idx = data.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
         
+        let newStatus = true;
         if (idx > -1) {
             data[idx].is_real = !data[idx].is_real;
+            newStatus = data[idx].is_real;
             localStorage.setItem(key, JSON.stringify(data));
-            this.fetchRealStats(); // Refresh UI
+            this.fetchRealStats(); // Refresh UI locally
+        }
+
+        // If cloud is active, sync the change for orders
+        if (type === 'order' && !id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_real: newStatus })
+                });
+                console.log('✅ Real Status Synced to Cloud');
+            } catch (err) {
+                console.warn('Could not sync Real Status to cloud:', err);
+            }
         }
     },
 
@@ -157,6 +177,7 @@ var admin = {
         this.updateUtilitiesUI();
         this.updateRentalUI();
         this.checkMonthlyReset();
+        this.updateDates();
 
         // Local Sync Listener
         if (window.IceQubeSync) {
@@ -947,25 +968,30 @@ var admin = {
 
         // Render Pending Table
         pendingBody.innerHTML = pendingOrders.map(o => {
-            const timeStr = new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const createdAt = new Date(o.created_at);
+            const isToday = createdAt.toDateString() === new Date().toDateString();
+            const timeStr = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateDisplay = isToday ? '' : `<div style="font-size: 0.6rem; opacity: 0.6; margin-top: 2px; font-weight: 600;">${createdAt.toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()}</div>`;
+            const displayTime = `<div style="display: flex; flex-direction: column;"><div>${timeStr}</div>${dateDisplay}</div>`;
             const itemsStr = this.formatOrderItems(o);
             const isAwaiting = o.delivery_status === 'Awaiting Acceptance';
 
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
-                    <td>${timeStr}</td>
+                    <td>${displayTime}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
                     <td><b>${o.customer_name}</b></td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
                     <td>
                         <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
-                               onchange="admin.updatePriorityFee('${o.id || o.order_id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
+                               onchange="admin.updatePriorityFee('${o.id || o.order_id}', this.value)">
                     </td>
                     <td>
-                        <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" ${isAwaiting ? 'disabled' : ''}>
+                        <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)">
                             ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
                         </select>
                     </td>
@@ -987,13 +1013,17 @@ var admin = {
 
         // Render Ledger Table (Uneditable)
         ledgerBody.innerHTML = ledgerOrders.map(o => {
-            const timeStr = new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const createdAt = new Date(o.created_at);
+            const isToday = createdAt.toDateString() === new Date().toDateString();
+            const timeStr = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateDisplay = isToday ? '' : `<div style="font-size: 0.6rem; opacity: 0.6; margin-top: 2px; font-weight: 600;">${createdAt.toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()}</div>`;
+            const displayTime = `<div style="display: flex; flex-direction: column;"><div>${timeStr}</div>${dateDisplay}</div>`;
             const itemsStr = this.formatOrderItems(o);
             const addr = o.delivery_address && o.delivery_address !== 'N/A' ? o.delivery_address : 'Pickup / Store';
 
             return `
                 <tr>
-                    <td>${timeStr}</td>
+                    <td>${displayTime}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
                     <td><b>${o.customer_name}</b></td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
@@ -1001,7 +1031,10 @@ var admin = {
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono'; color: #f59e0b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
+                    <td>
+                        <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
+                               onchange="admin.updatePriorityFee('${o.id || o.order_id}', this.value)">
+                    </td>
                     <td style="text-align: center;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
                                 style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
@@ -1042,6 +1075,7 @@ var admin = {
                 body: JSON.stringify({ priority_fee: parseFloat(fee) })
             });
             console.log('✅ Priority Fee Updated');
+            this.fetchRealStats(); // Refresh UI
         } catch (err) {
             console.error('Update Failed:', err);
         }
@@ -1106,6 +1140,17 @@ var admin = {
         if (hd['1kg']) parts.push(`${hd['1kg']} bags - 1kg (Half Dice)`);
         
         return parts.length > 0 ? parts.join('<br>') : (typeof o.items === 'object' ? '1 Bag' : o.items);
+    },
+
+    updateDates() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+        
+        const headerDate = document.getElementById('current-date');
+        const ledgerDate = document.getElementById('ledger-date-badge');
+        
+        if (headerDate) headerDate.innerText = dateStr;
+        if (ledgerDate) ledgerDate.innerText = `• ${dateStr}`;
     },
 
     async dispatchOrder(id, rider, orderId, silent = false) {
