@@ -120,7 +120,7 @@
             text-align: center;
             flex: 1;
         }
-        .step-header .back-nav-btn {
+        .step-header .back-nav-btn, .sheet-header .back-nav-btn {
             position: absolute;
             left: 1rem;
             top: 50%;
@@ -137,7 +137,7 @@
             transition: background 0.2s ease;
             z-index: 1;
         }
-        .step-header .back-nav-btn:hover {
+        .step-header .back-nav-btn:hover, .sheet-header .back-nav-btn:hover {
             background: #f1f5f9;
         }
         .qty-sticky-header-group {
@@ -2223,6 +2223,9 @@
     <div id="report-sheet" class="bottom-sheet">
         <div class="bottom-sheet-content">
             <div class="sheet-header">
+                <button class="back-nav-btn" onclick="app.toggleBottomSheet('report', false)">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
                 <div class="handle"></div>
                 <h3>Report an Issue</h3>
                 <p>We'll resolve this immediately.</p>
