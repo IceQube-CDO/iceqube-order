@@ -47,32 +47,47 @@ var admin = {
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
-        admin.showConfirmModal(
+        this.showConfirmModal(
             "Purge Test Data",
             "This will remove all TEST entries but will PROTECT your 'Real Business' data. Proceed?",
-            () => {
+            async () => {
                 console.log('🧹 Purging Test Data starting...');
                 try {
+                    // 1. Local Purge
                     const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
                     const realOrders = orders.filter(o => o.is_real === true);
                     localStorage.setItem('ice_orders', JSON.stringify(realOrders));
-                    console.log(`- Filtered Orders: ${realOrders.length} kept`);
+                    console.log(`- Filtered Orders: ${realOrders.length} kept locally`);
 
                     const deliveries = JSON.parse(localStorage.getItem('ice_deliveries') || '[]');
                     const realDeliveries = deliveries.filter(d => d.is_real === true);
                     localStorage.setItem('ice_deliveries', JSON.stringify(realDeliveries));
-                    console.log(`- Filtered Deliveries: ${realDeliveries.length} kept`);
 
                     const cashflow = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
                     const realCashflow = cashflow.filter(c => c.is_real === true);
                     localStorage.setItem('ice_cashflow', JSON.stringify(realCashflow));
-                    console.log(`- Filtered Cashflow: ${realCashflow.length} kept`);
 
                     localStorage.removeItem('ice_messages');
-                    console.log('- Demo messages cleared');
-
                     localStorage.setItem('ice_system_purged', 'true');
-                    console.log('- System marked as PURGED (Clean Slate Mode)');
+
+                    // 2. Cloud Purge (If active)
+                    if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                        console.log('☁️ Attempting Cloud Purge (Orders where is_real is not true)...');
+                        // Delete non-real orders from Supabase
+                        const cloudResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(is_real.is.null,is_real.eq.false)`, {
+                            method: 'DELETE',
+                            headers: {
+                                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                            }
+                        });
+                        
+                        if (!cloudResponse.ok) {
+                            console.warn('⚠️ Cloud Purge partially failed (check if is_real column exists):', cloudResponse.status);
+                        } else {
+                            console.log('✅ Cloud Purge successful');
+                        }
+                    }
                     
                     console.log('Purge successful. Reloading...');
                     location.reload();
@@ -115,21 +130,35 @@ var admin = {
         else if (type === 'cashflow') key = 'ice_cashflow';
         else return;
 
-        const data = JSON.parse(localStorage.getItem(key) || '[]');
-        const idx = data.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
+        // 1. Detect current status
+        const localData = JSON.parse(localStorage.getItem(key) || '[]');
+        const localIdx = localData.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
         
-        let newStatus = true;
-        if (idx > -1) {
-            data[idx].is_real = !data[idx].is_real;
-            newStatus = data[idx].is_real;
-            localStorage.setItem(key, JSON.stringify(data));
-            this.fetchRealStats(); // Refresh UI locally
+        let currentStatus = false;
+        if (localIdx > -1) {
+            currentStatus = !!localData[localIdx].is_real;
+        } else {
+            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
+            if (memoryItem) currentStatus = !!memoryItem.is_real;
         }
 
-        // If cloud is active, sync the change for orders
+        const newStatus = !currentStatus;
+
+        // 2. Update Local State
+        if (localIdx > -1) {
+            localData[localIdx].is_real = newStatus;
+            localStorage.setItem(key, JSON.stringify(localData));
+        }
+
+        // 3. Update Memory State & UI Immediately
+        const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
+        if (memoryItem) memoryItem.is_real = newStatus;
+        this.updateOrderQueue(this.allOrders);
+
+        // 4. Cloud Sync
         if (type === 'order' && !id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
-                await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
                     method: 'PATCH',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -138,7 +167,11 @@ var admin = {
                     },
                     body: JSON.stringify({ is_real: newStatus })
                 });
-                console.log('✅ Real Status Synced to Cloud');
+                if (response.ok) {
+                    console.log('✅ Real Status Synced to Cloud');
+                } else {
+                    console.error('❌ Cloud Sync Failed:', response.status);
+                }
             } catch (err) {
                 console.warn('Could not sync Real Status to cloud:', err);
             }
