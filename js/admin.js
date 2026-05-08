@@ -40,6 +40,7 @@ var admin = {
         pldt: true,
         rent: true
     })),
+    utilityPaidDates: JSON.parse(localStorage.getItem('iceqube_utility_paid_dates') || '{}'),
     rental: JSON.parse(localStorage.getItem('iceqube_rental') || '15000'),
     cashflowFilter: 'daily', 
     vacationMode: JSON.parse(localStorage.getItem('iceqube_vacation_mode') || 'false'),
@@ -1859,13 +1860,25 @@ var admin = {
         cw.value = this.utilities.water;
         cp.value = this.utilities.internet;
 
-        // Set status buttons
+        // Set status buttons and paid dates
         Object.keys(this.utilityStatus).forEach(key => {
             const btn = document.getElementById(`status-${key}`);
+            const dateEl = document.getElementById(`paid-date-${key}`);
             if (btn) {
                 const isPaid = this.utilityStatus[key];
                 btn.className = `status-btn ${isPaid ? 'paid' : 'unpaid'}`;
                 btn.innerText = isPaid ? 'PAID' : 'UNPAID';
+
+                // Update Paid Date label
+                if (dateEl) {
+                    const paidDate = this.utilityPaidDates[key];
+                    if (isPaid && paidDate) {
+                        dateEl.innerText = `Paid on ${paidDate}`;
+                        dateEl.style.display = 'block';
+                    } else {
+                        dateEl.style.display = 'none';
+                    }
+                }
             }
         });
 
@@ -1894,38 +1907,71 @@ var admin = {
 
     togglePaymentStatus(utilityId) {
         const btn = document.getElementById(`status-${utilityId}`);
-        const amount = document.getElementById(`bill-${utilityId}`) ? document.getElementById(`bill-${utilityId}`).value : (utilityId === 'rent' ? this.rental : 0);
+        const amountInput = document.getElementById(`bill-${utilityId}`);
+        const amount = amountInput ? parseFloat(amountInput.value) : (utilityId === 'rent' ? parseFloat(this.rental) : 0);
+        
+        const monthYear = document.getElementById('current-billing-month')?.innerText || 
+                          new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+        
+        const names = {
+            cepalco: 'Electricity (CEPALCO)',
+            cowd: 'Water (COWD)',
+            pldt: 'Internet (PLDT)',
+            rent: 'Warehouse Rent'
+        };
+        const name = names[utilityId] || utilityId.toUpperCase();
+        const desc = `Monthly ${name} Payment (${monthYear})`;
 
-        if (btn.classList.contains('unpaid')) {
+        if (btn && btn.classList.contains('unpaid')) {
             // Switch to PAID
             this.utilityStatus[utilityId] = true;
-            btn.classList.remove('unpaid');
-            btn.classList.add('paid');
+            btn.className = 'status-btn paid';
             btn.innerText = 'PAID';
             
-            // Logic to push to cashflow
             console.log(`[SYSTEM] ₱${amount} paid for ${utilityId}. Pushing to Cashflow.`);
             
-            // Optional: If you want to automatically log this to the cashflow ledger:
-            /*
-            this.cashflow.unshift({
-                date: new Date().toLocaleDateString(),
-                desc: `Monthly ${utilityId.toUpperCase()} Payment`,
-                amount: -parseFloat(amount),
-                type: 'expense'
+            // Remove existing entry for this specific month/utility if it exists (prevent duplicates)
+            this.manualEntries = this.manualEntries.filter(e => e.description !== desc);
+            
+            // Add to Cashflow
+            this.manualEntries.push({
+                timestamp: new Date().toISOString(),
+                category: utilityId === 'rent' ? 'Other' : 'Utilities (Power/Water)',
+                description: desc,
+                type: 'OUT',
+                amount: amount,
+                source: 'AUTO',
+                is_real: true
             });
-            localStorage.setItem('iceqube_cashflow', JSON.stringify(this.cashflow));
-            */
-        } else {
+            
+            this.saveManualEntries();
+
+            // Record Payment Date
+            this.utilityPaidDates[utilityId] = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            localStorage.setItem('iceqube_utility_paid_dates', JSON.stringify(this.utilityPaidDates));
+            
+            this.updateUtilitiesUI();
+            this.updateRentalUI();
+        } else if (btn) {
             // Revert to UNPAID
             this.utilityStatus[utilityId] = false;
-            btn.classList.remove('paid');
-            btn.classList.add('unpaid');
+            btn.className = 'status-btn unpaid';
             btn.innerText = 'UNPAID';
             
-            console.log(`[SYSTEM] Reverting ${utilityId} to Unpaid.`);
+            console.log(`[SYSTEM] Reverting ${utilityId} to Unpaid. Removing from Cashflow.`);
+            this.manualEntries = this.manualEntries.filter(e => e.description !== desc);
+            this.saveManualEntries();
+
+            // Clear Payment Date
+            delete this.utilityPaidDates[utilityId];
+            localStorage.setItem('iceqube_utility_paid_dates', JSON.stringify(this.utilityPaidDates));
+
+            this.updateUtilitiesUI();
+            this.updateRentalUI();
         }
+        
         localStorage.setItem('iceqube_utility_status', JSON.stringify(this.utilityStatus));
+        this.fetchRealStats(); // Triggers UI refresh
     },
 
     checkMonthlyReset() {
@@ -1943,9 +1989,11 @@ var admin = {
                 // Reset inputs to 0.00 for the new billing cycle
                 this.utilities = { electricity: 0, water: 0, internet: 0 };
                 this.utilityStatus = { cepalco: false, cowd: false, pldt: false, rent: false };
+                this.utilityPaidDates = {};
                 
                 localStorage.setItem('iceqube_utilities', JSON.stringify(this.utilities));
                 localStorage.setItem('iceqube_utility_status', JSON.stringify(this.utilityStatus));
+                localStorage.setItem('iceqube_utility_paid_dates', JSON.stringify(this.utilityPaidDates));
                 localStorage.setItem('iceqube_last_reset', currentMonth);
                 
                 this.updateUtilitiesUI();
@@ -1961,10 +2009,22 @@ var admin = {
         }
         // Status handled in updateUtilitiesUI loop but can be redundant here
         const btn = document.getElementById('status-rent');
+        const dateEl = document.getElementById('paid-date-rent');
         if (btn) {
             const isPaid = this.utilityStatus.rent;
             btn.className = `status-btn ${isPaid ? 'paid' : 'unpaid'}`;
             btn.innerText = isPaid ? 'PAID' : 'UNPAID';
+
+            // Update Paid Date label
+            if (dateEl) {
+                const paidDate = this.utilityPaidDates.rent;
+                if (isPaid && paidDate) {
+                    dateEl.innerText = `Paid on ${paidDate}`;
+                    dateEl.style.display = 'block';
+                } else {
+                    dateEl.style.display = 'none';
+                }
+            }
         }
     },
 

@@ -1746,7 +1746,10 @@
 
                     <!-- CEPALCO -->
                     <div class="utility-row">
-                        <span class="utility-label">Electricity (CEPALCO)</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="utility-label">Electricity (CEPALCO)</span>
+                            <small id="paid-date-cepalco" style="color: #64748b; font-size: 0.65rem; display: none;">Paid on ---</small>
+                        </div>
                         <div class="utility-controls">
                             <span class="currency-symbol">₱</span>
                             <input type="number" id="bill-cepalco" class="bill-input" value="0" onchange="admin.calculateTotalUtilities()">
@@ -1756,7 +1759,10 @@
 
                     <!-- COWD -->
                     <div class="utility-row">
-                        <span class="utility-label">Water (COWD)</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="utility-label">Water (COWD)</span>
+                            <small id="paid-date-cowd" style="color: #64748b; font-size: 0.65rem; display: none;">Paid on ---</small>
+                        </div>
                         <div class="utility-controls">
                             <span class="currency-symbol">₱</span>
                             <input type="number" id="bill-cowd" class="bill-input" value="0" onchange="admin.calculateTotalUtilities()">
@@ -1766,7 +1772,10 @@
 
                     <!-- PLDT -->
                     <div class="utility-row">
-                        <span class="utility-label">Internet (PLDT)</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="utility-label">Internet (PLDT)</span>
+                            <small id="paid-date-pldt" style="color: #64748b; font-size: 0.65rem; display: none;">Paid on ---</small>
+                        </div>
                         <div class="utility-controls">
                             <span class="currency-symbol">₱</span>
                             <input type="number" id="bill-pldt" class="bill-input" value="0" onchange="admin.calculateTotalUtilities()">
@@ -1784,7 +1793,10 @@
                 <div class="cc-card">
                     <h3 class="metric-label">WAREHOUSE RENTAL</h3>
                     <div class="utility-row" style="border: none; padding-bottom: 0;">
-                        <span class="utility-label">Current Monthly Rent</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="utility-label">Current Monthly Rent</span>
+                            <small id="paid-date-rent" style="color: #64748b; font-size: 0.65rem; display: none;">Paid on ---</small>
+                        </div>
                         <div class="utility-controls">
                             <span class="currency-symbol">₱</span>
                             <input type="number" id="bill-rent" class="bill-input rent-input" value="0" onchange="admin.updateRentDisplay()">
