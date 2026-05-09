@@ -3377,7 +3377,27 @@ const app = {
     },
 
     openSOA(poNumber) {
-        document.getElementById('soa-overlay').style.display = 'block';
+        document.getElementById('soa-overlay').style.display = 'flex';
+        
+        // Initialize Panzoom if not already done
+        if (!this.soaPanzoom) {
+            const elem = document.getElementById('printable-soa-document');
+            this.soaPanzoom = Panzoom(elem, {
+                maxScale: 3,
+                minScale: 0.5,
+                contain: 'outside',
+                startScale: 0.8 // Initial zoom to fit better on screen
+            });
+
+            elem.parentElement.addEventListener('wheel', (e) => {
+                this.soaPanzoom.zoomWithWheel(e);
+            });
+        }
+        
+        // Center the document on open
+        setTimeout(() => {
+            this.resetSOAZoom();
+        }, 50);
         
         // Set default custom range to today
         const todayStr = new Date().toISOString().split('T')[0];
@@ -3412,6 +3432,30 @@ const app = {
 
     closeSOA() {
         document.getElementById('soa-overlay').style.display = 'none';
+        if (this.soaPanzoom) {
+            this.soaPanzoom.reset();
+        }
+    },
+
+    soaZoom(scaleDelta) {
+        if (this.soaPanzoom) {
+            const currentScale = this.soaPanzoom.getScale();
+            this.soaPanzoom.zoom(currentScale * scaleDelta, { animate: true });
+        }
+    },
+
+    resetSOAZoom() {
+        if (this.soaPanzoom) {
+            this.soaPanzoom.reset({ animate: true });
+            
+            // Auto-scale to fit width on small screens
+            const viewportWidth = document.getElementById('soa-viewport').clientWidth;
+            const paperWidth = 794; // 210mm at 96dpi
+            if (viewportWidth < paperWidth + 80) {
+                const scale = (viewportWidth - 40) / paperWidth;
+                this.soaPanzoom.zoom(scale, { animate: true });
+            }
+        }
     },
 
     generateLedger(isCustomSubmit = false) {
