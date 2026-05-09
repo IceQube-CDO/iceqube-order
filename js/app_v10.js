@@ -63,12 +63,14 @@ const app = {
         if (psid) {
             console.log('Detected Messenger PSID:', psid);
             MESSENGER_CONFIG.RECIPIENT_ID = psid;
+            this.user.messengerId = psid;
             localStorage.setItem('ice_messenger_psid', psid);
         } else {
             // Fallback to last known PSID
             const storedPsid = localStorage.getItem('ice_messenger_psid');
-            if (storedPsid && MESSENGER_CONFIG.RECIPIENT_ID === 'YOUR_RECIPIENT_PSID_HERE') {
+            if (storedPsid) {
                 MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
+                this.user.messengerId = storedPsid;
             }
         }
 
@@ -142,6 +144,9 @@ const app = {
             this.deferredPrompt = null;
         });
 
+        // --- Profile Management ---
+        this.loadUserProfile();
+
         // --- Sync Status Diagnostics ---
         this.updateSyncBadges();
     },
@@ -211,6 +216,9 @@ const app = {
     user: {
         accountType: 'Standard', 
         companyName: 'Guest Customer',
+        contactPerson: '',
+        contactNumber: '',
+        messengerId: null,
         role: 'Owner', 
         balance: 0.00,
         creditLimit: 50000.00
@@ -258,6 +266,7 @@ const app = {
     map: null,
     mapMarker: null,
     mapInitialized: false,
+    mapContext: 'order', // 'order' or 'profile'
     deferredPrompt: null,
 
     installPWA() {
@@ -562,13 +571,18 @@ const app = {
     applyQuickReorderDefaults() {
         this.isQuickReorder = true;
         this.orderData.logistics = 'Doorstep Delivery';
+        // Use Profile Defaults if available, fallback to mock for demo
+        const defaultName = (this.user.companyName && this.user.companyName !== 'Guest Customer') ? this.user.companyName : 'Loft Living CDO';
+        const defaultPerson = this.user.contactPerson || 'Manager (Admin)';
+        const defaultContact = this.user.contactNumber || '09171234567';
+
         this.orderData.deliveryDetails = {
-            location: 'Loft Living CDO',
+            location: defaultName,
             maps: 'https://maps.app.goo.gl/loft-living-mock',
             lat: 8.4772,
             lng: 124.6459,
-            person: 'Manager (Admin)',
-            contact: '09171234567',
+            person: defaultPerson,
+            contact: defaultContact,
             instructions: 'Gate 2, Side Entrance. Regular delivery spot.'
         };
 
@@ -725,6 +739,38 @@ const app = {
                 pwaBanner.style.display = 'none';
             }
         }
+
+        // --- Step-Specific Initialization ---
+        if (index === 3) { // Logistics Step
+            const locInput = document.getElementById('delivery-location');
+            const perInput = document.getElementById('delivery-person');
+            const conInput = document.getElementById('delivery-contact');
+            
+            if (locInput && !locInput.value && this.user.companyName && this.user.companyName !== 'Guest Customer') {
+                locInput.value = this.user.companyName;
+                this.handleLocationInput(this.user.companyName); 
+                
+                // If we have saved GPS, apply it too
+                if (this.user.savedLat && this.user.savedLng) {
+                    this.orderData.deliveryDetails.lat = this.user.savedLat;
+                    this.orderData.deliveryDetails.lng = this.user.savedLng;
+                    this.orderData.deliveryDetails.location = this.user.savedAddress || this.user.companyName;
+                    
+                    const mapsInput = document.getElementById('delivery-maps');
+                    if (mapsInput) {
+                        mapsInput.value = `📍 ${this.user.savedAddress || 'Saved Pin'}`;
+                        this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this.user.savedLat},${this.user.savedLng},17z`;
+                    }
+                    this.calculateDeliveryFee();
+                }
+            }
+            if (perInput && !perInput.value && this.user.contactPerson) {
+                perInput.value = this.user.contactPerson;
+            }
+            if (conInput && !conInput.value && this.user.contactNumber) {
+                conInput.value = this.formatPhone(this.user.contactNumber);
+            }
+        }
     },
 
     nextStep() {
@@ -800,39 +846,7 @@ const app = {
         return { distanceKm: 5, routeTimeMins: 20 }; // Generic fallback
     },
 
-    // Map Integration Methods
-    openMapOverlay() {
-        const overlay = document.getElementById('map-overlay');
-        overlay.classList.add('active');
-        
-        if (!this.mapInitialized) {
-            if (window.google && this.googleMapsReady) {
-                this.initGoogleMap();
-            } else {
-                this.initMap();
-            }
-        } else {
-            // Leaflet needs to re-calculate size when shown inside a hidden container
-            setTimeout(() => {
-                if (this.map) {
-                    this.map.invalidateSize();
-                    // If we have existing coordinates from manual entry or previous pin, center there
-                    if (this.orderData.deliveryDetails.lat && this.orderData.deliveryDetails.lng) {
-                        const latlng = [this.orderData.deliveryDetails.lat, this.orderData.deliveryDetails.lng];
-                        this.map.setView(latlng, 17);
-                        this.mapMarker.setLatLng(latlng);
-                    }
-                } else if (this.googleMap) {
-                    google.maps.event.trigger(this.googleMap, 'resize');
-                    if (this.orderData.deliveryDetails.lat && this.orderData.deliveryDetails.lng) {
-                        const pos = { lat: this.orderData.deliveryDetails.lat, lng: this.orderData.deliveryDetails.lng };
-                        this.googleMap.setCenter(pos);
-                        this.googleMarker.setPosition(pos);
-                    }
-                }
-            }, 100);
-        }
-    },
+    // --- Map Integration Methods (Consolidated at end of app object) ---
 
     initMap() {
         const cdoCoords = [8.4772, 124.6459];
@@ -1349,34 +1363,42 @@ const app = {
                 : "Selected Location";
         }
 
-        // Always populate delivery-location with the confirmed address
-        const locInput = document.getElementById('delivery-location');
-        if (locInput) {
-            locInput.value = this._tempAddress;
-        }
-        
-        this.orderData.deliveryDetails.location = this._tempAddress;
-        this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
-        if (this._tempEstablishment) {
-            this.orderData.deliveryDetails.establishment = this._tempEstablishment;
-        }
-        this.orderData.deliveryDetails.lat = this._tempLat || 0;
-        this.orderData.deliveryDetails.lng = this._tempLng || 0;
-        
-        // Populate the maps field with address + pin link for rider
-        const mapsInput = document.getElementById('delivery-maps');
-        if (mapsInput && this._tempLat && this._tempLng) {
-            const displayText = `📍 ${this._tempAddress}`;
-            mapsInput.value = displayText;
-            mapsInput.classList.add('populated');
-            mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
-            // Store the actual maps link in data
-            this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+        if (this.mapContext === 'profile') {
+            const addrInput = document.getElementById('profile-address');
+            const latInput = document.getElementById('profile-lat');
+            const lngInput = document.getElementById('profile-lng');
+            
+            if (addrInput) addrInput.value = this._tempAddress;
+            if (latInput) latInput.value = this._tempLat || 0;
+            if (lngInput) lngInput.value = this._tempLng || 0;
+
+            this.showToast("📍 Location Pinned to Profile", 'success');
+        } else {
+            // Regular Order Logic
+            const locInput = document.getElementById('delivery-location');
+            if (locInput) locInput.value = this._tempAddress;
+            
+            this.orderData.deliveryDetails.location = this._tempAddress;
+            this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
+            if (this._tempEstablishment) {
+                this.orderData.deliveryDetails.establishment = this._tempEstablishment;
+            }
+            this.orderData.deliveryDetails.lat = this._tempLat || 0;
+            this.orderData.deliveryDetails.lng = this._tempLng || 0;
+            
+            const mapsInput = document.getElementById('delivery-maps');
+            if (mapsInput && this._tempLat && this._tempLng) {
+                const displayText = `📍 ${this._tempAddress}`;
+                mapsInput.value = displayText;
+                mapsInput.classList.add('populated');
+                mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+                this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+            }
+            this.calculateDeliveryFee();
         }
         
         this.hideSearchSuggestions();
         this.closeMapOverlay();
-        this.calculateDeliveryFee();
     },
 
     sanitizeSearchIcons() {
@@ -3728,15 +3750,13 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             const pwaBanner = document.getElementById('pwa-install-banner');
             if (pwaBanner) pwaBanner.style.display = 'none';
 
-            // Simulate authentication if it's the account panel
+            // Initialize UI with user data if it's the account panel
             if (panelId === 'account') {
                 const nameElem = document.getElementById('user-full-name');
-                if (nameElem && nameElem.innerText === 'Authenticating...') {
-                    setTimeout(() => {
-                        nameElem.innerText = 'Loft Living CDO';
-                        const pfp = document.getElementById('user-pfp');
-                        if (pfp) pfp.style.background = '#4285F4';
-                    }, 1200);
+                if (nameElem) {
+                    nameElem.innerText = this.user.companyName || 'Guest Customer';
+                    const pfp = document.getElementById('user-pfp');
+                    if (pfp) pfp.style.background = (this.user.companyName === 'Guest Customer') ? '#94a3b8' : '#4285F4';
                 }
             }
         } else {
@@ -4061,6 +4081,158 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     saveOrderWithStatus(status) {
         console.log(`Order saved with status: ${status}`);
         // In a real app, this would persist to a database (e.g., Supabase)
+    },
+
+    // --- Profile Helpers ---
+    loadUserProfile() {
+        const saved = localStorage.getItem('iceqube_user_profile');
+        if (saved) {
+            try {
+                const profile = JSON.parse(saved);
+                this.user.companyName = profile.establishment || this.user.companyName;
+                this.user.contactPerson = profile.contactPerson || '';
+                this.user.contactNumber = profile.contactNumber || '';
+                this.user.messengerId = profile.messengerId || this.user.messengerId;
+                this.user.savedAddress = profile.address || '';
+                this.user.savedLat = profile.lat || null;
+                this.user.savedLng = profile.lng || null;
+                
+                // Pre-fill Edit Modal
+                const estInput = document.getElementById('profile-establishment');
+                const perInput = document.getElementById('profile-contact-person');
+                const numInput = document.getElementById('profile-contact-number');
+                const addrInput = document.getElementById('profile-address');
+                const latInput = document.getElementById('profile-lat');
+                const lngInput = document.getElementById('profile-lng');
+                const msgInput = document.getElementById('profile-messenger-id');
+
+                if (estInput) estInput.value = this.user.companyName;
+                if (perInput) perInput.value = this.user.contactPerson;
+                if (numInput) numInput.value = this.user.contactNumber;
+                if (addrInput) addrInput.value = this.user.savedAddress;
+                if (latInput) latInput.value = this.user.savedLat || '';
+                if (lngInput) lngInput.value = this.user.savedLng || '';
+                if (msgInput) msgInput.value = this.user.messengerId || '';
+
+                this.updateMessengerStatusUI();
+
+                console.log("👤 Profile Loaded:", this.user.companyName);
+            } catch (e) {
+                console.error("Error parsing profile:", e);
+            }
+        }
+    },
+
+    saveUserProfile() {
+        const establishment = document.getElementById('profile-establishment').value.trim();
+        const contactPerson = document.getElementById('profile-contact-person').value.trim();
+        const contactNumber = document.getElementById('profile-contact-number').value.trim();
+        const messengerId = document.getElementById('profile-messenger-id').value.trim();
+        const address = document.getElementById('profile-address').value.trim();
+        const lat = document.getElementById('profile-lat').value;
+        const lng = document.getElementById('profile-lng').value;
+
+        if (!establishment) {
+            this.showToast("⚠️ Please enter an Establishment Name", 'error');
+            return;
+        }
+
+        const profile = {
+            establishment,
+            contactPerson,
+            contactNumber,
+            messengerId,
+            address,
+            lat,
+            lng,
+            updatedAt: new Date().toISOString()
+        };
+
+        localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+        
+        // Update live state
+        this.user.companyName = establishment;
+        this.user.contactPerson = contactPerson;
+        this.user.contactNumber = contactNumber;
+        this.user.messengerId = messengerId;
+        this.user.savedAddress = address;
+        this.user.savedLat = lat;
+        this.user.savedLng = lng;
+
+        this.updateMessengerStatusUI();
+
+        // Update UI
+        const nameElem = document.getElementById('user-full-name');
+        if (nameElem) nameElem.innerText = establishment;
+
+        this.showToast("✅ Profile Updated Successfully", 'success');
+        this.toggleBottomSheet('profile', false);
+    },
+
+    updateMessengerStatusUI() {
+        const text = document.getElementById('messenger-status-text');
+        const badge = document.getElementById('messenger-status-badge');
+        
+        if (!text || !badge) return;
+
+        if (this.user.messengerId) {
+            text.innerText = "Linked: " + this.user.messengerId.substring(0, 8) + "...";
+            badge.innerText = "LINKED";
+            badge.style.background = "#dcfce7";
+            badge.style.color = "#16a34a";
+        } else {
+            text.innerText = "Not connected";
+            badge.innerText = "OFF";
+            badge.style.background = "#fee2e2";
+            badge.style.color = "#ef4444";
+        }
+    },
+
+    openMapForProfile() {
+        this.mapContext = 'profile';
+        // Initialize map with saved location if available
+        if (this.user.savedLat && this.user.savedLng) {
+            this._tempLat = parseFloat(this.user.savedLat);
+            this._tempLng = parseFloat(this.user.savedLng);
+            this._tempAddress = this.user.savedAddress;
+        }
+        this.openMapOverlay();
+    },
+
+    // Override openMapOverlay to ensure context is reset if called from elsewhere
+    originalOpenMapOverlay: null,
+    openMapOverlay() {
+        // Simple context management: if it's not profile, it's order
+        if (this.mapContext !== 'profile') this.mapContext = 'order';
+        
+        const overlay = document.getElementById('map-overlay');
+        overlay.classList.add('active');
+        
+        if (!this.mapInitialized) {
+            if (window.google && this.googleMapsReady) {
+                this.initGoogleMap();
+            } else {
+                this.initMap();
+            }
+        } else {
+            setTimeout(() => {
+                if (this.map) {
+                    this.map.invalidateSize();
+                    if (this._tempLat && this._tempLng) {
+                        const latlng = [this._tempLat, this._tempLng];
+                        this.map.setView(latlng, 17);
+                        this.mapMarker.setLatLng(latlng);
+                    }
+                } else if (this.googleMap) {
+                    google.maps.event.trigger(this.googleMap, 'resize');
+                    if (this._tempLat && this._tempLng) {
+                        const pos = { lat: this._tempLat, lng: this._tempLng };
+                        this.googleMap.setCenter(pos);
+                        this.googleMarker.setPosition(pos);
+                    }
+                }
+            }, 100);
+        }
     }
 };
 
@@ -4095,13 +4267,13 @@ function closeReorderModal() {
 
 function processOrder() {
     app.processOrder();
-    this.showToast("Order Confirmed! Your bags are scheduled.", 'success');
+    app.showToast("Order Confirmed! Your bags are scheduled.", 'success');
     closeReorderModal();
 }
 
 function goToEditQty() {
     app.goToEditQty();
-    alert("Opening Quantity Editor...");
+    app.showToast("Opening Quantity Editor...", 'info');
     closeReorderModal();
 }
 
@@ -4111,7 +4283,7 @@ async function submitTopUp(amount) {
     const finalAmt = parseFloat(amount || customAmt);
     
     if (!finalAmt || finalAmt < 1) {
-        this.showToast('Please enter a valid amount to recharge.', 'error');
+        app.showToast('Please enter a valid amount to recharge.', 'error');
         return;
     }
     
@@ -4134,7 +4306,7 @@ async function submitTopUp(amount) {
 
     if (result.success) {
         app.toggleBottomSheet('debt', false);
-        this.showToast(`✅ Payment of ₱${finalAmt} applied!`, 'success');
+        app.showToast(`✅ Payment of ₱${finalAmt} applied!`, 'success');
         
         // Refresh local UI state
         if (app.user.balance <= 0) {
@@ -4247,7 +4419,7 @@ function submitCustomTopUp() {
     if (amt && amt > 0) {
         submitTopUp(amt); // Calls the FIFO backend function
     } else {
-        this.showToast('Please enter a valid amount.', 'error');
+        app.showToast('Please enter a valid amount.', 'error');
     }
 }
 
@@ -4344,7 +4516,7 @@ function activateProvisionalCredit() {
         reorderBtn.style.filter = 'none';
     }
     
-    this.showToast("🚀 Overdraft Active: You can place new orders now.", 'success');
+    app.showToast("🚀 Overdraft Active: You can place new orders now.", 'success');
 }
 
 /**
@@ -4667,7 +4839,7 @@ function saveQRToGallery() {
     link.click();
     document.body.removeChild(link);
     
-    this.showToast("📲 QR Code saved/downloaded.", 'success');
+    app.showToast("📲 QR Code saved/downloaded.", 'success');
 }
 
 // Function called when the AI returns 'approved'
