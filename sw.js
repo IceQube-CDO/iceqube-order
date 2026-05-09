@@ -6,7 +6,10 @@ const ASSETS = [
   './rider.html',
   './css/style_v10.css',
   './manifest.json',
-  './assets/logo-192.png'
+  './manifest_admin.json',
+  './assets/logo-192.png',
+  './assets/logo-512.png',
+  './assets/logo2.png'
 ];
 
 self.addEventListener('install', event => {
