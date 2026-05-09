@@ -1171,7 +1171,7 @@
                     </div>
                     
                     <div class="contact-group">
-                        <a href="https://www.google.com/maps/dir/?api=1&origin=IceQube+Macabalan+Hub&destination=8.4526,124.6293" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a href="#" onclick="openMapWithRoute(event)" class="contact-btn map" id="incoming-map-btn">🗺️ Open Map</a>
                         <a href="tel:+639171234567" class="contact-btn">📞 Call</a>
                         <a href="sms:+639171234567" class="contact-btn">📱 SMS</a>
                         <a href="https://m.me/fatmonkcoffee" target="_blank" class="contact-btn">💬 Messenger</a>
@@ -1232,7 +1232,7 @@
                     </div>
 
                     <div class="contact-group" style="margin-bottom: 1rem;">
-                        <a href="#" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a href="#" onclick="openMapWithRoute(event)" class="contact-btn map" id="active-map-btn">🗺️ Open Map</a>
                         <a id="active-call" href="tel:+639171234567" class="contact-btn">📞 Call</a>
                         <a id="active-sms" href="sms:+639171234567" class="contact-btn">📱 SMS</a>
                         <a id="active-messenger" href="#" target="_blank" class="contact-btn">💬 Messenger</a>
@@ -1336,7 +1336,7 @@
                     </div>
 
                     <div class="contact-group" style="margin-bottom: 1rem;">
-                        <a href="#" target="_blank" class="contact-btn map">🗺️ Open Map</a>
+                        <a href="#" onclick="openMapWithRoute(event)" class="contact-btn map" id="advance-map-btn">🗺️ Open Map</a>
                         <a id="advance-call" href="tel:+639171234567" class="contact-btn">📞 Call</a>
                         <a id="advance-sms" href="sms:+639171234567" class="contact-btn">📱 SMS</a>
                         <a id="advance-messenger" href="#" target="_blank" class="contact-btn">💬 Messenger</a>
@@ -1416,7 +1416,84 @@
         let riderProfile = { sms: '', address: '', idVerified: false, profilePic: '' };
         let payoutHistory = [];
         let activeOrder = null; // Store the current synced order here
-        
+
+        // IceQube Macabalan Hub coordinates (stopover waypoint)
+        const ICEQUBE_HUB = {
+            lat: 8.5020476,
+            lng: 124.660855,
+            label: 'IceQube+Macabalan+Hub'
+        };
+
+        /**
+         * Opens Google Maps with a 3-point route:
+         * 1. Rider's current GPS location (origin)
+         * 2. IceQube Macabalan Hub (stopover waypoint)
+         * 3. Delivery location (destination)
+         */
+        function openMapWithRoute(event) {
+            event.preventDefault();
+            const btn = event.currentTarget;
+
+            // Get delivery destination from the active order or data attributes
+            let destLat = btn.dataset.lat || '';
+            let destLng = btn.dataset.lng || '';
+            let destAddr = btn.dataset.address || '';
+
+            // Fallback: if no data attributes, try from activeOrder
+            if ((!destLat || !destLng) && activeOrder) {
+                destLat = activeOrder.delivery_lat || '';
+                destLng = activeOrder.delivery_lng || '';
+                destAddr = activeOrder.delivery_address || '';
+            }
+
+            // Build destination string
+            let destination = '';
+            if (destLat && destLng) {
+                destination = `${destLat},${destLng}`;
+            } else if (destAddr) {
+                destination = encodeURIComponent(destAddr + ', Cagayan de Oro');
+            } else {
+                destination = encodeURIComponent('Cagayan de Oro');
+            }
+
+            // Waypoint: IceQube Macabalan Hub
+            const waypoint = `${ICEQUBE_HUB.lat},${ICEQUBE_HUB.lng}`;
+
+            // Show brief loading state on button
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '📍 Getting GPS...';
+            btn.style.pointerEvents = 'none';
+
+            // Try to get rider's current position for the origin
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        // Success — use live GPS as origin
+                        const origin = `${position.coords.latitude},${position.coords.longitude}`;
+                        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&waypoints=${waypoint}&destination=${destination}&travelmode=driving`;
+                        btn.innerHTML = originalText;
+                        btn.style.pointerEvents = '';
+                        window.open(url, '_blank');
+                    },
+                    (error) => {
+                        // GPS denied/failed — omit origin so Google auto-detects
+                        console.warn('📍 GPS unavailable, falling back to auto-detect:', error.message);
+                        const url = `https://www.google.com/maps/dir/?api=1&waypoints=${waypoint}&destination=${destination}&travelmode=driving`;
+                        btn.innerHTML = originalText;
+                        btn.style.pointerEvents = '';
+                        window.open(url, '_blank');
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+                );
+            } else {
+                // No geolocation support — fallback
+                const url = `https://www.google.com/maps/dir/?api=1&waypoints=${waypoint}&destination=${destination}&travelmode=driving`;
+                btn.innerHTML = originalText;
+                btn.style.pointerEvents = '';
+                window.open(url, '_blank');
+            }
+        }
+
         // --- GLOBAL SYNC LISTENER ---
         // Moved outside login() to ensure it's always listening even if login overlay is skipped
         if (window.IceQubeSync) {
@@ -1944,9 +2021,19 @@
                 }
             }
 
-            // Map & Call Links
-            const mapLink = document.querySelector('#active-delivery .contact-btn.map');
-            if (mapLink) mapLink.href = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`;
+            // Map Link — store coords as data attributes for the openMapWithRoute() function
+            const mapLink = document.getElementById('active-map-btn');
+            const incomingMapLink = document.getElementById('incoming-map-btn');
+            if (mapLink) {
+                mapLink.dataset.lat = order.delivery_lat || '';
+                mapLink.dataset.lng = order.delivery_lng || '';
+                mapLink.dataset.address = order.delivery_address || '';
+            }
+            if (incomingMapLink) {
+                incomingMapLink.dataset.lat = order.delivery_lat || '';
+                incomingMapLink.dataset.lng = order.delivery_lng || '';
+                incomingMapLink.dataset.address = order.delivery_address || '';
+            }
 
             // Show/Hide buttons based on assignment
             // Show/Hide buttons based on assignment and status
@@ -2682,9 +2769,13 @@
                 }
             }
 
-            // Map Link
-            const mapLink = document.querySelector('#advance-order .contact-btn.map');
-            if (mapLink) mapLink.href = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`;
+            // Map Link — store coords as data attributes for the openMapWithRoute() function
+            const mapLink = document.getElementById('advance-map-btn');
+            if (mapLink) {
+                mapLink.dataset.lat = order.delivery_lat || '';
+                mapLink.dataset.lng = order.delivery_lng || '';
+                mapLink.dataset.address = order.delivery_address || '';
+            }
 
             // Action Buttons
             const actionsGroup = document.getElementById('advance-actions-group');
