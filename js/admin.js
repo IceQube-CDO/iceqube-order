@@ -703,12 +703,20 @@ var admin = {
         const manualEntries = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
         
         // 1. Process Automatic Entries from Orders (Revenue)
-        const autoEntries = syncedOrders.map(o => ({
-            timestamp: o.created_at,
-            category: 'Sales',
-            type: 'IN',
-            amount: parseFloat(o.total_price) || 0
-        }));
+        const autoEntries = syncedOrders.map(o => {
+            let amount = parseFloat(o.total_price) || 0;
+            // COD Adjustment: Business only receives (Item Total - Priority Fee) 
+            // because Delivery + Priority goes directly to the rider.
+            if (o.payment_method === 'Cash on Delivery') {
+                amount = Math.max(0, amount - (parseFloat(o.priority_fee) || 0));
+            }
+            return {
+                timestamp: o.created_at,
+                category: 'Sales',
+                type: 'IN',
+                amount: amount
+            };
+        });
 
         const allEntries = [...autoEntries, ...manualEntries];
         
@@ -822,14 +830,22 @@ var admin = {
         if (!tbody) return;
 
         // 1. Process Automatic Entries from Orders
-        const autoEntries = orders.map(o => ({
-            timestamp: o.created_at,
-            category: 'Sales',
-            description: `Order ${o.order_id} - ${o.customer_name}`,
-            type: 'IN',
-            amount: parseFloat(o.total_price) || 0,
-            source: 'AUTO'
-        }));
+        const autoEntries = orders.map(o => {
+            let amount = parseFloat(o.total_price) || 0;
+            // COD Adjustment: Business only receives (Item Total - Priority Fee) 
+            // because Delivery + Priority goes directly to the rider.
+            if (o.payment_method === 'Cash on Delivery') {
+                amount = Math.max(0, amount - (parseFloat(o.priority_fee) || 0));
+            }
+            return {
+                timestamp: o.created_at,
+                category: 'Sales',
+                description: `Order ${o.order_id} - ${o.customer_name}`,
+                type: 'IN',
+                amount: amount,
+                source: 'AUTO'
+            };
+        });
 
         // 2. Combine with Manual Entries
         const allEntries = [...autoEntries, ...this.manualEntries];
