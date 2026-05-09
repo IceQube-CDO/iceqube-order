@@ -1197,12 +1197,17 @@
             </div>
 
             <div class="map-footer-minimal">
-                <div class="address-display-hub unified-search">
+                <div class="address-display-hub unified-search" style="position: relative;">
                     <div id="map-badge-container" class="badge-container-minimal"></div>
-                    <input type="text" id="map-search-input" placeholder="Search or drag pin to your location..." onkeyup="if(event.key === 'Enter') app.searchLocation(this.value)">
+                    <input type="text" id="map-search-input" placeholder="Search establishment or address..." oninput="app.onMapSearchInput(this.value)" onkeyup="if(event.key === 'Enter') { app.searchLocation(this.value); app.hideSearchSuggestions(); }" autocomplete="off">
+                    <button id="map-search-clear" class="search-clear-btn" onclick="app.clearMapSearch()" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                     <div class="search-indicator-minimal">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </div>
+                    <!-- Live Search Suggestions Dropdown -->
+                    <div id="map-search-suggestions" class="map-search-suggestions" style="display: none;"></div>
                 </div>
                 
                 <div class="map-actions-grid">

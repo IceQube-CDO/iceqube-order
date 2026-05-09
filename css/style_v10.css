@@ -4531,6 +4531,142 @@ input:checked + .slider:before {
     gap: 0.75rem;
 }
 
+/* Search Clear Button */
+.search-clear-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-clear-btn:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+
+/* Live Search Suggestions Dropdown */
+.map-search-suggestions {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 8px;
+    box-shadow: 0 -8px 25px -5px rgba(0, 0, 0, 0.12), 0 -4px 10px rgba(0, 0, 0, 0.06);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 10001;
+    animation: suggestSlideUp 0.2s ease-out;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.map-search-suggestions::-webkit-scrollbar {
+    width: 4px;
+}
+
+.map-search-suggestions::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+@keyframes suggestSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item:active {
+    background: #f0f7ff;
+}
+
+.suggestion-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+    background: #eff6ff;
+    color: var(--accent);
+    margin-top: 1px;
+}
+
+.suggestion-icon.establishment {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.suggestion-icon.address {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.suggestion-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.suggestion-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-address {
+    font-size: 0.75rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-loading {
+    padding: 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.suggestion-empty {
+    padding: 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+
 .hub-btn {
     flex: 1;
     height: 48px;

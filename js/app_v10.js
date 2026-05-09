@@ -865,6 +865,9 @@ const app = {
 
         this.map.on('movestart', () => {
             if (container) container.classList.add('map-moving');
+            // Break the lock when user drags the map
+            this._lockedPlace = null;
+            this.hideSearchSuggestions();
         });
 
         this.map.on('moveend', () => {
@@ -1226,179 +1229,89 @@ const app = {
     },
 
     async reverseGeocode(lat, lng) {
-        // Set these immediately so they are available for confirmation even if resolve is slow
         this._tempLat = lat;
         this._tempLng = lng;
         
         const addrInput = document.getElementById('map-search-input');
         const badgeElem = document.getElementById('map-badge-container');
-        const coordsStr = `(${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-        if (badgeElem) badgeElem.innerHTML = `<span class="scanning-badge">Engine V3 ${coordsStr}</span>`;
+        if (badgeElem) badgeElem.innerHTML = `<span class="scanning-badge">Locating...</span>`;
         
-        let resolved = false;
-
-        // --- V7.0 LOCK BYPASS ---
-        // If the user tapped a POI or searched a specific name, respect it entirely.
+        // If the user searched/tapped a specific place, respect it
         if (this._lockedPlace) {
-            resolved = true;
             if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
             if (addrInput) addrInput.value = this._lockedPlace;
-            
-            const satLabel = document.querySelector(".sat-label");
-            if (satLabel) satLabel.innerText = this._lockedPlace;
-
             this._tempAddress = this._lockedPlace;
-            this._tempLat = lat;
-            this._tempLng = lng;
-            this.sanitizeSearchIcons();
+            // Show clear button
+            const clearBtn = document.getElementById('map-search-clear');
+            if (clearBtn) clearBtn.style.display = 'flex';
             return;
         }
 
-        // --- PRIORITY 0: PRECISION MAGNETS (High Accuracy) ---
-        let landmark = "";
-        
-        // Aguilar Store Area (Super-Wide)
-        if (lat > 8.4850 && lat < 8.4910 && lng > 124.6520 && lng < 124.6570) {
-            landmark = "Aguilar Store, Macabalan";
-        }
-        // Taroma Store Area (Super-Wide)
-        else if (lat > 8.4870 && lat < 8.4920 && lng > 124.6530 && lng < 124.6580) {
-            landmark = "Taroma Store, Macabalan";
-        }
-        // ZZ LOFT Area (Super-Wide)
-        else if (lat > 8.4870 && lat < 8.4930 && lng > 124.6500 && lng < 124.6560) {
-            landmark = "ZZ LOFT, Hyacinth St";
-        }
-        // Tirso Neri / Barangay 3 Area
-
-        if (landmark) {
-            resolved = true;
-            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 v3.0.1</span>`;
-            if (addrInput) addrInput.value = landmark;
-            this._tempAddress = landmark;
-            this._tempLat = lat;
-            this._tempLng = lng;
-            this.sanitizeSearchIcons();
-            return;
-        }
-
-        // --- GOOGLE ENGINE (Geocoder Fallback) ---
-        if (window.google && this.googleMapsReady) {
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-                if (status === "OK" && results && results.length > 0 && !resolved) {
-                    
-                    // 1. Check for establishment in the primary results
-                    let bestMatch = results.find(r => 
-                        r.types.includes('point_of_interest') || 
-                        r.types.includes('establishment') || 
-                        r.types.includes('restaurant') || 
-                        r.types.includes('cafe') || 
-                        r.types.includes('bar')
-                    );
-
-                    if (bestMatch) {
-                        resolved = true;
-                        this.finalizeAddress(bestMatch, lat, lng);
-                    } else {
-                        // 2. DEEP POI SCAN: If only a street is found, look for nearby businesses within 20m
-                        const placesService = new google.maps.places.PlacesService(document.createElement('div'));
-                        placesService.nearbySearch({
-                            location: { lat, lng },
-                            radius: 25, // Slightly wider scan
-                            type: ['restaurant', 'cafe', 'food', 'bar', 'establishment', 'point_of_interest']
-                        }, (poiResults, poiStatus) => {
-                            if (poiStatus === google.maps.places.PlacesServiceStatus.OK && poiResults && poiResults.length > 0 && !resolved) {
-                                resolved = true;
-                                
-                                // --- THE SNIPER LOGIC: Pick the CLOSEST business to the pin ---
-                                let closestPoi = poiResults[0];
-                                let minDistance = Infinity;
-
-                                poiResults.forEach(poi => {
-                                    const poiLat = poi.geometry.location.lat();
-                                    const poiLng = poi.geometry.location.lng();
-                                    // Simple Euclidean distance for small scales
-                                    const dist = Math.sqrt(Math.pow(lat - poiLat, 2) + Math.pow(lng - poiLng, 2));
-                                    if (dist < minDistance) {
-                                        minDistance = dist;
-                                        closestPoi = poi;
-                                    }
-                                });
-
-                                const poi = closestPoi;
-                                if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
-                                if (addrInput) addrInput.value = poi.name;
-                                
-                                // Also update the satellite label if it exists (for the bottom bar)
-                                const satLabel = document.querySelector(".sat-label");
-                                if (satLabel) satLabel.innerText = poi.name;
-
-                                this._tempAddress = poi.name;
-                                this._tempLat = lat;
-                                this._tempLng = lng;
-                                this.sanitizeSearchIcons();
-                            } else {
-                                // 3. Last Fallback: Use the original street address
-                                resolved = true;
-                                this.finalizeAddress(results[0], lat, lng);
-                            }
-                        });
-                    }
-                }
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&namedetails=1`, {
+                headers: { 'User-Agent': 'IceQube-CDO-App' }
             });
-        }
-
-        // --- BACKUP ENGINE (OpenStreetMap + Deep Search) ---
-        setTimeout(async () => {
-            if (resolved) return;
+            const data = await response.json();
             
-            try {
-                // Use the 'q' parameter to search for businesses near this spot
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-                const data = await response.json();
+            if (data && data.address) {
+                let name = '';
+                let isEstablishment = false;
+                const details = data.address;
+
+                // Priority 1: Named establishment from address details
+                const poiName = details.amenity || details.shop || details.cafe || details.restaurant || 
+                    details.tourism || details.leisure || details.office || details.building;
                 
-                if (data && !resolved) {
-                    resolved = true;
-                    let name = '';
-                    
-                    // Priority 1: Check for specific business/building names in the backup data
-                    const details = data.address;
-                    name = details.amenity || details.shop || details.cafe || details.restaurant || details.tourism || details.building;
-                    
-                    // Priority 2: Keyword Deep Scan (Most Reliable)
-                    const fullAddress = data.display_name.toLowerCase();
-                    
-                    if (fullAddress.includes('aguilar')) {
-                        name = "Aguilar Store, Macabalan";
-                    } else if (fullAddress.includes('kohi') || fullAddress.includes('mina')) {
-                        name = "Kohi Mina Cafe, Pabayo St";
-                    } else if (fullAddress.includes('taroma')) {
-                        name = "Taroma Store, Macabalan";
+                if (poiName && poiName !== 'yes') {
+                    name = poiName;
+                    isEstablishment = true;
+                }
+                // Priority 2: Named result from namedetails
+                else if (data.namedetails && data.namedetails.name) {
+                    name = data.namedetails.name;
+                    isEstablishment = ['amenity','tourism','shop','leisure','office'].includes(data.class);
+                }
+                // Priority 3: Street + neighborhood
+                else {
+                    const road = details.road || details.pedestrian || details.residential || '';
+                    const area = details.suburb || details.neighbourhood || details.village || details.city_district || '';
+                    if (road && area) {
+                        name = `${road}, ${area}`;
+                    } else if (road) {
+                        name = road;
                     } else {
-                        // Neighborhood Memory (Coordinate Backup)
-                        if (lat > 8.4860 && lat < 8.4910 && lng > 124.6520 && lng < 124.6570) {
-                            name = "Aguilar Store, Macabalan";
-                        }
-                    }
-                    
-                    // Priority 3: Fallback to street/neighborhood
-                    if (!name) {
                         name = data.display_name.split(',').slice(0, 2).join(',').trim();
                     }
-                    
-                    if (name.includes('Unnamed Road')) name = 'Spot in Macabalan';
-                    
-                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:var(--accent)">🛰️ SAT</span>`;
-                    if (addrInput) addrInput.value = name;
-                    this._tempAddress = name;
-                    this._tempLat = lat;
-                    this._tempLng = lng;
                 }
-            } catch (e) {
-                if (!resolved && addrInput) addrInput.value = 'Spot: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
+
+                if (name.includes('Unnamed Road')) {
+                    const area = details.suburb || details.neighbourhood || details.city_district || 'CDO';
+                    name = `Pin in ${area}`;
+                }
+
+                if (isEstablishment) {
+                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
+                    this._tempEstablishment = name;
+                } else {
+                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 LIVE</span>`;
+                    this._tempEstablishment = null;
+                }
+                
+                if (addrInput) addrInput.value = name;
+                this._tempAddress = name;
+                this._tempFullAddress = data.display_name;
+
+                // Show clear button when there's text
+                const clearBtn = document.getElementById('map-search-clear');
+                if (clearBtn) clearBtn.style.display = name ? 'flex' : 'none';
             }
-        }, 2000);
+        } catch (e) {
+            console.warn('Reverse geocode error:', e);
+            const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            if (addrInput) addrInput.value = fallback;
+            this._tempAddress = fallback;
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 PIN</span>`;
+        }
     },
     finalizeAddress(target, lat, lng) {
         let name = target.name || target.formatted_address.split(',').slice(0, 2).join(',').trim();
@@ -1430,57 +1343,193 @@ const app = {
 
 
     confirmMapLocation() {
-        // Force resolve: Use coords if address is missing
         if (!this._tempAddress) {
             this._tempAddress = (this._tempLat && this._tempLng) 
                 ? `${this._tempLat.toFixed(4)}, ${this._tempLng.toFixed(4)}`
                 : "Selected Location";
         }
 
+        // Always populate delivery-location with the confirmed address
         const locInput = document.getElementById('delivery-location');
         if (locInput) {
-            // ONLY overwrite if the input is empty or if we specifically found a POI name
-            if (!locInput.value.trim() || this._tempEstablishment) {
-                locInput.value = this._tempAddress;
-            }
+            locInput.value = this._tempAddress;
         }
         
         this.orderData.deliveryDetails.location = this._tempAddress;
-        // Save establishment name if it was a POI
+        this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
         if (this._tempEstablishment) {
             this.orderData.deliveryDetails.establishment = this._tempEstablishment;
         }
         this.orderData.deliveryDetails.lat = this._tempLat || 0;
         this.orderData.deliveryDetails.lng = this._tempLng || 0;
         
-        // Populate the maps link field too
+        // Populate the maps field with address + pin link for rider
         const mapsInput = document.getElementById('delivery-maps');
-        if (mapsInput) {
-            mapsInput.value = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+        if (mapsInput && this._tempLat && this._tempLng) {
+            const displayText = `📍 ${this._tempAddress}`;
+            mapsInput.value = displayText;
             mapsInput.classList.add('populated');
+            mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+            // Store the actual maps link in data
+            this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
         }
         
+        this.hideSearchSuggestions();
         this.closeMapOverlay();
         this.calculateDeliveryFee();
     },
 
     sanitizeSearchIcons() {
-        // Nuclear Option: Recurring sanitation
         const cleaner = () => {
             document.querySelectorAll('.pac-icon, .pac-item:before, .pac-container:after').forEach(el => {
                 el.style.display = 'none';
                 el.style.width = '0';
             });
-            const input = document.getElementById('map-search-input');
-            if (input) {
-                // Clear any weird placeholder text if Google is injecting errors
-                if (input.placeholder.includes('!')) input.placeholder = 'Search for a location...';
-            }
         };
         cleaner();
         setTimeout(cleaner, 100);
         setTimeout(cleaner, 500);
-        setTimeout(cleaner, 1000);
+    },
+
+    // --- V8 LIVE SEARCH ENGINE ---
+    _searchTimer: null,
+    _searchAbort: null,
+
+    onMapSearchInput(value) {
+        const clearBtn = document.getElementById('map-search-clear');
+        if (clearBtn) clearBtn.style.display = value.length > 0 ? 'flex' : 'none';
+
+        // Break any locked place when user starts typing
+        this._lockedPlace = null;
+
+        if (this._searchTimer) clearTimeout(this._searchTimer);
+        if (!value || value.trim().length < 3) {
+            this.hideSearchSuggestions();
+            return;
+        }
+
+        // Show loading state
+        const suggestionsEl = document.getElementById('map-search-suggestions');
+        if (suggestionsEl) {
+            suggestionsEl.style.display = 'block';
+            suggestionsEl.innerHTML = '<div class="suggestion-loading">Searching...</div>';
+        }
+
+        this._searchTimer = setTimeout(() => this._fetchSuggestions(value.trim()), 350);
+    },
+
+    async _fetchSuggestions(query) {
+        if (this._searchAbort) this._searchAbort.abort();
+        this._searchAbort = new AbortController();
+
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Cagayan de Oro, Philippines')}&limit=5&addressdetails=1&namedetails=1`;
+            const res = await fetch(url, {
+                signal: this._searchAbort.signal,
+                headers: { 'User-Agent': 'IceQube-CDO-App' }
+            });
+            const data = await res.json();
+            this.showSearchSuggestions(data, query);
+        } catch (e) {
+            if (e.name !== 'AbortError') console.error('Search error:', e);
+        }
+    },
+
+    showSearchSuggestions(results, query) {
+        const el = document.getElementById('map-search-suggestions');
+        if (!el) return;
+
+        if (!results || results.length === 0) {
+            el.innerHTML = '<div class="suggestion-empty">No results found</div>';
+            el.style.display = 'block';
+            return;
+        }
+
+        const establishmentTypes = ['amenity','tourism','historic','office','shop','leisure','building'];
+        let html = '';
+        results.forEach((item, i) => {
+            const isEstablishment = establishmentTypes.includes(item.class) || 
+                (item.namedetails && item.namedetails.name);
+            const name = (item.namedetails && item.namedetails.name) ? item.namedetails.name : item.display_name.split(',')[0].trim();
+            const addr = item.display_name.split(',').slice(1, 3).join(',').trim();
+            const iconClass = isEstablishment ? 'establishment' : 'address';
+            const icon = isEstablishment ? '🏢' : '📍';
+
+            html += `<div class="suggestion-item" onclick="app.selectSuggestion(${i})" data-lat="${item.lat}" data-lon="${item.lon}" data-name="${name.replace(/"/g, '&quot;')}" data-addr="${item.display_name.replace(/"/g, '&quot;')}" data-class="${item.class || ''}">
+                <div class="suggestion-icon ${iconClass}">${icon}</div>
+                <div class="suggestion-text">
+                    <div class="suggestion-name">${name}</div>
+                    <div class="suggestion-address">${addr}</div>
+                </div>
+            </div>`;
+        });
+
+        el.innerHTML = html;
+        el.style.display = 'block';
+        this._lastSuggestions = results;
+    },
+
+    hideSearchSuggestions() {
+        const el = document.getElementById('map-search-suggestions');
+        if (el) el.style.display = 'none';
+    },
+
+    selectSuggestion(index) {
+        const item = this._lastSuggestions && this._lastSuggestions[index];
+        if (!item) return;
+
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
+        const establishmentTypes = ['amenity','tourism','historic','office','shop','leisure','building'];
+        const isEstablishment = establishmentTypes.includes(item.class) || (item.namedetails && item.namedetails.name);
+        const name = (item.namedetails && item.namedetails.name) ? item.namedetails.name : item.display_name.split(',')[0].trim();
+
+        // Lock the place name
+        this._lockedPlace = name;
+        this._tempAddress = name;
+        this._tempEstablishment = isEstablishment ? name : null;
+        this._tempLat = lat;
+        this._tempLng = lng;
+        // Store full address for rider
+        this._tempFullAddress = item.display_name;
+
+        // Update the search input
+        const input = document.getElementById('map-search-input');
+        if (input) input.value = name;
+
+        // Update badge
+        const badge = document.getElementById('map-badge-container');
+        if (badge) badge.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+
+        // Move map pin to this location
+        if (this.map) {
+            this.map.setView([lat, lng], 18, { animate: true });
+            if (this.mapMarker) this.mapMarker.setLatLng([lat, lng]);
+        } else if (this.googleMap) {
+            this.googleMap.setCenter({ lat, lng });
+            this.googleMap.setZoom(18);
+            if (this.googleMarker) this.googleMarker.setPosition({ lat, lng });
+        }
+
+        // Hide suggestions
+        this.hideSearchSuggestions();
+
+        // Update clear button
+        const clearBtn = document.getElementById('map-search-clear');
+        if (clearBtn) clearBtn.style.display = 'flex';
+    },
+
+    clearMapSearch() {
+        const input = document.getElementById('map-search-input');
+        if (input) { input.value = ''; input.focus(); }
+        const clearBtn = document.getElementById('map-search-clear');
+        if (clearBtn) clearBtn.style.display = 'none';
+        this._lockedPlace = null;
+        this._tempAddress = null;
+        this._tempEstablishment = null;
+        this.hideSearchSuggestions();
+        const badge = document.getElementById('map-badge-container');
+        if (badge) badge.innerHTML = '';
     },
 
     toggleMapType() {
@@ -1512,6 +1561,7 @@ const app = {
     },
 
     closeMapOverlay() {
+        this.hideSearchSuggestions();
         document.getElementById('map-overlay').classList.remove('active');
     },
 
@@ -1931,7 +1981,7 @@ const app = {
         placeOrderBtn.disabled = true;
         document.getElementById('summary-delivery-fee').innerText = 'Calculating route...';
 
-        const { distanceKm, routeTimeMins } = await this.fetchRoutingDistance(pinLink || `${lng},${lat}`);
+        const { distanceKm, routeTimeMins } = await this.fetchRoutingDistance(lat && lng ? `${lng},${lat}` : pinLink);
 
         let fee = 0;
         let zone = '';
