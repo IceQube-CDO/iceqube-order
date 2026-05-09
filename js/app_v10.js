@@ -3384,9 +3384,14 @@ const app = {
             const elem = document.getElementById('printable-soa-document');
             this.soaPanzoom = Panzoom(elem, {
                 maxScale: 3,
-                minScale: 0.5,
-                contain: 'outside',
-                startScale: 0.8 // Initial zoom to fit better on screen
+                minScale: 0.1,
+                contain: null,
+                origin: 'top center', // Pin top edge so no gap appears when scaling
+                handleStartEvent: (event) => {
+                    if (event.type === 'mousedown' || event.type === 'touchstart') {
+                        event.stopPropagation();
+                    }
+                }
             });
 
             elem.parentElement.addEventListener('wheel', (e) => {
@@ -3394,10 +3399,10 @@ const app = {
             });
         }
         
-        // Center the document on open
+        // Center the document on open with a slight delay for rendering
         setTimeout(() => {
             this.resetSOAZoom();
-        }, 50);
+        }, 200);
         
         // Set default custom range to today
         const todayStr = new Date().toISOString().split('T')[0];
@@ -3446,15 +3451,25 @@ const app = {
 
     resetSOAZoom() {
         if (this.soaPanzoom) {
-            this.soaPanzoom.reset({ animate: true });
+            this.soaPanzoom.reset({ animate: false });
             
-            // Auto-scale to fit width on small screens
-            const viewportWidth = document.getElementById('soa-viewport').clientWidth;
-            const paperWidth = 794; // 210mm at 96dpi
-            if (viewportWidth < paperWidth + 80) {
-                const scale = (viewportWidth - 40) / paperWidth;
-                this.soaPanzoom.zoom(scale, { animate: true });
-            }
+            const viewport = document.getElementById('soa-viewport');
+            const paper = document.getElementById('printable-soa-document');
+            
+            if (!viewport || !paper) return;
+
+            const vWidth = viewport.clientWidth;
+            const vHeight = viewport.clientHeight;
+            const pWidth = paper.offsetWidth || 794;
+            const pHeight = paper.offsetHeight || 1123;
+
+            // Fit entire document in viewport (constrained by height on desktop)
+            const scaleW = (vWidth - 60) / pWidth;
+            const scaleH = (vHeight - 40) / pHeight;
+            const finalScale = Math.min(scaleW, scaleH);
+
+            this.soaPanzoom.zoom(finalScale, { animate: false });
+            this.soaPanzoom.pan(0, 0, { animate: false });
         }
     },
 
@@ -3536,6 +3551,11 @@ const app = {
         // Update Summary Stats
         document.getElementById('soa-debt').innerText = '₱1,665.00';
         document.getElementById('soa-available').innerText = '₱835.00';
+
+        // Re-scale to fit the new content
+        setTimeout(() => {
+            this.resetSOAZoom();
+        }, 100);
     },
 
     openPOInvoice(poNumber) {

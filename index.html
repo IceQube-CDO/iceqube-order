@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-content">
     <title>IceQube CDO | Premium Crystal Ice</title>
     <meta name="description" content="Order premium crystal clear ice in Cagayan de Oro. Fast delivery and high-quality ice cubes.">
     <link rel="stylesheet" href="css/style_v10.css?v=10.5.6">
@@ -27,9 +27,9 @@
         }
         html {
             height: 100%;
-            overflow: hidden;
-            overflow-x: hidden;
-            overscroll-behavior-x: none;
+            overflow: auto;
+            overflow-x: auto;
+            overscroll-behavior-x: auto;
         }
         body {
             margin: 0 !important;
@@ -37,9 +37,9 @@
             width: 100% !important;
             height: 100vh !important;
             height: 100dvh !important;
-            overflow: hidden !important;
-            overflow-x: hidden !important;
-            overscroll-behavior-x: none !important;
+            overflow: auto !important;
+            overflow-x: auto !important;
+            overscroll-behavior-x: auto !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
@@ -386,10 +386,7 @@
     <div class="app-container" style="padding-top: 4px; min-height: 100vh; position: relative; z-index: 1;">
             <!-- Step 1: START (Hero) -->
             <section id="step-start" class="step-content active" style="padding: 1rem; padding-top: calc(1rem + env(safe-area-inset-top));">
-                <div id="sync-status-badge" style="position: absolute; top: 80px; right: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.2); z-index: 100;">
-                    <span id="sync-dot" style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span>
-                    LOCAL (OFF)
-                </div>
+
                 <div id="cloud-sync-badge" style="position: absolute; top: 110px; right: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.2); z-index: 100;">
                     <span id="cloud-dot" style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span>
                     CLOUD (OFF)
@@ -2453,6 +2450,8 @@
             console.log('App Safety Reset: All panels closed.');
         });
     </script>
+</div> <!-- closes app-shell -->
+
     <!-- Payment Settlement Overlay -->
     <div id="secure-checkout-overlay" class="fullscreen-modal" style="display: none;">
         
@@ -2527,12 +2526,10 @@
                 <h2 class="soa-title">Statement of Account</h2>
                 <div style="display: flex; gap: 8px;">
                     <button class="soa-print-btn secondary" onclick="app.resetSOAZoom()" title="Reset Zoom">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                        <span>Reset View</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
                     </button>
                     <button class="soa-print-btn" onclick="window.print()" title="Print or Save PDF">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        <span>Print / Save</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                     </button>
                 </div>
             </div>
@@ -2635,7 +2632,11 @@
             <div class="soa-footer">
                 <p><strong>Payment Terms:</strong> Strictly Net 7 Days. Please settle via the IceQube App.</p>
                 <p>This is a system-generated document. For disputes, contact billing@iceqube.cdo.</p>
-            </div> <!-- close soa-paper -->
+            </div> <!-- close soa-footer -->
+            
+            <div class="soa-seal hide-on-print"></div>
+            
+        </div> <!-- close soa-paper -->
         </div> <!-- close soa-viewport -->
     </div> <!-- close soa-overlay -->
     <!-- Digital Receipt Panel -->
@@ -2730,7 +2731,7 @@
             </div> <!-- closes receipt-actions -->
         </div> <!-- closes panel-content -->
     </div> <!-- closes receipt-panel -->
-</div> <!-- closes app-shell -->
+
 
     <script>
         // PWA Service Worker Registration
@@ -2752,20 +2753,7 @@
         }
         'use strict';
 
-        // 1. Block pinch-to-zoom gestures (Safari)
-        document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
-        document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
-        document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
-
-        // 2. Block double-tap zoom
-        var lastTouchEnd = 0;
-        document.addEventListener('touchend', function(e) {
-            var now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, { passive: false });
+        // Zoom and gestures are now allowed for better accessibility and panning.
 
         // 3. Dynamically re-enforce viewport meta on input focus
         // Some in-app browsers (Messenger, LINE) override the meta tag;

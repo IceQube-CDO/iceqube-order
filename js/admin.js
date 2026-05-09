@@ -45,6 +45,7 @@ var admin = {
     cashflowFilter: 'daily', 
     vacationMode: JSON.parse(localStorage.getItem('iceqube_vacation_mode') || 'false'),
     autoDispatchType: 'broadcast',
+    _autoRefreshIntervalId: null,
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
@@ -212,6 +213,17 @@ var admin = {
         this.updateRentalUI();
         this.checkMonthlyReset();
         this.updateDates();
+
+        // Restore active tab
+        const lastTab = localStorage.getItem('iceqube_admin_tab');
+        if (lastTab) {
+            this.switchView(lastTab);
+        }
+
+        // Check Session Unlock
+        if (sessionStorage.getItem('iceqube_admin_unlocked') === 'true') {
+            this.unlock(true); // silent unlock
+        }
 
         // Local Sync Listener
         if (window.IceQubeSync) {
@@ -460,14 +472,18 @@ var admin = {
         }, 500);
     },
 
-    unlock() {
+    unlock(silent = false) {
         const gate = document.getElementById('admin-gate');
         const dashboard = document.getElementById('command-center');
         
         gate.classList.add('unlocked');
         dashboard.style.display = 'flex';
         
-        console.log('--- ACCESS GRANTED: COMMAND CENTER ONLINE ---');
+        if (!silent) console.log('--- ACCESS GRANTED: COMMAND CENTER ONLINE ---');
+        
+        // Persist session
+        sessionStorage.setItem('iceqube_admin_unlocked', 'true');
+
         this.startDataSync();
         
         // Close dropdown when clicking outside
@@ -484,9 +500,9 @@ var admin = {
         // Initial fetch
         await this.fetchRealStats();
         
-        // Auto-refresh every 30 seconds (prevent stacking intervals)
+        // Auto-refresh every 10 seconds for "real-time" feel without page reload
         if (this._syncIntervalId) clearInterval(this._syncIntervalId);
-        this._syncIntervalId = setInterval(() => this.fetchRealStats(), 30000);
+        this._syncIntervalId = setInterval(() => this.fetchRealStats(), 10000);
         
         // Add entrance animation
         this.animateCards();
@@ -670,6 +686,9 @@ var admin = {
                 }
             }
         });
+
+        // Persist Tab
+        localStorage.setItem('iceqube_admin_tab', viewId);
         
         if (viewId === 'assets') {
             this.updateMaintenanceUI();
