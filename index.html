@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,6 +65,21 @@
             box-shadow: 0 0 150px rgba(0,0,0,0.8) !important;
             margin: 0 auto !important;
         }
+        .soa-zoom-controls {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 8px;
+            gap: 4px;
+            z-index: 1000;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
         #app {
             width: 100%;
             max-width: 100%;
@@ -106,8 +120,8 @@
             max-width: 100%;
             background: white;
             z-index: 500;
-            padding: 1rem;
-            padding-top: calc(1rem + env(safe-area-inset-top));
+            padding: 1.5rem 1rem 1rem;
+            padding-top: calc(1.5rem + env(safe-area-inset-top));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -267,12 +281,21 @@
             color: white;
             transform: scale(0.95);
         }
+        .soa-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
+            border-bottom: 3px solid #f1f5f9; 
+            padding-bottom: 30px; 
+            margin-bottom: 50px; 
+            width: 100%;
+        }
         .payment-steps-guide {
-            display: flex;
-            justify-content: space-between;
-            margin: 1.5rem 0;
-            padding: 0 0.5rem;
+            background: #f1f5f9; /* Soft desk-like background */
+            display: block; /* Remove flex centering */
+            padding: 0;
             position: relative;
+            cursor: grab;
         }
         .payment-steps-guide::after {
             content: '';
@@ -343,6 +366,7 @@
             transform: scale(0.9);
             background: #e2e8f0;
         }
+        .soa-paper { padding-top: 60px; margin: 0; }
     </style>
     <style>
         .btn-choice {
@@ -385,7 +409,7 @@
         <main id="app">
     <div class="app-container" style="padding-top: 4px; min-height: 100vh; position: relative; z-index: 1;">
             <!-- Step 1: START (Hero) -->
-            <section id="step-start" class="step-content active" style="padding: 1rem; padding-top: calc(1rem + env(safe-area-inset-top));">
+            <section id="step-start" class="step-content active" style="padding: 1.5rem; padding-top: calc(1.5rem + env(safe-area-inset-top));">
 
                 <div id="cloud-sync-badge" style="position: absolute; top: 110px; right: 15px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(239, 68, 68, 0.2); z-index: 100;">
                     <span id="cloud-dot" style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span>
@@ -405,7 +429,7 @@
                         </defs>
                     </svg>
                     <img src="./assets/logo.png" alt="IceQube Logo" class="brand-logo logo-cutout">
-                    <h1 class="landing-title">IceQube CDO</h1>
+                    <h1 class="landing-title">IceQube <span style="color: #2563eb; font-size: 0.85em;">CDO</span></h1>
                 </div>
                 <p class="subtitle">Solid-Core Cubes. No Holes. The New Standard for CDO’s Finest Drinks.</p>
                 <div class="hero-actions">
@@ -762,7 +786,35 @@
                 </div>
 
                 <div id="logistics-pickup" class="logistics-subview">
-                    <h2 style="font-size: 1.2rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.5rem;">Pickup Info</h2>
+                    <h2 style="font-size: 1.2rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.25rem;">Pickup Info</h2>
+                    <p class="subtitle" style="margin-bottom: 0.75rem;">Enter your details for order identification.</p>
+                    
+                    <div class="input-stack" style="margin-bottom: 1.5rem;">
+                        <!-- Establishment Input -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m6 0v1a3 3 0 0 0 6 0V7M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17M9 12h6M9 16h6"/></svg>
+                            </div>
+                            <input type="text" id="pickup-establishment" class="input-high-contrast" placeholder="Customer's Name or Establishment" required>
+                        </div>
+
+                        <!-- Person Picking Up -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <input type="text" id="pickup-person" class="input-high-contrast" placeholder="Person Picking Up">
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div class="premium-input-group">
+                            <div class="input-icon-left">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </div>
+                            <input type="tel" id="pickup-contact" class="input-high-contrast" placeholder="Contact Number (09XX XXX XXXX)" maxlength="13">
+                        </div>
+                    </div>
+
                     <p class="subtitle">Our hub details for self-pickup.</p>
                     <div class="pickup-card premium-hub-card">
                         <div class="hub-header-minimal">
@@ -1940,7 +1992,7 @@
                 <!-- Tab: Hub -->
                 <div class="about-tab-pane" id="pane-about-hub">
                     <div class="hub-card">
-                        <h4>IceQube CDO Hub</h4>
+                        <h4>IceQube <span style="color: #2563eb; font-size: 0.85em;">CDO</span> Hub</h4>
                         <p>Piaping Itum, Macabalan, Cagayan de Oro City</p>
                         
                         <a href="https://www.google.com/maps/place/IceQube/@8.5020529,124.6582801,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu&g_ep=EgoyMDI2MDQyMC4wIKXMDSoASAFQAw%3D%3D" 
@@ -2240,7 +2292,7 @@
             <div class="sheet-header" style="position: relative;">
                 <div class="handle"></div>
                 <button onclick="app.toggleBottomSheet('debt', false)" style="position: absolute; left: 15px; top: 20px; background: transparent; border: none; padding: 10px; cursor: pointer; z-index: 10;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </button>
                 <h3>Total Debt Breakdown</h3>
                 <h1 class="total-debt-display">₱1,665.00</h1>
@@ -2395,7 +2447,7 @@
             <div class="photo-upload-zone">
                 <button class="upload-trigger" id="report-upload-trigger" onclick="document.getElementById('report-photo-input').click()">
                     <span id="upload-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                     </span>
                     <span id="upload-text">Snap Photo of Product</span>
                 </button>
@@ -2450,9 +2502,124 @@
             console.log('App Safety Reset: All panels closed.');
         });
     </script>
-</div> <!-- closes app-shell -->
+        <!-- Statement of Account (SOA) Overlay -->
+        <div id="soa-overlay" class="soa-overlay">
+            <div class="soa-controls hide-on-print">
+                <div class="header-actions">
+                    <button class="control-btn" onclick="app.closeSOA()" aria-label="Back">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h2 class="soa-title">Statement of Account</h2>
+                    <div class="pinned-header-controls">
+                        <button class="control-btn" onclick="app.resetSOAZoom()" title="Reset Zoom">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                        </button>
+                        <button class="print-btn" onclick="window.print()" title="Print">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label>Statement Period:</label>
+                        <select id="soa-date-filter" onchange="app.generateLedger()">
+                            <option value="current">May 2026 (Month-to-Date)</option>
+                            <option value="last_month">April 2026</option>
+                            <option value="custom">Custom Range...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="custom-range-inputs" style="display: none;">
+                        <div class="premium-picker-card compact" onclick="this.querySelector('input').showPicker()">
+                            <div class="picker-icon-wrapper small" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div class="picker-info">
+                                <label style="color: #94a3b8; font-size: 8px; font-weight: 800;">START</label>
+                                <div id="display-soa-start" class="picker-display-value" style="color: #0f172a; font-size: 11px; font-weight: 700;">Select Date</div>
+                            </div>
+                            <input type="date" id="soa-start-date" class="hidden-input" oninput="app.handleSOADateChange('start', this.value)">
+                        </div>
 
-    <!-- Payment Settlement Overlay -->
+                        <div class="premium-picker-card compact" onclick="this.querySelector('input').showPicker()">
+                            <div class="picker-icon-wrapper small" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div class="picker-info">
+                                <label style="color: #94a3b8; font-size: 8px; font-weight: 800;">END</label>
+                                <div id="display-soa-end" class="picker-display-value" style="color: #0f172a; font-size: 11px; font-weight: 700;">Select Date</div>
+                            </div>
+                            <input type="date" id="soa-end-date" class="hidden-input" oninput="app.handleSOADateChange('end', this.value)">
+                        </div>
+
+                        <button class="btn-generate-soa" onclick="app.generateLedger(true)">Generate</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="soa-viewport" id="soa-viewport">
+                <div style="height: 100px; width: 100%; pointer-events: none;"></div> <!-- RE-CALIBRATED GAP -->
+                
+                <div id="printable-soa-document" class="soa-paper">
+                    <div class="soa-header">
+                        <div class="brand-block">
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                <img src="./assets/logo.png" alt="IceQube" style="height: 44px; width: auto; mix-blend-mode: multiply; filter: contrast(1.1);">
+                                <h1 class="logo-text" style="margin: 0;">IceQube</h1>
+                            </div>
+                            <p><strong>STATEMENT OF ACCOUNT (LEDGER)</strong></p>
+                            <p class="meta-text" id="generation-timestamp">Generated: May 26, 2026 @ 08:30 AM</p>
+                        </div>
+                        <div class="client-block">
+                            <p><strong>BILLED TO:</strong></p>
+                            <h3 id="client-name">Loft Living CDO</h3>
+                            <p id="client-tier">Account Type: Elite PO</p>
+                        </div>
+                    </div>
+
+                    <div class="dynamic-summary">
+                        <div class="stat-box">
+                            <span>Credit Limit</span>
+                            <strong id="soa-credit-limit">₱2,500.00</strong>
+                        </div>
+                        <div class="stat-box">
+                            <span>Available Power</span>
+                            <strong id="soa-available">₱835.00</strong>
+                        </div>
+                        <div class="stat-box highlight">
+                            <span>CURRENT DEBT</span>
+                            <strong id="soa-debt">₱1,665.00</strong>
+                        </div>
+                    </div>
+
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Activity / Reference</th>
+                                <th class="align-right">Charge (Debit)</th>
+                                <th class="align-right">Payment (Credit)</th>
+                                <th class="align-right">Running Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledger-table-body">
+                            <!-- Data will be injected here by app.js -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="soa-footer">
+                        <p><strong>Payment Terms:</strong> Strictly Net 7 Days. Please settle via the IceQube App.</p>
+                        <p>This is a system-generated document. For disputes, contact billing@iceqube.cdo.</p>
+                    </div>
+                    
+                    <div class="soa-seal hide-on-print"></div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- closes app-shell -->
+
+    <!-- Payment Settlement Overlay (Remaining outside for true fullscreen feel) -->
     <div id="secure-checkout-overlay" class="fullscreen-modal" style="display: none;">
         
         <div class="checkout-header" style="display: flex; align-items: center; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -2516,128 +2683,6 @@
         </div>
     </div>
 
-    <!-- Statement of Account (SOA) Overlay -->
-    <div id="soa-overlay" class="fullscreen-modal" style="display: none; background: #f8fafc; z-index: 5000; overflow-y: auto;">
-        <div class="soa-controls hide-on-print">
-            <div class="header-actions">
-                <button class="back-btn" onclick="app.closeSOA()" aria-label="Back">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                </button>
-                <h2 class="soa-title">Statement of Account</h2>
-                <div style="display: flex; gap: 8px;">
-                    <button class="soa-print-btn secondary" onclick="app.resetSOAZoom()" title="Reset Zoom">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                    </button>
-                    <button class="soa-print-btn" onclick="window.print()" title="Print or Save PDF">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label>Statement Period:</label>
-                    <select id="soa-date-filter" onchange="app.generateLedger()">
-                        <option value="current">May 2026 (Month-to-Date)</option>
-                        <option value="last_month">April 2026</option>
-                        <option value="custom">Custom Range...</option>
-                    </select>
-                </div>
-                
-                <div id="custom-range-inputs" style="display: none;">
-                    <div class="premium-picker-card compact" onclick="this.querySelector('input').showPicker()">
-                        <div class="picker-icon-wrapper small" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        </div>
-                        <div class="picker-info">
-                            <label style="color: #94a3b8; font-size: 8px; font-weight: 800;">START</label>
-                            <div id="display-soa-start" class="picker-display-value" style="color: #0f172a; font-size: 11px; font-weight: 700;">Select Date</div>
-                        </div>
-                        <input type="date" id="soa-start-date" class="hidden-input" oninput="app.handleSOADateChange('start', this.value)">
-                    </div>
-
-                    <div class="premium-picker-card compact" onclick="this.querySelector('input').showPicker()">
-                        <div class="picker-icon-wrapper small" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        </div>
-                        <div class="picker-info">
-                            <label style="color: #94a3b8; font-size: 8px; font-weight: 800;">END</label>
-                            <div id="display-soa-end" class="picker-display-value" style="color: #0f172a; font-size: 11px; font-weight: 700;">Select Date</div>
-                        </div>
-                        <input type="date" id="soa-end-date" class="hidden-input" oninput="app.handleSOADateChange('end', this.value)">
-                    </div>
-
-                    <button class="btn-generate-soa" onclick="app.generateLedger(true)">Generate</button>
-                </div>
-
-
-            </div>
-        </div>
-
-        <div class="soa-viewport" id="soa-viewport">
-            <div class="soa-zoom-controls hide-on-print">
-                <button onclick="app.soaZoom(1.1)" title="Zoom In">＋</button>
-                <div class="zoom-divider"></div>
-                <button onclick="app.soaZoom(0.9)" title="Zoom Out">－</button>
-            </div>
-            
-            <div id="printable-soa-document" class="soa-paper">
-            
-            <div class="soa-header">
-                <div class="brand-block">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                        <img src="./assets/logo.png" alt="IceQube" style="height: 44px; width: auto; mix-blend-mode: multiply; filter: contrast(1.1);">
-                        <h1 class="logo-text" style="margin: 0;">IceQube</h1>
-                    </div>
-                    <p><strong>STATEMENT OF ACCOUNT (LEDGER)</strong></p>
-                    <p class="meta-text" id="generation-timestamp">Generated: May 26, 2026 @ 08:30 AM</p>
-                </div>
-                <div class="client-block">
-                    <p><strong>BILLED TO:</strong></p>
-                    <h3 id="client-name">Loft Living CDO</h3>
-                    <p id="client-tier">Account Type: Elite PO</p>
-                </div>
-            </div>
-
-            <div class="dynamic-summary">
-                <div class="stat-box">
-                    <span>Credit Limit</span>
-                    <strong id="soa-credit-limit">₱2,500.00</strong>
-                </div>
-                <div class="stat-box">
-                    <span>Available Power</span>
-                    <strong class="good" id="soa-available">₱835.00</strong>
-                </div>
-                <div class="stat-box highlight">
-                    <span>CURRENT DEBT</span>
-                    <strong class="alert" id="soa-debt">₱1,665.00</strong>
-                </div>
-            </div>
-
-            <table class="ledger-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Activity / Reference</th>
-                        <th class="align-right">Charge (Debit)</th>
-                        <th class="align-right">Payment (Credit)</th>
-                        <th class="align-right">Running Balance</th>
-                    </tr>
-                </thead>
-                <tbody id="ledger-table-body">
-                    <!-- Data will be injected here by app.js -->
-                </tbody>
-            </table>
-            
-            <div class="soa-footer">
-                <p><strong>Payment Terms:</strong> Strictly Net 7 Days. Please settle via the IceQube App.</p>
-                <p>This is a system-generated document. For disputes, contact billing@iceqube.cdo.</p>
-            </div> <!-- close soa-footer -->
-            
-            <div class="soa-seal hide-on-print"></div>
-            
-        </div> <!-- close soa-paper -->
-        </div> <!-- close soa-viewport -->
     </div> <!-- close soa-overlay -->
     <!-- Digital Receipt Panel -->
     <div id="receipt-overlay" class="panel-overlay" onclick="app.togglePanel('receipt', false)"></div>
@@ -2751,7 +2796,8 @@
                 });
             });
         }
-        'use strict';
+        (function() {
+            'use strict';
 
         // Zoom and gestures are now allowed for better accessibility and panning.
 

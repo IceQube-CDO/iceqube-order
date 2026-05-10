@@ -855,7 +855,7 @@ const app = {
         this.map = L.map('map-container', {
             zoomControl: false,
             attributionControl: false
-        }).setView(cdoCoords, 14);
+        }).setView(cdoCoords, 18);
         
         // Google Maps Tiles Fallback (English labels and PH region)
         L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=en&gl=ph&x={x}&y={y}&z={z}', {
@@ -922,19 +922,27 @@ const app = {
             }
             this.googleMap = new google.maps.Map(mapContainer, {
                 center: cdoCoords,
-                zoom: 14,
+                zoom: 18,
+                maxZoom: 21, // Allow ultra-deep zoom
+                minZoom: 12,
                 disableDefaultUI: true,
                 zoomControl: true,
                 zoomControlOptions: {
                     position: google.maps.ControlPosition.RIGHT_BOTTOM
                 },
                 styles: [
-                    { "featureType": "administrative", "elementType": "labels.text.fill", "stylers": [{ "color": "#444444" }] },
-                    { "featureType": "landscape", "elementType": "all", "stylers": [{ "color": "#f2f2f2" }] },
-                    { "featureType": "road", "elementType": "all", "stylers": [{ "saturation": -100 }, { "lightness": 45 }] },
-                    { "featureType": "road.highway", "elementType": "all", "stylers": [{ "visibility": "simplified" }] },
-                    { "featureType": "road.arterial", "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-                    { "featureType": "transit", "elementType": "all", "stylers": [{ "visibility": "off" }] },
+                    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#1a73e8" }] },
+                    { "featureType": "poi.business", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "poi.government", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "poi.medical", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "poi.park", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "poi.place_of_worship", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "poi.school", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "poi.sports_complex", "elementType": "all", "stylers": [{ "visibility": "on" }] },
+                    { "featureType": "road", "elementType": "all", "stylers": [{ "saturation": -20 }, { "lightness": 10 }] },
+                    { "featureType": "landscape.man_made", "elementType": "all", "stylers": [{ "visibility": "on" }, { "color": "#f8fafc" }] },
+                    { "featureType": "building", "elementType": "all", "stylers": [{ "visibility": "on" }, { "color": "#cbd5e1" }] },
+                    { "featureType": "transit", "elementType": "all", "stylers": [{ "visibility": "on" }] },
                     { "featureType": "water", "elementType": "all", "stylers": [{ "color": "#4285F4" }, { "visibility": "on" }, { "lightness": 60 }] }
                 ]
             });
@@ -972,7 +980,7 @@ const app = {
                             
                             // Snap the map exactly to the business door
                             this.googleMap.setCenter(place.geometry.location);
-                            this.googleMap.setZoom(18);
+                            this.googleMap.setZoom(20); // Deep zoom on selection
                             
                             // Finalize instantly, bypassing all guessing logic
                             this.finalizeAddress(place, place.geometry.location.lat(), place.geometry.location.lng());
@@ -1260,7 +1268,107 @@ const app = {
             if (clearBtn) clearBtn.style.display = 'flex';
             return;
         }
+        // --- V10.3: MULTI-STRATEGY PRECISION LOOKUP ---
+        let name = "";
+        let isEstablishment = false;
+        let fullAddress = "";
 
+        // STRATEGY 1: GOOGLE PLACES (BEST FOR BUSINESSES)
+        if (window.google && google.maps && google.maps.places && this.googleMap) {
+            try {
+                const placesService = new google.maps.places.PlacesService(this.googleMap);
+                const nearby = await new Promise((resolve) => {
+                    placesService.nearbySearch({
+                        location: { lat, lng },
+                        radius: 20, // Tight 20m radius for pinpoint precision
+                        rankBy: google.maps.places.RankBy.PROMINENCE
+                    }, (results, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK) resolve(results);
+                        else resolve(null);
+                    });
+                });
+
+                if (nearby && nearby.length > 0) {
+                    // Skip administrative areas
+                    const areaTypes = ['locality', 'neighborhood', 'political', 'sublocality', 'country'];
+                    const best = nearby.find(r => !r.types.some(t => areaTypes.includes(t)));
+                    
+                    if (best && best.name) {
+                        name = best.name;
+                        isEstablishment = true;
+                        fullAddress = best.vicinity || best.name;
+                    }
+                }
+            } catch (err) {
+                console.warn('Strategy 1 (Places) failed:', err);
+            }
+        }
+
+        // STRATEGY 2: GOOGLE GEOCODER (BEST FOR STREET ADDRESSES)
+        if (!isEstablishment && window.google && google.maps && google.maps.Geocoder) {
+            try {
+                const geocoder = new google.maps.Geocoder();
+                const response = await Promise.race([
+                    new Promise((resolve, reject) => {
+                        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+                            if (status === "OK") resolve(results);
+                            else reject(status);
+                        });
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject('timeout'), 1500))
+                ]);
+
+                if (response && response.length > 0) {
+                    // Find anything specific (not a broad area or a whole district/barangay)
+                    const areaTypes = [
+                        'locality', 'neighborhood', 'political', 'sublocality', 
+                        'administrative_area_level_1', 'administrative_area_level_2', 
+                        'administrative_area_level_3', 'administrative_area_level_4', 
+                        'administrative_area_level_5', 'country', 'postal_code'
+                    ];
+                    
+                    // Try to find the most specific result that is NOT one of those area types
+                    const specificResult = response.find(r => !r.types.some(t => areaTypes.includes(t)));
+                    
+                    if (specificResult) {
+                        name = specificResult.name || specificResult.formatted_address.split(',')[0].trim();
+                        isEstablishment = specificResult.types.includes('establishment') || specificResult.types.includes('point_of_interest');
+                        fullAddress = specificResult.formatted_address;
+                    } else {
+                        // Fallback to the first result but filter out area names from the label
+                        const first = response[0];
+                        const parts = first.formatted_address.split(',');
+                        // If the first part is a number or street, use it. 
+                        // In PH, addresses often start with block/lot or street name.
+                        name = parts.slice(0, 2).join(',').trim();
+                        fullAddress = first.formatted_address;
+                    }
+                }
+            } catch (err) {
+                console.warn('Strategy 2 (Geocoder) failed:', err);
+            }
+        }
+
+        // FINALIZE GOOGLE RESULTS
+        if (name) {
+            if (isEstablishment) {
+                if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
+                this._tempEstablishment = name;
+            } else {
+                if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 LIVE</span>`;
+                this._tempEstablishment = null;
+            }
+            if (addrInput) addrInput.value = name;
+            this._tempAddress = name;
+            this._tempFullAddress = fullAddress;
+            const satLabel = document.querySelector(".sat-label");
+            if (satLabel) satLabel.innerText = name;
+            const clearBtn = document.getElementById('map-search-clear');
+            if (clearBtn) clearBtn.style.display = 'flex';
+            return;
+        }
+
+        // STRATEGY 3: OSM/NOMINATIM FALLBACK
         try {
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&namedetails=1`, {
                 headers: { 'User-Agent': 'IceQube-CDO-App' }
@@ -1271,6 +1379,7 @@ const app = {
                 let name = '';
                 let isEstablishment = false;
                 const details = data.address;
+                this._lastNominatimDetails = details; // Save for fallback
 
                 // Priority 1: Named establishment from address details
                 const poiName = details.amenity || details.shop || details.cafe || details.restaurant || 
@@ -1285,43 +1394,69 @@ const app = {
                     name = data.namedetails.name;
                     isEstablishment = ['amenity','tourism','shop','leisure','office'].includes(data.class);
                 }
-                // Priority 3: Street + neighborhood
+                // Priority 3: Street (Explicitly avoid using Barangay/Area as primary name)
                 else {
                     const road = details.road || details.pedestrian || details.residential || '';
-                    const area = details.suburb || details.neighbourhood || details.village || details.city_district || '';
-                    if (road && area) {
-                        name = `${road}, ${area}`;
-                    } else if (road) {
+                    if (road) {
                         name = road;
                     } else {
-                        name = data.display_name.split(',').slice(0, 2).join(',').trim();
+                        // If no road, use display name but skip the first part if it's a known area
+                        const parts = data.display_name.split(',');
+                        name = parts.slice(0, 2).join(',').trim();
                     }
                 }
 
-                if (name.includes('Unnamed Road')) {
-                    const area = details.suburb || details.neighbourhood || details.city_district || 'CDO';
-                    name = `Pin in ${area}`;
-                }
-
-                if (isEstablishment) {
-                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
-                    this._tempEstablishment = name;
-                } else {
-                    if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 LIVE</span>`;
-                    this._tempEstablishment = null;
-                }
-                
                 if (addrInput) addrInput.value = name;
                 this._tempAddress = name;
                 this._tempFullAddress = data.display_name;
-
-                // Show clear button when there's text
-                const clearBtn = document.getElementById('map-search-clear');
-                if (clearBtn) clearBtn.style.display = name ? 'flex' : 'none';
             }
         } catch (e) {
-            console.warn('Reverse geocode error:', e);
-            const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            console.warn('Strategy 3 (Nominatim) failed:', e);
+        }
+
+        // STRATEGY 4: DEEP OSM SEARCH (OVERPASS API) - EXTREMELY ROBUST FALLBACK
+        if (!name) {
+            try {
+                const overpassQuery = `[out:json][timeout:3];(node(around:50,${lat},${lng})["name"];way(around:50,${lat},${lng})["name"];);out center body;`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+                let response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`, { signal: controller.signal })
+                    .catch(() => fetch(`https://overpass.kumi.systems/api/interpreter?data=${encodeURIComponent(overpassQuery)}`, { signal: controller.signal }));
+                
+                clearTimeout(timeoutId);
+                if (response) {
+                    const data = await response.json();
+                    if (data && data.elements && data.elements.length > 0) {
+                        const skip = [
+                            'highway', 'traffic_signals', 'street_lamp', 'bench', 
+                            'boundary', 'admin_level', 'place', 'city_district', 
+                            'suburb', 'neighborhood'
+                        ];
+                        const best = data.elements.find(el => el.tags && el.tags.name && !Object.keys(el.tags).some(k => skip.includes(k)));
+                        
+                        if (best && best.tags && best.tags.name) {
+                            name = best.tags.name;
+                            isEstablishment = true;
+                            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 BIZ</span>`;
+                            if (addrInput) addrInput.value = name;
+                            this._tempAddress = name;
+                            this._tempEstablishment = name;
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Strategy 4 (Overpass) failed:', err);
+            }
+        }
+
+        // LAST RESORT FALLBACK
+        if (!name) {
+            // Try to use a saved road from previous strategies
+            const savedRoad = (this._lastNominatimDetails && this._lastNominatimDetails.road) ? this._lastNominatimDetails.road : '';
+            const fallback = savedRoad ? `Near ${savedRoad}` : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
             if (addrInput) addrInput.value = fallback;
             this._tempAddress = fallback;
             if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 PIN</span>`;
@@ -1444,17 +1579,311 @@ const app = {
         if (this._searchAbort) this._searchAbort.abort();
         this._searchAbort = new AbortController();
 
-        try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Cagayan de Oro, Philippines')}&limit=5&addressdetails=1&namedetails=1`;
-            const res = await fetch(url, {
-                signal: this._searchAbort.signal,
-                headers: { 'User-Agent': 'IceQube-CDO-App' }
-            });
-            const data = await res.json();
-            this.showSearchSuggestions(data, query);
-        } catch (e) {
-            if (e.name !== 'AbortError') console.error('Search error:', e);
+        let resultsFound = false;
+
+        // STRATEGY 1: GOOGLE PLACES AUTOCOMPLETE
+        if (window.google && google.maps && google.maps.places) {
+            try {
+                const service = new google.maps.places.AutocompleteService();
+                const predictions = await Promise.race([
+                    new Promise((resolve) => {
+                        service.getPlacePredictions({
+                            input: query,
+                            locationBias: { radius: 10000, center: { lat: 8.4772, lng: 124.6459 } },
+                            componentRestrictions: { country: 'ph' }
+                        }, (results, status) => {
+                            if (status === google.maps.places.PlacesServiceStatus.OK) resolve(results);
+                            else resolve(null);
+                        });
+                    }),
+                    new Promise((resolve) => setTimeout(() => resolve(null), 2000))
+                ]);
+
+                if (predictions && predictions.length > 0) {
+                    this.showGoogleSuggestions(predictions, query);
+                    resultsFound = true;
+                    return;
+                }
+            } catch (err) {
+                console.warn('Autocomplete failed:', err);
+            }
+
+            // STRATEGY 1B: GOOGLE TEXT SEARCH (DEEPER SEARCH)
+            try {
+                const placesService = new google.maps.places.PlacesService(this.googleMap || document.createElement('div'));
+                const textResults = await Promise.race([
+                    new Promise((resolve) => {
+                        placesService.textSearch({
+                            query: query + ', Cagayan de Oro',
+                            location: { lat: 8.4772, lng: 124.6459 },
+                            radius: 5000
+                        }, (results, status) => {
+                            if (status === google.maps.places.PlacesServiceStatus.OK) resolve(results);
+                            else resolve(null);
+                        });
+                    }),
+                    new Promise((resolve) => setTimeout(() => resolve(null), 2500)) // 2.5s timeout
+                ]);
+
+                if (textResults && textResults.length > 0) {
+                    this.showGoogleSearchResults(textResults);
+                    resultsFound = true;
+                    return;
+                }
+            } catch (err) {
+                console.warn('TextSearch failed:', err);
+            }
         }
+
+        // STRATEGY 2: OSM NOMINATIM FALLBACK
+        if (!resultsFound) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Cagayan de Oro')}&limit=5&addressdetails=1&namedetails=1`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const res = await fetch(url, {
+                    signal: controller.signal,
+                    headers: { 'User-Agent': 'IceQube-CDO-App' }
+                });
+                clearTimeout(timeoutId);
+                const data = await res.json();
+                
+                if (data && data.length > 0) {
+                    this.showSearchSuggestions(data, query);
+                    resultsFound = true;
+                }
+            } catch (e) {
+                console.warn('OSM Search failed:', e);
+            }
+        }
+
+        // STRATEGY 3: DEEP OVERPASS SEARCH (BROADER)
+        if (!resultsFound) {
+            try {
+                const overpassQuery = `[out:json][timeout:5];(node["name"~"${query}",i](around:10000,8.4772,124.6459);way["name"~"${query}",i](around:10000,8.4772,124.6459);relation["name"~"${query}",i](around:10000,8.4772,124.6459););out center body;`;
+                // Try main server, then mirror
+                let response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`).catch(() => null);
+                if (!response) response = await fetch(`https://overpass.kumi.systems/api/interpreter?data=${encodeURIComponent(overpassQuery)}`).catch(() => null);
+                
+                if (response) {
+                    const data = await response.json();
+                    if (data && data.elements && data.elements.length > 0) {
+                        this.showOverpassSuggestions(data.elements, query);
+                        resultsFound = true;
+                    }
+                }
+            } catch (err) {
+                console.warn('Overpass failed:', err);
+            }
+        }
+
+        if (!resultsFound) {
+            const el = document.getElementById('map-search-suggestions');
+            if (el) {
+                el.innerHTML = `
+                    <div class="suggestion-item" onclick="app.useManualSearchName('${query.replace(/'/g, "\\'")}')">
+                        <div class="suggestion-icon">📍</div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-name">Use "${query}"</div>
+                            <div class="suggestion-address">Pin this name to current location</div>
+                        </div>
+                    </div>
+                    <div class="suggestion-empty">No other results found</div>
+                `;
+                el.style.display = 'block';
+            }
+        }
+    },
+
+    useManualSearchName(name) {
+        this._lockedPlace = name;
+        this._tempAddress = name;
+        this._tempEstablishment = name;
+        
+        const input = document.getElementById('map-search-input');
+        if (input) input.value = name;
+
+        const badge = document.getElementById('map-badge-container');
+        if (badge) badge.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 MANUAL</span>`;
+
+        const satLabel = document.querySelector(".sat-label");
+        if (satLabel) satLabel.innerText = name;
+
+        this.hideSearchSuggestions();
+    },
+
+    showGoogleSearchResults(results) {
+        const el = document.getElementById('map-search-suggestions');
+        if (!el) return;
+
+        let html = '';
+        results.slice(0, 5).forEach((item, i) => {
+            const name = item.name;
+            const addr = item.formatted_address || item.vicinity;
+            const isEstablishment = true; // textSearch results are usually establishments
+            
+            html += `<div class="suggestion-item" onclick="app.selectGoogleSearchResult(${i})">
+                <div class="suggestion-icon establishment">🏢</div>
+                <div class="suggestion-text">
+                    <div class="suggestion-name">${name}</div>
+                    <div class="suggestion-address">${addr}</div>
+                </div>
+            </div>`;
+        });
+
+        el.innerHTML = html;
+        el.style.display = 'block';
+        this._lastGoogleResults = results;
+    },
+
+    selectGoogleSearchResult(index) {
+        const item = this._lastGoogleResults && this._lastGoogleResults[index];
+        if (!item) return;
+
+        const lat = item.geometry.location.lat();
+        const lng = item.geometry.location.lng();
+        const name = item.name;
+
+        this._lockedPlace = name;
+        this._tempAddress = name;
+        this._tempLat = lat;
+        this._tempLng = lng;
+        this._tempFullAddress = item.formatted_address;
+
+        const input = document.getElementById('map-search-input');
+        if (input) input.value = name;
+
+        const badge = document.getElementById('map-badge-container');
+        if (badge) badge.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+
+        if (this.googleMap) {
+            this.googleMap.setCenter({ lat, lng });
+            this.googleMap.setZoom(18);
+            if (this.googleMarker) this.googleMarker.setPosition({ lat, lng });
+        }
+        this.hideSearchSuggestions();
+    },
+
+    showOverpassSuggestions(elements, query) {
+        const el = document.getElementById('map-search-suggestions');
+        if (!el) return;
+
+        let html = '';
+        elements.slice(0, 5).forEach((item, i) => {
+            const name = item.tags.name;
+            const addr = item.tags['addr:street'] ? `${item.tags['addr:street']}, ${item.tags['addr:city'] || 'CDO'}` : 'Local Business';
+            
+            html += `<div class="suggestion-item" onclick="app.selectOverpassSuggestion(${i})">
+                <div class="suggestion-icon establishment">🏢</div>
+                <div class="suggestion-text">
+                    <div class="suggestion-name">${name}</div>
+                    <div class="suggestion-address">${addr}</div>
+                </div>
+            </div>`;
+        });
+
+        el.innerHTML = html;
+        el.style.display = 'block';
+        this._lastOverpassSuggestions = elements;
+    },
+
+    selectOverpassSuggestion(index) {
+        const item = this._lastOverpassSuggestions && this._lastOverpassSuggestions[index];
+        if (!item) return;
+
+        const lat = item.lat;
+        const lng = item.lon;
+        const name = item.tags.name;
+
+        this._lockedPlace = name;
+        this._tempAddress = name;
+        this._tempLat = lat;
+        this._tempLng = lng;
+
+        const input = document.getElementById('map-search-input');
+        if (input) input.value = name;
+
+        const badge = document.getElementById('map-badge-container');
+        if (badge) badge.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+
+        if (this.googleMap) {
+            this.googleMap.setCenter({ lat, lng });
+            this.googleMap.setZoom(20);
+            if (this.googleMarker) this.googleMarker.setPosition({ lat, lng });
+        } else if (this.map) {
+            this.map.setView([lat, lng], 20);
+            if (this.mapMarker) this.mapMarker.setLatLng([lat, lng]);
+        }
+        this.hideSearchSuggestions();
+    },
+
+    showGoogleSuggestions(predictions, query) {
+        const el = document.getElementById('map-search-suggestions');
+        if (!el) return;
+
+        let html = '';
+        predictions.forEach((item, i) => {
+            const name = item.structured_formatting.main_text;
+            const addr = item.structured_formatting.secondary_text;
+            const isEstablishment = item.types.includes('establishment') || item.types.includes('point_of_interest');
+            const iconClass = isEstablishment ? 'establishment' : 'address';
+            const icon = isEstablishment ? '🏢' : '📍';
+
+            html += `<div class="suggestion-item" onclick="app.selectGoogleSuggestion(${i})">
+                <div class="suggestion-icon ${iconClass}">${icon}</div>
+                <div class="suggestion-text">
+                    <div class="suggestion-name">${name}</div>
+                    <div class="suggestion-address">${addr}</div>
+                </div>
+            </div>`;
+        });
+
+        el.innerHTML = html;
+        el.style.display = 'block';
+        this._lastGoogleSuggestions = predictions;
+    },
+
+    async selectGoogleSuggestion(index) {
+        const item = this._lastGoogleSuggestions && this._lastGoogleSuggestions[index];
+        if (!item || !this.googleMap) return;
+
+        const placesService = new google.maps.places.PlacesService(this.googleMap);
+        try {
+            const details = await new Promise((resolve, reject) => {
+                placesService.getDetails({ placeId: item.place_id, fields: ['geometry', 'name', 'formatted_address'] }, (res, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK) resolve(res);
+                    else reject(status);
+                });
+            });
+
+            if (details && details.geometry) {
+                const lat = details.geometry.location.lat();
+                const lng = details.geometry.location.lng();
+                const name = details.name || item.structured_formatting.main_text;
+
+                this._lockedPlace = name;
+                this._tempAddress = name;
+                this._tempLat = lat;
+                this._tempLng = lng;
+                this._tempFullAddress = details.formatted_address;
+
+                const input = document.getElementById('map-search-input');
+                if (input) input.value = name;
+
+                const badge = document.getElementById('map-badge-container');
+                if (badge) badge.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+
+                if (this.googleMap) {
+                    this.googleMap.setCenter({ lat, lng });
+                    this.googleMap.setZoom(20);
+                    if (this.googleMarker) this.googleMarker.setPosition({ lat, lng });
+                }
+            }
+        } catch (err) {
+            console.error('Select Google suggestion failed:', err);
+        }
+        this.hideSearchSuggestions();
     },
 
     showSearchSuggestions(results, query) {
@@ -1477,7 +1906,7 @@ const app = {
             const iconClass = isEstablishment ? 'establishment' : 'address';
             const icon = isEstablishment ? '🏢' : '📍';
 
-            html += `<div class="suggestion-item" onclick="app.selectSuggestion(${i})" data-lat="${item.lat}" data-lon="${item.lon}" data-name="${name.replace(/"/g, '&quot;')}" data-addr="${item.display_name.replace(/"/g, '&quot;')}" data-class="${item.class || ''}">
+            html += `<div class="suggestion-item" onclick="app.selectSuggestion(${i})">
                 <div class="suggestion-icon ${iconClass}">${icon}</div>
                 <div class="suggestion-text">
                     <div class="suggestion-name">${name}</div>
@@ -2147,6 +2576,17 @@ const app = {
                 maps: document.getElementById('delivery-maps').value,
                 lat: this._tempLat,
                 lng: this._tempLng
+            };
+        } else if (this.logisticsState === 'pickup') {
+            this.orderData.deliveryDetails = {
+                establishment: document.getElementById('pickup-establishment').value,
+                person: document.getElementById('pickup-person').value,
+                contact: document.getElementById('pickup-contact').value,
+                physical_address: 'Self-Pickup @ Macabalan Hub',
+                instructions: 'Customer Pickup',
+                maps: '',
+                lat: null,
+                lng: null
             };
         }
         
@@ -2827,6 +3267,10 @@ const app = {
                 this.totalDebtToCollect || 0
             ).catch(err => console.error('Order generation failed:', err));
 
+            // 5.5. AUTO-FILL PROFILE FOR FIRST-TIME CUSTOMERS
+            // If no profile exists yet, save the delivery details as the user's Account Settings
+            this.autoFillProfileFromOrder();
+
             // 6. AUTO-CLOSE TIMER
             this.initiateAutoClose();
 
@@ -3377,32 +3821,33 @@ const app = {
     },
 
     openSOA(poNumber) {
+        document.body.classList.add('soa-active');
         document.getElementById('soa-overlay').style.display = 'flex';
         
         // Initialize Panzoom if not already done
         if (!this.soaPanzoom) {
             const elem = document.getElementById('printable-soa-document');
             this.soaPanzoom = Panzoom(elem, {
-                maxScale: 3,
+                maxScale: 6,
                 minScale: 0.1,
-                contain: null,
-                origin: 'top center', // Pin top edge so no gap appears when scaling
-                handleStartEvent: (event) => {
-                    if (event.type === 'mousedown' || event.type === 'touchstart') {
-                        event.stopPropagation();
-                    }
-                }
+                contain: 'inside',
+                origin: 'top center'
             });
 
+            // Robust manual wheel zooming
             elem.parentElement.addEventListener('wheel', (e) => {
-                this.soaPanzoom.zoomWithWheel(e);
-            });
+                e.preventDefault();
+                const delta = e.deltaY;
+                const scale = this.soaPanzoom.getScale();
+                const newScale = scale * (delta > 0 ? 0.92 : 1.08);
+                this.soaPanzoom.zoom(newScale, { focal: e, animate: true });
+            }, { passive: false });
         }
         
         // Center the document on open with a slight delay for rendering
         setTimeout(() => {
             this.resetSOAZoom();
-        }, 200);
+        }, 300);
         
         // Set default custom range to today
         const todayStr = new Date().toISOString().split('T')[0];
@@ -3436,6 +3881,7 @@ const app = {
     },
 
     closeSOA() {
+        document.body.classList.remove('soa-active');
         document.getElementById('soa-overlay').style.display = 'none';
         if (this.soaPanzoom) {
             this.soaPanzoom.reset();
@@ -3450,27 +3896,17 @@ const app = {
     },
 
     resetSOAZoom() {
-        if (this.soaPanzoom) {
-            this.soaPanzoom.reset({ animate: false });
-            
-            const viewport = document.getElementById('soa-viewport');
-            const paper = document.getElementById('printable-soa-document');
-            
-            if (!viewport || !paper) return;
+        if (!this.soaPanzoom) return;
+        const viewport = document.getElementById('soa-viewport');
+        const doc = document.getElementById('printable-soa-document');
+        if (!viewport || !doc) return;
 
-            const vWidth = viewport.clientWidth;
-            const vHeight = viewport.clientHeight;
-            const pWidth = paper.offsetWidth || 794;
-            const pHeight = paper.offsetHeight || 1123;
+        const containerWidth = viewport.clientWidth;
+        const docWidth = doc.offsetWidth;
+        const scale = containerWidth / docWidth;
 
-            // Fit entire document in viewport (constrained by height on desktop)
-            const scaleW = (vWidth - 60) / pWidth;
-            const scaleH = (vHeight - 40) / pHeight;
-            const finalScale = Math.min(scaleW, scaleH);
-
-            this.soaPanzoom.zoom(finalScale, { animate: false });
-            this.soaPanzoom.pan(0, 0, { animate: false });
-        }
+        this.soaPanzoom.zoom(scale, { animate: true });
+        this.soaPanzoom.pan(0, 0, { animate: true });
     },
 
     generateLedger(isCustomSubmit = false) {
@@ -3492,7 +3928,9 @@ const app = {
 
         // Update timestamp
         const now = new Date();
-        timestamp.innerText = `Generated: ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} @ ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+        if (timestamp) {
+            timestamp.innerText = `Generated: ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} @ ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+        }
 
         // Mock data based on the period
         let data = [];
@@ -4177,6 +4615,14 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 if (latInput) latInput.value = this.user.savedLat || '';
                 if (lngInput) lngInput.value = this.user.savedLng || '';
                 if (msgInput) msgInput.value = this.user.messengerId || '';
+                
+                // Pre-fill Pickup Form (New)
+                const pickEst = document.getElementById('pickup-establishment');
+                const pickPer = document.getElementById('pickup-person');
+                const pickNum = document.getElementById('pickup-contact');
+                if (pickEst) pickEst.value = this.user.companyName;
+                if (pickPer) pickPer.value = this.user.contactPerson;
+                if (pickNum) pickNum.value = this.user.contactNumber;
 
                 this.updateMessengerStatusUI();
 
@@ -4223,6 +4669,14 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         this.user.savedLat = lat;
         this.user.savedLng = lng;
 
+        // Also sync to Pickup fields if they exist
+        const pickEst = document.getElementById('pickup-establishment');
+        const pickPer = document.getElementById('pickup-person');
+        const pickNum = document.getElementById('pickup-contact');
+        if (pickEst) pickEst.value = establishment;
+        if (pickPer) pickPer.value = contactPerson;
+        if (pickNum) pickNum.value = contactNumber;
+
         this.updateMessengerStatusUI();
 
         // Update UI
@@ -4231,6 +4685,72 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
         this.showToast("✅ Profile Updated Successfully", 'success');
         this.toggleBottomSheet('profile', false);
+    },
+
+    /**
+     * AUTO-FILL PROFILE FOR FIRST-TIME CUSTOMERS
+     * When a first-time customer places their first order (Delivery or Pickup),
+     * automatically populate Account Settings with the same details so they
+     * don't have to re-enter everything manually.
+     */
+    autoFillProfileFromOrder() {
+        // Only auto-fill if no profile has been saved yet (first-time customer)
+        const existingProfile = localStorage.getItem('iceqube_user_profile');
+        if (existingProfile) {
+            console.log('👤 Profile already exists — skipping auto-fill.');
+            return;
+        }
+
+        // Works for both delivery and pickup orders
+        const details = this.orderData.deliveryDetails;
+        if (!details || !details.establishment) {
+            console.log('📦 No delivery details to auto-fill profile from.');
+            return;
+        }
+
+        // Build the profile object from order delivery details
+        const profile = {
+            establishment: details.establishment || '',
+            contactPerson: details.person || '',
+            contactNumber: details.contact || '',
+            messengerId: this.user.messengerId || '',
+            address: details.physical_address || details.maps || '',
+            lat: details.lat || '',
+            lng: details.lng || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        // Save to localStorage
+        localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+
+        // Update live app state
+        this.user.companyName = profile.establishment;
+        this.user.contactPerson = profile.contactPerson;
+        this.user.contactNumber = profile.contactNumber;
+        this.user.savedAddress = profile.address;
+        this.user.savedLat = profile.lat;
+        this.user.savedLng = profile.lng;
+
+        // Pre-fill the Account Settings form inputs so they're ready if the user opens it
+        const estInput = document.getElementById('profile-establishment');
+        const perInput = document.getElementById('profile-contact-person');
+        const numInput = document.getElementById('profile-contact-number');
+        const addrInput = document.getElementById('profile-address');
+        const latInput = document.getElementById('profile-lat');
+        const lngInput = document.getElementById('profile-lng');
+
+        if (estInput) estInput.value = profile.establishment;
+        if (perInput) perInput.value = profile.contactPerson;
+        if (numInput) numInput.value = profile.contactNumber;
+        if (addrInput) addrInput.value = profile.address;
+        if (latInput) latInput.value = profile.lat || '';
+        if (lngInput) lngInput.value = profile.lng || '';
+
+        // Update the displayed name in the dashboard
+        const nameElem = document.getElementById('user-full-name');
+        if (nameElem) nameElem.innerText = profile.establishment;
+
+        console.log('✅ Auto-filled Account Settings from first order:', profile.establishment);
     },
 
     updateMessengerStatusUI() {

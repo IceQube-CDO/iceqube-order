@@ -2075,6 +2075,28 @@ input:checked + .slider:before {
     z-index: 2100;
 }
 
+.soa-viewport {
+    overflow-x: hidden !important;
+}
+
+.soa-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 1000000 !important;
+    display: none;
+    flex-direction: column;
+}
+
+/* Hide map controls and background noise when SOA is open */
+.soa-overlay[style*="display: flex"] ~ * .gmnoprint,
+.soa-overlay[style*="display: flex"] ~ * .gm-style-cc {
+    display: none !important;
+}
+
 /* Receipt Verification Overlay */
 .verification-overlay {
     position: absolute;
@@ -2180,8 +2202,9 @@ input:checked + .slider:before {
 
 .bottom-panel .panel-header {
     padding: 0 20px;
-    padding-top: env(safe-area-inset-top);
-    height: calc(60px + env(safe-area-inset-top));
+    padding-top: calc(15px + env(safe-area-inset-top));
+    height: auto;
+    min-height: calc(60px + env(safe-area-inset-top));
     border-bottom: none;
     display: flex;
     align-items: center;
@@ -4136,7 +4159,30 @@ input:checked + .slider:before {
     font-weight: 800;
 }
 
+.soa-zoom-controls button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
 
+.soa-zoom-controls button:active {
+    transform: scale(0.9);
+    background: #1d4ed8;
+}
+
+.soa-paper {
+    box-shadow: none !important;
+}
 
 .premium-picker-row {
     display: grid;
@@ -4778,6 +4824,7 @@ input:checked + .slider:before {
     border-radius: 0 !important;
     box-shadow: none !important;
 }
+
 
 .map-overlay-content {
     background: white;
@@ -6085,7 +6132,7 @@ input:checked + .slider:before {
 }
 
 .sheet-header {
-    padding: 12px 20px 20px;
+    padding: calc(15px + env(safe-area-inset-top)) 20px 20px;
     text-align: center;
     position: relative;
 }
@@ -6680,50 +6727,49 @@ input:checked + .slider:before {
 }
 
 /* --- Premium Statement of Account (SOA) Styles --- */
-#soa-overlay { 
-    display: flex; 
-    flex-direction: column; 
-    overflow: hidden !important; 
-    background: #020617;
-    padding: 0 !important;
+/* TOTAL BLACKOUT: Hide all background noise when SOA is active */
+body.soa-active .gmnoprint, 
+body.soa-active .gm-style-cc,
+body.soa-active .bottom-nav,
+body.soa-active .floating-action-btn,
+body.soa-active .cc-tabs,
+body.soa-active .app-header {
+    display: none !important;
+}
+
+.soa-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 1000000 !important;
+    display: none;
+    flex-direction: column;
+    padding-top: 44px; /* SAFE AREA BUFFER for notches/status bars */
 }
 
 .soa-controls { 
-    background: #020617; /* Deep Black */
-    padding: 24px; 
+    background: #020617; 
+    padding: 16px 20px; /* ULTRA COMPACT PADDING */
     color: white; 
     border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
     z-index: 100;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 480px; /* STRICT LOCK TO DASHBOARD WIDTH (480px) */
+    margin: 0 auto;
+    box-sizing: border-box;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 .header-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 8px; /* COMPACT MARGIN */
     gap: 15px;
-}
-
-.header-actions .back-btn {
-    color: white;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    flex-shrink: 0;
-}
-
-.header-actions .back-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateX(-2px);
 }
 
 .soa-title {
@@ -6735,10 +6781,24 @@ input:checked + .slider:before {
     letter-spacing: -0.01em;
 }
 
-.soa-print-btn {
+.control-btn {
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.print-btn {
+    width: 44px;
+    height: 44px;
+    background: #2563eb;
     color: white;
     border: none;
     border-radius: 12px;
@@ -6746,93 +6806,69 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-    flex-shrink: 0;
 }
 
-.soa-print-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4);
-    filter: brightness(1.1);
+.pinned-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.soa-print-btn.secondary {
+.header-zoom-btn {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #94a3b8;
-    box-shadow: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
 }
 
-.soa-print-btn.secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+.header-zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.2);
+}
+
+.header-zoom-btn:active {
+    transform: scale(0.95);
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.header-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 4px;
 }
 
 .soa-viewport {
     flex: 1;
     width: 100%;
+    max-width: 480px; /* STRICT LOCK TO DASHBOARD WIDTH (480px) */
+    margin: 0 auto;
     overflow: hidden;
-    background: #020617;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Pin document to top */
-    padding: 20px; 
+    background: #f1f5f9; 
+    display: block; 
+    padding: 0;
     position: relative;
     cursor: grab;
-}
-
-.soa-viewport:active {
-    cursor: grabbing;
-}
-
-.soa-zoom-controls {
-    position: absolute;
-    bottom: 30px;
-    right: 30px;
-    display: flex;
-    flex-direction: column;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    overflow: hidden;
-    z-index: 1000;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-}
-
-.soa-zoom-controls button {
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.soa-zoom-controls button:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.zoom-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.1);
-    margin: 0 8px;
+    overflow-x: hidden !important;
 }
 
 .filter-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 16px;
     align-items: center;
-    background: #020617; /* Deep Black */
+    justify-content: flex-start;
+    background: #020617;
     padding: 10px 24px 24px 24px;
     color: white;
     border-radius: 0 0 24px 24px;
@@ -6903,24 +6939,27 @@ input:checked + .slider:before {
 .soa-paper { 
     background: white; 
     color: #0f172a; 
-    width: 210mm; 
-    min-height: 297mm; 
-    padding: 25mm; 
-    border-radius: 4px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5); 
+    width: 794px; /* Natural A4-style width */
+    min-height: 1123px; 
+    margin: 0; 
+    padding: 60px; 
+    border-radius: 0; 
     font-family: 'Inter', -apple-system, sans-serif; 
     transform-origin: top center;
     flex-shrink: 0;
     display: block;
     position: relative;
+    box-shadow: none !important;
 }
 
 .soa-header { 
     display: flex; 
     justify-content: space-between; 
+    align-items: flex-start;
     border-bottom: 3px solid #f1f5f9; 
     padding-bottom: 30px; 
-    margin-bottom: 40px; 
+    margin-bottom: 50px; 
+    width: 100%;
 }
 
 .logo-text { 
