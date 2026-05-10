@@ -586,10 +586,9 @@ const app = {
             instructions: 'Gate 2, Side Entrance. Regular delivery spot.'
         };
 
-        if (document.getElementById('delivery-location')) {
-            document.getElementById('delivery-location').value = this.orderData.deliveryDetails.location;
+        if (document.getElementById('delivery-person')) {
             document.getElementById('delivery-person').value = this.orderData.deliveryDetails.person;
-                        document.getElementById('delivery-contact').value = this.formatPhone(this.orderData.deliveryDetails.contact);
+            document.getElementById('delivery-contact').value = this.formatPhone(this.orderData.deliveryDetails.contact);
             document.getElementById('delivery-instructions').value = this.orderData.deliveryDetails.instructions;
             document.getElementById('delivery-maps').value = 'Pinned: Loft Living CDO';
             
@@ -742,28 +741,11 @@ const app = {
 
         // --- Step-Specific Initialization ---
         if (index === 3) { // Logistics Step
-            const locInput = document.getElementById('delivery-location');
             const perInput = document.getElementById('delivery-person');
             const conInput = document.getElementById('delivery-contact');
             
-            if (locInput && !locInput.value && this.user.companyName && this.user.companyName !== 'Guest Customer') {
-                locInput.value = this.user.companyName;
-                this.handleLocationInput(this.user.companyName); 
-                
-                // If we have saved GPS, apply it too
-                if (this.user.savedLat && this.user.savedLng) {
-                    this.orderData.deliveryDetails.lat = this.user.savedLat;
-                    this.orderData.deliveryDetails.lng = this.user.savedLng;
-                    this.orderData.deliveryDetails.location = this.user.savedAddress || this.user.companyName;
-                    
-                    const mapsInput = document.getElementById('delivery-maps');
-                    if (mapsInput) {
-                        mapsInput.value = `📍 ${this.user.savedAddress || 'Saved Pin'}`;
-                        this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this.user.savedLat},${this.user.savedLng},17z`;
-                    }
-                    this.calculateDeliveryFee();
-                }
-            }
+            // Note: delivery-location is now purely manual per user request
+            
             if (perInput && !perInput.value && this.user.contactPerson) {
                 perInput.value = this.user.contactPerson;
             }
@@ -1193,52 +1175,7 @@ const app = {
     _locationTimer: null,
     handleLocationInput(value) {
         this.orderData.deliveryDetails.location = value;
-        
-        if (this._locationTimer) clearTimeout(this._locationTimer);
-        
-        if (value.length < 3) {
-            this.hideEstablishmentBadge();
-            return;
-        }
-
-        // Search for establishments as user types
-        this._locationTimer = setTimeout(async () => {
-            try {
-                const query = encodeURIComponent(`${value}, Cagayan de Oro, Philippines`);
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=5`, {
-                    headers: { 'User-Agent': 'IceQube-CDO-Ordering-App' }
-                });
-                const data = await res.json();
-                
-                // Identify if any result is an establishment or landmark
-                const establishment = data.find(item => 
-                    ['establishment', 'university', 'hospital', 'hotel', 'cafe', 'restaurant', 'theatre', 'bank', 'place_of_worship'].includes(item.type) || 
-                    ['amenity', 'tourism', 'historic', 'office', 'shop'].includes(item.class)
-                );
-
-                if (establishment) {
-                    const lat = parseFloat(establishment.lat);
-                    const lon = parseFloat(establishment.lon);
-                    
-                    this.orderData.deliveryDetails.lat = lat;
-                    this.orderData.deliveryDetails.lng = lon;
-                    
-                    const mapsInput = document.getElementById('delivery-maps');
-                    if (mapsInput) {
-                        mapsInput.value = `https://www.google.com/maps/@${lat},${lon},17z`;
-                        mapsInput.classList.add('populated');
-                    }
-                    
-                    this.showEstablishmentBadge(establishment.display_name);
-                    this.calculateDeliveryFee(); // Trigger fee calculation for new pin
-                } else {
-                    this.hideEstablishmentBadge();
-                    // Just continue as manual text if no direct match found
-                }
-            } catch (e) {
-                console.error("Location lookup error:", e);
-            }
-        }, 800);
+        // Auto-lookup disabled per user request to keep input manual
     },
 
     showEstablishmentBadge(fullName) {
@@ -1559,10 +1496,9 @@ const app = {
             this.showToast("📍 Location Pinned to Profile", 'success');
         } else {
             // Regular Order Logic
-            const locInput = document.getElementById('delivery-location');
-            if (locInput) locInput.value = this._tempAddress;
+            // Note: We no longer auto-fill delivery-location with the map address (manual entry only)
             
-            this.orderData.deliveryDetails.location = this._tempAddress;
+            this.orderData.deliveryDetails.location = document.getElementById('delivery-location')?.value || this._tempAddress;
             this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
             if (this._tempEstablishment) {
                 this.orderData.deliveryDetails.establishment = this._tempEstablishment;
