@@ -1218,23 +1218,12 @@
                 <button class="btn-back-icon" onclick="app.closeMapOverlay()">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </button>
-                <div class="header-title-stack">
+                <div class="header-title-stack" style="flex: 1; text-align: center;">
                     <h2 style="font-size: 1.1rem; margin-bottom: 0; font-weight: 800; letter-spacing: -0.01em;">Select Location</h2>
-                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Pin your delivery point precisely</p>
                 </div>
-                <button id="btn-locate-me-text" class="btn-text-minimal" onclick="app.geolocateUser()" title="Use My Location">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-                    Locate Me
-                </button>
-                <button id="map-type-toggle" class="btn-text-minimal" onclick="app.toggleMapType()" title="Satellite View" style="margin-right: 0; min-width: 90px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    Satellite
-                </button>
             </div>
 
-
-
-            <div class="map-card-container">
+            <div class="map-card-container" style="flex: 1; position: relative;">
                 <div id="map-container" class="hub-style-map"></div>
                 <div class="center-pin-overlay">
                     <div class="pin-wrap">
@@ -1246,7 +1235,7 @@
             </div>
 
             <div class="map-footer-minimal">
-                <div class="address-display-hub unified-search" style="position: relative;">
+                <div class="address-display-hub unified-search" style="position: relative; margin-bottom: 12px;">
                     <div id="map-badge-container" class="badge-container-minimal"></div>
                     <input type="text" id="map-search-input" placeholder="Search establishment or address..." oninput="app.onMapSearchInput(this.value)" onkeyup="if(event.key === 'Enter') { app.searchLocation(this.value); app.hideSearchSuggestions(); }" autocomplete="off">
                     <button id="map-search-clear" class="search-clear-btn" onclick="app.clearMapSearch()" style="display: none;">
@@ -1257,6 +1246,17 @@
                     </div>
                     <!-- Live Search Suggestions Dropdown -->
                     <div id="map-search-suggestions" class="map-search-suggestions" style="display: none;"></div>
+                </div>
+
+                <div class="map-sub-controls" style="display: flex; gap: 8px; justify-content: center;">
+                    <button id="btn-locate-me-text" class="btn-text-minimal" onclick="app.geolocateUser()" title="Use My Location" style="flex: 1; margin: 0;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+                        Locate Me
+                    </button>
+                    <button id="map-type-toggle" class="btn-text-minimal" onclick="app.toggleMapType()" title="Satellite View" style="flex: 1; margin: 0; min-width: 90px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        Satellite
+                    </button>
                 </div>
                 
                 <div class="map-actions-grid">

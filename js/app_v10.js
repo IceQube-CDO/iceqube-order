@@ -1041,30 +1041,79 @@ const app = {
         const badgeElem = document.getElementById('map-badge-container');
         const addrInput = document.getElementById('map-search-input');
         const originalText = addrInput ? addrInput.value : '';
-        if (badgeElem && !silent) badgeElem.innerHTML = '<span class="scanning-badge">Locating...</span>';
+        
+        if (badgeElem && !silent) {
+            badgeElem.innerHTML = '<span class="scanning-badge">Refining GPS...</span>';
+        }
 
+        // V10.4: Extended timeout and high accuracy forced
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                const { latitude, longitude } = position.coords;
+                const { latitude, longitude, accuracy } = position.coords;
                 const latlng = [latitude, longitude];
                 
-                if (this.googleMap && this.googleMarker) {
+                // Dynamic Zoom: The more accurate, the deeper we zoom
+                let zoomLevel = 18;
+                if (accuracy && accuracy < 25) zoomLevel = 20; // Pinpoint accuracy
+                else if (accuracy && accuracy < 60) zoomLevel = 19; // Street level
+                
+                if (this.googleMap) {
                     const pos = { lat: latitude, lng: longitude };
                     this.googleMap.setCenter(pos);
-                    this.googleMap.setZoom(17);
-                    this.googleMarker.setPosition(pos);
-                    this.reverseGeocode(latitude, longitude);
+                    this.googleMap.setZoom(zoomLevel);
+                    if (this.googleMarker) this.googleMarker.setPosition(pos);
                 } else if (this.map && this.mapMarker) {
-                    this.map.setView(latlng, 17);
+                    this.map.setView(latlng, zoomLevel);
                     this.mapMarker.setLatLng(latlng);
-                    this.reverseGeocode(latitude, longitude);
                 }
+
+                if (badgeElem && !silent) {
+                    if (accuracy && accuracy < 30) {
+                        badgeElem.innerHTML = '<span class="live-badge" style="background:#16a34a;">📍 HIGH PRECISION</span>';
+                    } else {
+                        badgeElem.innerHTML = '<span class="live-badge">📍 LOCATED</span>';
+                    }
+                    // Fade out badge after 3s
+                    setTimeout(() => {
+                        if (badgeElem.innerHTML.includes('LOCATED') || badgeElem.innerHTML.includes('PRECISION')) {
+                            badgeElem.innerHTML = '';
+                        }
+                    }, 3000);
+                }
+
+                this.reverseGeocode(latitude, longitude);
             },
             (error) => {
-                if (addrInput && !silent) addrInput.value = originalText;
-                if (!silent) console.warn("Geolocation Error:", error);
+                if (badgeElem && !silent) badgeElem.innerHTML = '';
+                if (!silent) {
+                    console.warn("Geolocation Error:", error);
+                    // If it's a timeout, it likely means the device couldn't get a GPS lock in time.
+                    // We try once more with high accuracy disabled to at least get a network-based location.
+                    if (error.code === error.TIMEOUT) {
+                        this.showToast("GPS timeout. Using network location...", "info");
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                const lat = pos.coords.latitude;
+                                const lng = pos.coords.longitude;
+                                if (this.googleMap) {
+                                    this.googleMap.setCenter({ lat, lng });
+                                    this.googleMap.setZoom(17);
+                                } else if (this.map) {
+                                    this.map.setView([lat, lng], 17);
+                                }
+                                this.reverseGeocode(lat, lng);
+                            },
+                            null,
+                            { enableHighAccuracy: false, timeout: 5000 }
+                        );
+                    }
+                }
             },
-            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            { 
+                enableHighAccuracy: true, 
+                timeout: 10000, // Increased from 5s to 10s to allow GPS warm-up
+                maximumAge: 0   // Force fresh coordinates
+            }
         );
     },
     
