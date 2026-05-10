@@ -3757,7 +3757,7 @@ input:checked + .slider:before {
 }
 
 .brand-logo {
-    height: 42px; /* Balanced premium size */
+    height: 32px; /* Reduced to 75% */
     width: auto;
     flex-shrink: 0;
 }
@@ -5892,7 +5892,7 @@ input:checked + .slider:before {
     position: absolute;
     top: 3px;
     right: 20px;
-    height: 54px;
+    height: 40px; /* Reduced to 75% */
     width: auto;
     opacity: 1;
     pointer-events: none;
@@ -7153,8 +7153,8 @@ body.soa-active .app-header {
 }
 
 .receipt-logo {
-    width: 50px;
-    height: 50px;
+    width: 38px; /* Reduced to 75% */
+    height: 38px; /* Reduced to 75% */
     object-fit: contain;
 }
 
