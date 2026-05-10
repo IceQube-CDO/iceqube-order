@@ -603,12 +603,12 @@ const app = {
         // Mocking the "15 Bags (Half-Dice 3kg)" default
         this.orderData.qty.fullDice['3kg'] = 0;
         this.orderData.qty.fullDice['1kg'] = 0;
-        this.orderData.qty.halfDice['3kg'] = 15;
+        this.orderData.qty.halfDice['3kg'] = 14;
         this.orderData.qty.halfDice['1kg'] = 0;
         
         // Update the inputs in Step 2 to reflect this
         if (document.getElementById('qty-halfDice-3kg')) {
-            document.getElementById('qty-halfDice-3kg').value = 15;
+            document.getElementById('qty-halfDice-3kg').value = 14;
             document.getElementById('qty-fullDice-3kg').value = 0;
             document.getElementById('qty-fullDice-1kg').value = 0;
             document.getElementById('qty-halfDice-1kg').value = 0;
@@ -2108,11 +2108,11 @@ const app = {
         this.orderData.bonusState3kg = false;
         this.orderData.bulkState3kg = false;
 
-        if (q3kg >= 15) {
+        if (q3kg >= 14) {
             total3kg = q3kg * 35;
             this.orderData.bulkState3kg = true;
-        } else if (q3kg === 14) {
-            total3kg = 525; // Force total to ₱525 for 14 bags (Paradox Protection)
+        } else if (q3kg === 13) {
+            total3kg = 490; // Force total to ₱490 for 13 bags (Paradox Protection)
             this.orderData.bonusState3kg = true;
         }
 
@@ -2131,7 +2131,7 @@ const app = {
 
         const promoBoxes = document.querySelectorAll('.bulk-promo-box');
         if (promoBoxes.length > 0) {
-            let notice = 'Wholesale: 15+ 3kg (₱35) or 40+ 1kg (₱14)';
+            let notice = 'Wholesale: 14+ 3kg (₱35) or 40+ 1kg (₱14)';
             let reached = false;
             
             if (this.orderData.bulkState3kg && this.orderData.bulkState1kg) {
@@ -2144,7 +2144,7 @@ const app = {
                 notice = '🔥 Bulk Applied: 1kg bags now ₱14';
                 reached = true;
             } else if (this.orderData.bonusState3kg) {
-                notice = '🎁 15th bag of 3kg is FREE!';
+                notice = '🎁 14th bag of 3kg is FREE!';
                 reached = true;
             } else if (this.orderData.bonusState1kg) {
                 notice = '🎁 40+ bags of 1kg unlocks ₱14 rate!';
@@ -2176,8 +2176,8 @@ const app = {
             if (this.orderData.bonusState3kg) {
                 const fd3 = this.orderData.qty.fullDice['3kg'];
                 const hd3 = this.orderData.qty.halfDice['3kg'];
-                // Adjust to exactly 15 bags
-                const diff = 15 - (fd3 + hd3);
+                // Adjust to exactly 14 bags
+                const diff = 14 - (fd3 + hd3);
                 if (fd3 > 0) {
                     this.orderData.qty.fullDice['3kg'] += diff;
                     document.getElementById('qty-fullDice-3kg').value = this.orderData.qty.fullDice['3kg'];
@@ -3747,7 +3747,7 @@ const app = {
                 date: 'April 20, 2026',
                 customer: 'Loft Living CDO',
                 address: 'Piaping Itum, Macabalan, CDO',
-                items: [{ name: 'Full Dice (3kg)', qty: 15, unit: 'Bag', price: 170.00 }],
+                items: [{ name: 'Full Dice (3kg)', qty: 14, unit: 'Bag', price: 170.00 }],
                 delivery: 0,
                 payment: 'Purchase Order (#8821)'
             },
