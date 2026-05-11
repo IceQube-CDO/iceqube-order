@@ -59,11 +59,11 @@ const app = {
         // --- Messenger Context Detection ---
         const urlParams = new URLSearchParams(window.location.search);
         const psid = urlParams.get('psid') || urlParams.get('extid');
-        
         if (psid) {
             console.log('Detected Messenger PSID:', psid);
             MESSENGER_CONFIG.RECIPIENT_ID = psid;
             this.user.messengerId = psid;
+            this.user.messengerEnabled = true; // Auto-enable if coming from Messenger
             localStorage.setItem('ice_messenger_psid', psid);
         } else {
             // Fallback to last known PSID
@@ -71,13 +71,19 @@ const app = {
             if (storedPsid) {
                 MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
                 this.user.messengerId = storedPsid;
+                // If we have a stored PSID but haven't explicitly disabled it, enable it
+                if (this.user.messengerEnabled === undefined) this.user.messengerEnabled = true;
             }
         }
 
         this.isQuickReorder = false;
         
         // --- Profile Management (Must run BEFORE UI rendering) ---
-        this.loadUserProfile();
+        try {
+            this.loadUserProfile();
+        } catch (e) {
+            console.error("❌ Profile Load Failed:", e);
+        }
         
         this.showStep(0);
         this.updateProgress();
@@ -220,6 +226,7 @@ const app = {
         contactPerson: '',
         contactNumber: '',
         messengerId: null,
+        messengerEnabled: true,
         role: 'Owner', 
         balance: 0.00,
         walletBalance: 500.00,
@@ -241,6 +248,7 @@ const app = {
         },
         logistics: null,
         deliveryFee: 0,
+        priorityFee: 0,
         deliveryZone: '',
         isManualReview: false,
         payment: null,
@@ -517,7 +525,7 @@ const app = {
         let orders = [];
         try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
         // Only consider orders that haven't been completed or cancelled
-        const activeOrders = orders.filter(o => ['Pending', 'Processing', 'Dispatched'].includes(o.status));
+        const activeOrders = orders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
         const hasActiveOrders = activeOrders.length > 0;
 
         console.log('📦 Dispatch Logic Check:', { hasActiveOrders, count: activeOrders.length });
@@ -532,10 +540,44 @@ const app = {
             }
             if (dispatchFooter) dispatchFooter.style.display = 'none';
         } else {
+            const currentOrder = activeOrders[0];
             if (dispatchDot) dispatchDot.style.background = '';
             if (dispatchTitle) dispatchTitle.innerText = 'Upcoming Dispatch';
-            if (dispatchTime) dispatchTime.innerText = 'Tomorrow, 9:00 AM';
-            if (dispatchDetails) dispatchDetails.innerText = '15 Bags • Half-Dice';
+            
+            // Format Time
+            if (dispatchTime) {
+                if (currentOrder.delivery_schedule === 'Immediate') {
+                    dispatchTime.innerText = 'Arriving Soon';
+                } else {
+                    dispatchTime.innerText = currentOrder.delivery_schedule || 'Tomorrow, 9:00 AM';
+                }
+            }
+
+            // Format Details
+            if (dispatchDetails) {
+                let totalBags = 0;
+                let types = [];
+                const items = currentOrder.items;
+                if (items) {
+                    ['fullDice', 'halfDice'].forEach(iceType => {
+                        if (items[iceType]) {
+                            const count = (items[iceType]['3kg'] || 0) + (items[iceType]['1kg'] || 0);
+                            if (count > 0) {
+                                totalBags += count;
+                                types.push(iceType === 'fullDice' ? 'Full Dice' : 'Half-Dice');
+                            }
+                        }
+                    });
+                }
+                
+                if (totalBags > 0) {
+                    const typeStr = types.join(' & ');
+                    dispatchDetails.innerText = `${totalBags} Bags • ${typeStr}`;
+                } else {
+                    dispatchDetails.innerText = '14 Bags • Half-Dice'; // Default fallback
+                }
+            }
+
             if (dispatchBtn) {
                 dispatchBtn.style.display = 'block';
                 dispatchBtn.innerText = 'Manage Order ›';
@@ -545,13 +587,11 @@ const app = {
 
             if (dispatchRef && dispatchStatus) {
                 if (this.user.accountType === 'Elite' || this.user.accountType === 'PO') {
-                    dispatchRef.innerText = 'PO #8821';
+                    dispatchRef.innerText = currentOrder.po_number || 'PO #8821';
                     dispatchStatus.innerText = 'Subscription Active';
-                    dispatchStatus.style.color = '';
                 } else {
-                    dispatchRef.innerText = 'Order #IQ-9812';
-                    dispatchStatus.innerText = 'Order Confirmed';
-                    dispatchStatus.style.color = '#60a5fa'; // Standard Blue
+                    dispatchRef.innerText = 'Ref: ' + (currentOrder.order_id || '---');
+                    dispatchStatus.innerText = currentOrder.payment_method || 'Cash on Delivery';
                 }
             }
         }
@@ -1062,7 +1102,7 @@ const app = {
             if (this.googleMap) {
                 this.googleMap.setCenter({ lat, lng });
                 this.googleMap.setZoom(17);
-                this.googleMarker.setPosition({ lat, lng });
+                if (this.googleMarker) this.googleMarker.setPosition({ lat, lng });
             } else if (this.map) {
                 this.map.setView([lat, lng], 17);
                 this.mapMarker.setLatLng([lat, lng]);
@@ -1109,16 +1149,18 @@ const app = {
         }
     },
 
-    processOrder() {
-        // Mocking the "15 Bags (Half-Dice 3kg)" default
+    processOrder(reorderQty = null) {
+        // Use provided qty or default to 14 (Wholesale Threshold)
+        const qty = reorderQty || 14;
+
         this.orderData.qty.fullDice['3kg'] = 0;
         this.orderData.qty.fullDice['1kg'] = 0;
-        this.orderData.qty.halfDice['3kg'] = 14;
+        this.orderData.qty.halfDice['3kg'] = qty;
         this.orderData.qty.halfDice['1kg'] = 0;
         
         // Update the inputs in Step 2 to reflect this
         if (document.getElementById('qty-halfDice-3kg')) {
-            document.getElementById('qty-halfDice-3kg').value = 14;
+            document.getElementById('qty-halfDice-3kg').value = qty;
             document.getElementById('qty-fullDice-3kg').value = 0;
             document.getElementById('qty-fullDice-1kg').value = 0;
             document.getElementById('qty-halfDice-1kg').value = 0;
@@ -1154,7 +1196,7 @@ const app = {
 
     checkUserPrivileges() {
         const poCard = document.getElementById('card-payment-po');
-        const isPrivileged = ['Enterprise', 'Verified_Partner'].includes(this.user.accountType);
+        const isPrivileged = ['Enterprise', 'Verified_Partner', 'Elite', 'PO'].includes(this.user.accountType);
         
         if (poCard) {
             poCard.style.display = isPrivileged ? 'flex' : 'none';
@@ -1174,6 +1216,13 @@ const app = {
         if (finishActiveAutoBtn && finishLockedAutoBtn) {
             finishActiveAutoBtn.style.display = isPrivileged ? 'flex' : 'none';
             finishLockedAutoBtn.style.display = isPrivileged ? 'none' : 'flex';
+            
+            if (isPrivileged) {
+                finishActiveAutoBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                    Manage Subscription
+                `;
+            }
         }
     },
 
@@ -1240,6 +1289,22 @@ const app = {
         this.lastStepIndex = index;
         this.updateProgress();
 
+        // --- ELITE TIER AUTO-SKIP PAYMENT ---
+        if (index === 4 && (this.user.accountType === 'Elite' || this.user.accountType === 'PO')) {
+            // Auto-select PO
+            const poCard = document.getElementById('card-payment-po');
+            if (poCard) {
+                poCard.style.display = 'block';
+                this.selectPayment('Purchase Order', poCard);
+                
+                // If it's a quick reorder, skip the screen entirely
+                if (this.isQuickReorder) {
+                    setTimeout(() => this.processFinalOrder(), 100);
+                    return;
+                }
+            }
+        }
+
         // Ensure the step container and the app shell scroll to the top
         const appEl = document.getElementById('app');
         if (appEl) appEl.scrollTop = 0;
@@ -1279,9 +1344,26 @@ const app = {
         if (this.currentStep < this.steps.length - 1) {
             const from = this.currentStep;
             
-            // Skip Logistics (Step 3) if it's a Quick Reorder
+            // Skip Logistics (Step 3) and possibly Payment (Step 4) if it's a Quick Reorder
             if (this.isQuickReorder && this.currentStep === 2) {
-                this.currentStep = 4; // Jump to Payment
+                const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+                const isElite = eliteList.includes(this.user.companyName) || this.user.accountType === 'Elite';
+
+                if (isElite || this.user.accountType === 'PO') {
+                    this.orderData.payment = 'Purchase Order';
+                    // Ensure fees are computed before final processing
+                    this.calculatePriorityFee();
+                    if (this.orderData.logistics === 'Doorstep Delivery') {
+                        // For Quick Reorder, we might need a quick fee refresh if distance is known
+                        if (this.orderData.deliveryDetails && (this.orderData.deliveryDetails.lat || this.orderData.deliveryDetails.maps)) {
+                            this.calculateDeliveryFee();
+                        }
+                    }
+                    this.processFinalOrder(); 
+                    return; 
+                } else {
+                    this.currentStep = 4; // Jump to Payment for Standard users
+                }
             } else {
                 this.currentStep++;
             }
@@ -1467,7 +1549,7 @@ const app = {
                 if (overlay) overlay.classList.remove('map-moving');
             });
 
-            // --- V7.0 DIRECT POI TAP ---
+            // --- V7.0 DIRECT TAP REFINEMENT ---
             this.googleMap.addListener('click', (e) => {
                 if (e.placeId) {
                     e.stop(); // Stop Google's default info window
@@ -1488,9 +1570,15 @@ const app = {
                             this.finalizeAddress(place, place.geometry.location.lat(), place.geometry.location.lng());
                         }
                     });
+                } else if (e.latLng) {
+                    // General map tap to refine location
+                    this._lockedPlace = null; // Clear lock when tapping a new spot
+                    this.googleMap.panTo(e.latLng);
+                    // The 'idle' listener will trigger reverseGeocode
                 }
             });
 
+            this.mapInitialized = true;
         } catch (e) {
             console.error('Google Map Init Error:', e);
             this.initMap();
@@ -1634,7 +1722,7 @@ const app = {
                     const loc = results[0].geometry.location;
                     this.googleMap.setCenter(loc);
                     this.googleMap.setZoom(17);
-                    this.googleMarker.setPosition(loc);
+                    if (this.googleMarker) this.googleMarker.setPosition(loc);
                     this.reverseGeocode(loc.lat(), loc.lng());
                 }
             });
@@ -2012,6 +2100,11 @@ const app = {
             if (addrInput) addrInput.value = this._tempAddress;
             if (latInput) latInput.value = this._tempLat || 0;
             if (lngInput) lngInput.value = this._tempLng || 0;
+
+            // Update live state for preview
+            this.user.savedLat = this._tempLat;
+            this.user.savedLng = this._tempLng;
+            this.updateProfileMapPreview();
 
             this.showToast("📍 Location Pinned to Profile", 'success');
         } else {
@@ -2677,9 +2770,32 @@ const app = {
         }
 
         this.orderData.total = total3kg + total1kg;
+        this.calculatePriorityFee();
+
         const nextBtn = document.getElementById('qty-next');
         nextBtn.innerText = `Confirm Order (₱${this.orderData.total})`;
         nextBtn.disabled = this.orderData.total === 0;
+    },
+
+    calculatePriorityFee() {
+        const fd3 = this.orderData.qty.fullDice['3kg'] || 0;
+        const fd1 = this.orderData.qty.fullDice['1kg'] || 0;
+        const hd3 = this.orderData.qty.halfDice['3kg'] || 0;
+        const hd1 = this.orderData.qty.halfDice['1kg'] || 0;
+        
+        const totalWeight = (fd3 + hd3) * 3 + (fd1 + hd1) * 1;
+        
+        let fee = 0;
+        if (totalWeight >= 31) {
+            fee = 15;
+        } else if (totalWeight >= 19) {
+            fee = 10;
+        } else {
+            fee = 0;
+        }
+        
+        this.orderData.priorityFee = fee;
+        return fee;
     },
 
     confirmQuantity() {
@@ -2966,13 +3082,11 @@ const app = {
             fee = calculateMaximFee(distanceKm);
         }
 
-        // Traffic Bonus
-        let trafficBonus = 0;
-        if (routeTimeMins > 30 && !isManualReview) {
-            trafficBonus = 20; // Rider Priority Fee
-        }
+        // Weight-based Priority Fee
+        const trafficBonus = this.calculatePriorityFee();
 
-        this.orderData.deliveryFee = fee + trafficBonus;
+        this.orderData.deliveryFee = fee;
+        this.orderData.priorityFee = trafficBonus;
         this.orderData.isManualReview = isManualReview;
         this.orderData.deliveryZone = zone;
 
@@ -2981,8 +3095,6 @@ const app = {
         document.getElementById('summary-zone').innerText = zone;
         
         let feeText = `₱${fee}`;
-        if (trafficBonus > 0) feeText += ` + ₱${trafficBonus} (Priority Fee)`;
-        
         document.getElementById('summary-delivery-fee').innerText = isManualReview ? 'Manual Review' : feeText;
         
         const manualReviewNotice = document.getElementById('summary-manual-review');
@@ -3120,15 +3232,23 @@ const app = {
         if (subtotalEl) subtotalEl.innerText = `₱${this.orderData.total}`;
 
         const deliveryEl = document.getElementById('payment-delivery-fee');
+        const priorityEl = document.getElementById('payment-priority-fee');
+        const priorityRow = document.getElementById('payment-priority-fee-row');
+
         if (deliveryEl) {
             deliveryEl.innerText = this.orderData.logistics === 'Doorstep Delivery' ? 
-                (this.orderData.isManualReview ? 'TBD' : `₱${this.orderData.deliveryFee}`) : '₱0';
+                (this.orderData.isManualReview ? 'TBD' : `₱${(this.orderData.deliveryFee || 0)}`) : '₱0';
+        }
+
+        if (priorityEl && priorityRow) {
+            // Internal only: Hidden from customer summary but DOM updated for potential internal use
+            priorityRow.style.display = 'none';
         }
 
         const totalEl = document.getElementById('payment-total');
         let totalVal = this.orderData.total;
         if (this.orderData.logistics === 'Doorstep Delivery' && !this.orderData.isManualReview) {
-            totalVal += this.orderData.deliveryFee;
+            totalVal += (this.orderData.deliveryFee || 0);
         }
         if (totalEl) totalEl.innerText = `₱${totalVal}${this.orderData.isManualReview ? ' + TBD' : ''}`;
 
@@ -3137,7 +3257,7 @@ const app = {
             if (this.orderData.isManualReview) {
                 displayTotalStr = `₱${this.orderData.total} + TBD`;
             } else {
-                displayTotalStr = `₱${this.orderData.total + this.orderData.deliveryFee}`;
+                displayTotalStr = `₱${this.orderData.total + (this.orderData.deliveryFee || 0)}`;
             }
         }
         document.getElementById('btn-finish-order').innerText = `Place Order & Pay ${displayTotalStr}`;
@@ -3186,6 +3306,13 @@ const app = {
             btn.disabled = false;
             codBox.classList.remove('active');
             poBox.classList.add('active');
+            
+            // For Elite users, the "Place Order" button should be even more prominent
+            if (this.user.accountType === 'Elite' || this.user.accountType === 'PO') {
+                 btn.innerHTML = `<span style="font-weight:900;">CONFIRM PO ORDER</span>`;
+                 btn.style.background = 'var(--accent-gold, #eab308)';
+                 btn.style.color = '#000';
+            }
         } else if (method === 'IceQube Wallet') {
             const total = this.orderData.total + (this.orderData.deliveryFee || 0);
             const balance = this.user.walletBalance || 0;
@@ -3926,7 +4053,7 @@ const app = {
             customer_name: customerName,
             receiver_name: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.person) ? this.orderData.deliveryDetails.person : customerName,
             contact_number: contactNumber,
-            delivery_notes: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.',
+            delivery_notes: (this.isQuickReorder ? '[⚡ QUICK REORDER] ' : '') + ((this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.'),
             items: this.orderData.qty,
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
@@ -3936,6 +4063,7 @@ const app = {
             delivery_lat: this.orderData.deliveryDetails ? this.orderData.deliveryDetails.lat : null,
             delivery_lng: this.orderData.deliveryDetails ? this.orderData.deliveryDetails.lng : null,
             delivery_fee: this.orderData.deliveryFee || 0,
+            priority_fee: this.orderData.priorityFee || 0,
             po_number: this.orderData.poNumber,
             is_real: true, // Safeguard for Purge Logic
             created_at: new Date().toISOString()
@@ -5100,6 +5228,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         this.closeAllPanels();
         
         // Clear any order data to prevent state bleed
+        this.isQuickReorder = false;
         this.orderData.qty = {
             fullDice: { '1kg': 0, '3kg': 0 },
             halfDice: { '1kg': 0, '3kg': 0 }
@@ -5232,7 +5361,10 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 this.user.contactPerson = profile.contactPerson || '';
                 this.user.contactNumber = profile.contactNumber || '';
                 this.user.messengerId = profile.messengerId || this.user.messengerId;
+                // If arriving from Messenger or we already had a fallback ID, messengerEnabled might already be true
+                this.user.messengerEnabled = (profile.messengerEnabled !== undefined) ? profile.messengerEnabled : true;
                 this.user.savedAddress = profile.address || '';
+                this.user.savedInstructions = profile.instructions || '';
                 this.user.savedLat = profile.lat || null;
                 this.user.savedLng = profile.lng || null;
                 
@@ -5255,11 +5387,15 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
                 if (estInput) estInput.value = this.user.companyName;
                 if (perInput) perInput.value = this.user.contactPerson;
+                const instInput = document.getElementById('profile-instructions');
                 if (numInput) numInput.value = this.user.contactNumber;
                 if (addrInput) addrInput.value = this.user.savedAddress;
+                if (instInput) instInput.value = this.user.savedInstructions || '';
                 if (latInput) latInput.value = this.user.savedLat || '';
                 if (lngInput) lngInput.value = this.user.savedLng || '';
                 if (msgInput) msgInput.value = this.user.messengerId || '';
+                const msgInputEditable = document.getElementById('profile-messenger-input');
+                if (msgInputEditable) msgInputEditable.value = this.user.messengerId || '';
                 
                 // Pre-fill Pickup Form (New)
                 const pickEst = document.getElementById('pickup-establishment');
@@ -5270,11 +5406,36 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 if (pickNum) pickNum.value = this.user.contactNumber;
 
                 this.updateMessengerStatusUI();
+                this.updateDiscountsUI();
+                this.updateProfileMapPreview();
 
                 console.log("👤 Profile Loaded:", this.user.companyName, "Tier:", this.user.accountType);
             } catch (e) {
                 console.error("Error parsing profile:", e);
             }
+        }
+    },
+
+    updateProfileMapPreview() {
+        const previewEl = document.getElementById('profile-map-preview');
+        const placeholderEl = document.getElementById('profile-map-placeholder');
+        if (!previewEl) return;
+
+        if (this.user.savedLat && this.user.savedLng) {
+            if (placeholderEl) placeholderEl.style.display = 'none';
+            const lat = this.user.savedLat;
+            const lng = this.user.savedLng;
+            const apiKey = 'AIzaSyC6JwFLApTP1XlzZVn_E7SAl2ezmrm2_zg';
+            const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=17&size=600x200&scale=2&maptype=roadmap&markers=color:0x4285F4|${lat},${lng}&key=${apiKey}`;
+            
+            previewEl.style.backgroundImage = `url('${staticUrl}')`;
+            previewEl.style.backgroundSize = 'cover';
+            previewEl.style.backgroundPosition = 'center';
+            previewEl.style.border = '1px solid var(--accent)';
+        } else {
+            if (placeholderEl) placeholderEl.style.display = 'flex';
+            previewEl.style.backgroundImage = 'none';
+            previewEl.style.border = '1px solid var(--border)';
         }
     },
 
@@ -5284,6 +5445,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         const contactNumber = document.getElementById('profile-contact-number').value.trim();
         const messengerId = document.getElementById('profile-messenger-id').value.trim();
         const address = document.getElementById('profile-address').value.trim();
+        const instructions = document.getElementById('profile-instructions').value.trim();
         const lat = document.getElementById('profile-lat').value;
         const lng = document.getElementById('profile-lng').value;
 
@@ -5297,7 +5459,9 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             contactPerson,
             contactNumber,
             messengerId,
+            messengerEnabled: this.user.messengerEnabled || false,
             address,
+            instructions,
             lat,
             lng,
             updatedAt: new Date().toISOString()
@@ -5311,6 +5475,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         this.user.contactNumber = contactNumber;
         this.user.messengerId = messengerId;
         this.user.savedAddress = address;
+        this.user.savedInstructions = instructions;
         this.user.savedLat = lat;
         this.user.savedLng = lng;
 
@@ -5323,6 +5488,8 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         if (pickNum) pickNum.value = contactNumber;
 
         this.updateMessengerStatusUI();
+        this.updateDiscountsUI();
+        this.updateProfileMapPreview();
 
         // Update UI
         const nameElem = document.getElementById('user-full-name');
@@ -5330,6 +5497,45 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
         this.showToast("✅ Profile Updated Successfully", 'success');
         this.toggleBottomSheet('profile', false);
+    },
+
+    updateDiscountsUI() {
+        const section = document.getElementById('profile-discounts-section');
+        const list = document.getElementById('active-discounts-list');
+        if (!section || !list) return;
+
+        const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+        const d = discounts[this.user.companyName];
+
+        if (d && (d.percent > 0 || d.fixed > 0)) {
+            let html = '';
+            if (d.percent > 0) {
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(34, 197, 94, 0.08); padding: 12px; border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.1rem;">🏷️</span>
+                            <span style="font-size: 0.85rem; font-weight: 700; color: #22c55e;">Partnership Discount</span>
+                        </div>
+                        <span style="background: #22c55e; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 900;">-${d.percent}%</span>
+                    </div>
+                `;
+            }
+            if (d.fixed > 0) {
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.08); padding: 12px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.1rem;">💰</span>
+                            <span style="font-size: 0.85rem; font-weight: 700; color: #3b82f6;">Fixed Loyalty Credit</span>
+                        </div>
+                        <span style="background: #3b82f6; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 900;">-₱${d.fixed}</span>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
     },
 
     /**
@@ -5399,26 +5605,54 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     },
 
     updateMessengerStatusUI() {
-        const text = document.getElementById('messenger-status-text');
+        const input = document.getElementById('profile-messenger-input');
         const badge = document.getElementById('messenger-status-badge');
         
-        if (!text || !badge) return;
+        if (!badge) return;
 
-        if (this.user.messengerId) {
-            text.innerText = "Linked: " + this.user.messengerId.substring(0, 8) + "...";
-            badge.innerText = "LINKED";
+        // Only update input if not focused to avoid interrupting user typing
+        if (input && document.activeElement !== input) {
+            input.value = this.user.messengerId || '';
+        }
+
+        if (this.user.messengerEnabled) {
+            badge.innerText = "ON";
             badge.style.background = "#dcfce7";
             badge.style.color = "#16a34a";
         } else {
-            text.innerText = "Not connected";
             badge.innerText = "OFF";
             badge.style.background = "#fee2e2";
             badge.style.color = "#ef4444";
         }
     },
 
+    handleMessengerInput(val) {
+        this.user.messengerId = val.trim();
+        // Keep the hidden input in sync for the save function
+        const msgIdHidden = document.getElementById('profile-messenger-id');
+        if (msgIdHidden) msgIdHidden.value = this.user.messengerId;
+        
+        this.updateMessengerStatusUI();
+    },
+
+    toggleMessengerNotifications() {
+        if (!this.user.messengerId) {
+            this.showToast("Please enter a Messenger ID first", "error");
+            return;
+        }
+        this.user.messengerEnabled = !this.user.messengerEnabled;
+        this.updateMessengerStatusUI();
+        
+        const status = this.user.messengerEnabled ? "ACTIVATED" : "DEACTIVATED";
+        const type = this.user.messengerEnabled ? "success" : "info";
+        this.showToast(`Messenger Notifications ${status}`, type);
+    },
+
     openMapForProfile() {
+        console.log("📍 Opening Map for Profile Refinement...");
+        this.showToast("📍 Opening map...", 'info');
         this.mapContext = 'profile';
+        
         // Initialize map with saved location if available
         if (this.user.savedLat && this.user.savedLng) {
             this._tempLat = parseFloat(this.user.savedLat);
@@ -5428,39 +5662,38 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         this.openMapOverlay();
     },
 
-    // Override openMapOverlay to ensure context is reset if called from elsewhere
-    originalOpenMapOverlay: null,
     openMapOverlay() {
-        // Simple context management: if it's not profile, it's order
-        if (this.mapContext !== 'profile') this.mapContext = 'order';
-        
+        console.log("📍 Opening Map Overlay. Context:", this.mapContext);
         const overlay = document.getElementById('map-overlay');
+        if (!overlay) return;
+
+        // Force overlay visible
         overlay.classList.add('active');
-        
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '10000';
+
         if (!this.mapInitialized) {
             if (window.google && this.googleMapsReady) {
                 this.initGoogleMap();
             } else {
                 this.initMap();
             }
+            this.mapInitialized = true;
         } else {
+            // Trigger resize/refresh after a short delay to ensure DOM is ready
             setTimeout(() => {
-                if (this.map) {
-                    this.map.invalidateSize();
-                    if (this._tempLat && this._tempLng) {
-                        const latlng = [this._tempLat, this._tempLng];
-                        this.map.setView(latlng, 17);
-                        this.mapMarker.setLatLng(latlng);
-                    }
-                } else if (this.googleMap) {
+                if (this.googleMap) {
                     google.maps.event.trigger(this.googleMap, 'resize');
                     if (this._tempLat && this._tempLng) {
-                        const pos = { lat: this._tempLat, lng: this._tempLng };
-                        this.googleMap.setCenter(pos);
-                        this.googleMarker.setPosition(pos);
+                        this.googleMap.setCenter({ lat: this._tempLat, lng: this._tempLng });
+                    }
+                } else if (this.map) {
+                    this.map.invalidateSize();
+                    if (this._tempLat && this._tempLng) {
+                        this.map.setView([this._tempLat, this._tempLng], 17);
                     }
                 }
-            }, 100);
+            }, 200);
         }
     }
 };
@@ -5468,35 +5701,80 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 // Expose app to global scope for Google Maps callback
 window.app = app;
 document.addEventListener('DOMContentLoaded', () => {
-    app.init();
-    // Mocking initial state for demonstration
-    app.updateBillingStatus('unpaid', '₱2,550.00');
+    console.log("🚀 IceQube DOM Ready. Initializing App...");
+    if (typeof app !== 'undefined' && typeof app.init === 'function') {
+        app.init();
+        // Mocking initial state for demonstration
+        app.updateBillingStatus('unpaid', '₱2,550.00');
+        console.log("✅ IceQube Initialized Successfully");
+        setTimeout(() => app.showToast("🚀 System Ready", "success"), 500);
+    } else {
+        console.error("❌ CRITICAL ERROR: App object or init function not found!");
+    }
 });
 
 // GLOBAL FUNCTIONS FOR QUICK REORDER MODAL
 function openReorderModal() {
     const modal = document.getElementById('reorderModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        // Delay adding active class for CSS transition to work
-        setTimeout(() => modal.classList.add('active'), 10);
+    if (!modal) return;
+
+    // Determine the "Real" Order Quantity
+    let orders = [];
+    try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
+    
+    let qty = 14; // Default to the 14-bag wholesale threshold
+    let type = 'Half-Dice';
+
+    // If there's an active or recent order, use its data
+    const activeOrders = orders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
+    const referenceOrder = activeOrders.length > 0 ? activeOrders[0] : (orders.length > 0 ? orders[0] : null);
+
+    if (referenceOrder && referenceOrder.items) {
+        let total = 0;
+        let types = [];
+        ['fullDice', 'halfDice'].forEach(t => {
+            if (referenceOrder.items[t]) {
+                const count = (referenceOrder.items[t]['3kg'] || 0) + (referenceOrder.items[t]['1kg'] || 0);
+                if (count > 0) {
+                    total += count;
+                    types.push(t === 'fullDice' ? 'Full Dice' : 'Half-Dice');
+                }
+            }
+        });
+        if (total > 0) {
+            qty = total;
+            type = types.join(' & ');
+        }
     }
+
+    // Update Modal UI
+    const defaultText = modal.querySelector('p strong');
+    if (defaultText) defaultText.innerText = `${qty} Bags (${type})`;
+    
+    const primaryBtn = modal.querySelector('.modal-btn.primary');
+    if (primaryBtn) {
+        primaryBtn.innerText = `Continue with ${qty} Bags`;
+        // Pass the determined qty to processOrder
+        primaryBtn.onclick = () => processOrder(qty);
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
 }
 
 function closeReorderModal() {
     const modal = document.getElementById('reorderModal');
     if (modal) {
         modal.classList.remove('active');
-        // Match the transition duration in CSS
         setTimeout(() => {
             modal.style.display = 'none';
         }, 300);
     }
 }
 
-function processOrder() {
-    app.processOrder();
-    app.showToast("Order Confirmed! Your bags are scheduled.", 'success');
+function processOrder(reorderQty) {
+    app.processOrder(reorderQty);
+    app.showToast(`Order Confirmed! ${reorderQty} bags are scheduled.`, 'success');
     closeReorderModal();
 }
 

@@ -954,7 +954,7 @@
                 <span id="drawer-deliveries-fee">₱0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--rider-accent); margin-bottom: 8px;">
-                <span>Total Priority Tips</span>
+                <span>Total Heavy Load Bonuses</span>
                 <span id="drawer-tips-fee">₱0.00</span>
             </div>
             <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; color: white;">
@@ -2070,7 +2070,7 @@
                     
                     if (collectTipEl) {
                         collectTipEl.style.display = pFee > 0 ? 'block' : 'none';
-                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Priority Tip`;
+                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Heavy Load Bonus`;
                     }
                 } else {
                     collectEl.innerText = `₱0.00`;
@@ -2413,7 +2413,7 @@
                             </div>
                             <div style="display: flex; gap: 10px; font-size: 0.8rem; color: #cbd5e1;">
                                 <span>Fee: ₱${del.fee.toFixed(2)}</span>
-                                <span style="color: #38bdf8;">Tip: ₱${del.tip.toFixed(2)}</span>
+                                <span style="color: #38bdf8;">Bonus: ₱${del.tip.toFixed(2)}</span>
                             </div>
                         </div>
                     `;

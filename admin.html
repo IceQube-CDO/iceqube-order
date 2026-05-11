@@ -1278,8 +1278,60 @@
 
         /* --- Customer Profile Drawer --- */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 1000; display: none; }
-        .drawer-panel { position: fixed; top: 0; right: -500px; width: 100%; max-width: 450px; height: 100vh; background: #0f172a; border-left: 1px solid #1e293b; z-index: 1001; box-shadow: -10px 0 30px rgba(0,0,0,0.5); transition: right 0.3s ease-in-out; overflow-y: auto; display: flex; flex-direction: column; }
-        .drawer-panel.open { right: 0; }
+        
+        /* Desktop Drawer (Integrated into Grid) */
+        .drawer-panel { 
+            background: #0f172a; 
+            border: 1px solid #1e293b; 
+            border-radius: 16px;
+            z-index: 10; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; 
+            flex-direction: column;
+            width: 0;
+            opacity: 0;
+            transform: translateX(-20px);
+            pointer-events: none;
+            height: fit-content;
+            max-height: calc(100vh - 180px);
+            overflow: hidden;
+        }
+        
+        .drawer-panel.open { 
+            width: 100%;
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            margin-right: 0.5rem;
+        }
+
+        .drawer-body {
+            padding: 24px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        /* Mobile fallback for drawer if needed */
+        @media (max-width: 1023px) {
+            .drawer-panel {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 90%;
+                max-width: 450px;
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+                z-index: 1001;
+                transform: none;
+            }
+            .drawer-panel.open {
+                right: 0;
+                width: 90%;
+                margin-right: 0;
+            }
+        }
 
         .drawer-header { padding: 24px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: flex-start; background: #1e293b; }
         .drawer-header h2 { margin: 0 0 5px 0; color: white; font-size: 20px; }
@@ -1340,7 +1392,14 @@
         /* Layout Override for Customer Intelligence */
         @media (min-width: 1024px) {
             #customer-view.cc-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-columns: 400px 1fr 380px !important;
+                align-items: start;
+                transition: grid-template-columns 0.5s ease;
+            }
+            /* When drawer is closed, middle column shrinks */
+            #customer-view.cc-grid:not(.drawer-open) {
+                grid-template-columns: 400px 0px 1fr !important;
+                gap: 1.5rem 0; /* Remove horizontal gap when closed */
             }
         }
     </style>
@@ -1592,7 +1651,7 @@
                                 <th>PAYMENT METHOD</th>
                                 <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
-                                <th>PRIORITY FEE</th>
+                                <th>HEAVY LOAD FEE</th>
                                 <th>RIDER ASSIGNMENT</th>
                                 <th style="text-align: right;">ACTION</th>
                             </tr>
@@ -1624,7 +1683,7 @@
                                 <th>PAYMENT METHOD</th>
                                 <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
-                                <th>PRIORITY FEE</th>
+                                <th>HEAVY LOAD FEE</th>
                                 <th style="text-align: center;">TYPE</th>
                                 <th>RIDER</th>
                                 <th>STATUS</th>
@@ -1647,6 +1706,113 @@
                     <input type="text" id="customer-search-input" placeholder="Search customer records..." style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; margin-bottom: 1.5rem;" oninput="admin.filterCustomerDirectory()">
                     <div id="customer-directory-list" style="display: flex; flex-direction: column; gap: 8px;">
                         <div style="text-align: center; color: #64748b; padding: 40px; font-size: 0.9rem;">No customers recorded yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Detail Drawer (Integrated into grid for desktop) -->
+            <div id="customer-drawer" class="drawer-panel">
+                <div class="drawer-header">
+                    <div>
+                        <h2 id="drawer-customer-name">Loft Living CDO</h2>
+                        <p class="sub-text" id="drawer-customer-address" style="margin-top: 5px;">Premium Partner • Macabalan, CDO</p>
+                    </div>
+                    <button class="close-btn" onclick="closeCustomerDrawer()">✕</button>
+                </div>
+
+                <div class="drawer-body">
+                    <!-- SECTION 1: Contact & Status -->
+                    <div class="profile-section">
+                        <h4 class="section-title">ACCOUNT STATUS & CONTACT</h4>
+                        <div class="contact-grid">
+                            <div>
+                                <span class="label">Contact Person</span>
+                                <span class="value" id="drawer-contact-person">Ian</span>
+                            </div>
+                            <div>
+                                <span class="label">Phone</span>
+                                <span class="value" id="drawer-phone">+63 917 123 4567</span>
+                            </div>
+                        </div>
+                        
+                        <!-- ELITE TIER TOGGLE -->
+                        <div class="tier-toggle-box">
+                            <div class="tier-info">
+                                <span class="tier-label">Elite Tier Status</span>
+                                <span class="tier-desc">Purchase Order & Credit Line Privileges</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="elite-toggle" onchange="toggleEliteStatus()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION: Custom Pricing & Discounts -->
+                    <div class="profile-section">
+                        <h4 class="section-title">CUSTOM PRICING & DISCOUNTS</h4>
+                        <div class="contact-grid">
+                            <div>
+                                <span class="label">Special Discount (%)</span>
+                                <input type="number" id="drawer-discount-percent" value="0" step="0.1" min="0" max="100" 
+                                       style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+                            <div>
+                                <span class="label">Fixed Discount (₱)</span>
+                                <input type="number" id="drawer-discount-fixed" value="0.00" step="1" min="0"
+                                       style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+                        </div>
+                        <button class="btn-text" style="margin-top: 15px; width: 100%; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #22c55e; border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.2); font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(34, 197, 94, 0.2)'" onmouseout="this.style.background='rgba(34, 197, 94, 0.1)'" onclick="saveCustomerDiscounts()">Apply Pricing Changes</button>
+                    </div>
+                    
+                    <!-- SECTION: Intelligence Insights (NEW) -->
+                    <div class="profile-section">
+                        <h4 class="section-title">CUSTOMER INTELLIGENCE</h4>
+                        <div class="contact-grid">
+                            <div>
+                                <span class="label">Lifetime Value (CLV)</span>
+                                <span class="value" id="drawer-clv" style="color: #22c55e; font-weight: 800;">₱0.00</span>
+                            </div>
+                            <div>
+                                <span class="label">Order Frequency</span>
+                                <span class="value" id="drawer-frequency">Calculating...</span>
+                            </div>
+                        </div>
+                        <div id="drawer-churn-alert" style="display: none; margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2rem;">⚠️</span>
+                            <div>
+                                <div style="font-size: 0.75rem; font-weight: 800; color: #ef4444;">CHURN RISK DETECTED</div>
+                                <div style="font-size: 0.65rem; color: #cbd5e1;">Ordering frequency has slowed significantly in the last 14 days.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: Financials & Receipts -->
+                    <div class="profile-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 class="section-title" style="margin: 0;">PAYMENT & RECEIPT HISTORY</h4>
+                            <button class="btn-text">View Full Archive →</button>
+                        </div>
+                        <div class="history-table">
+                            <div class="history-row header">
+                                <span>Order ID</span>
+                                <span>Amount</span>
+                                <span>Status</span>
+                                <span>Receipt</span>
+                            </div>
+                            <div id="drawer-history-list">
+                                <!-- Dynamically filled -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: Complaints History -->
+                    <div class="profile-section">
+                        <h4 class="section-title">ISSUE & RESOLUTION LOG</h4>
+                        <div id="drawer-complaints-list">
+                            <!-- Dynamically filled -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2473,120 +2639,6 @@
     <script src="js/sync.js?v=1.0.1"></script>
     <script src="js/admin.js?v=1.1.10"></script>
 
-    <!-- CUSTOMER PROFILE DRAWER (Hidden by default) -->
-    <div id="customer-drawer-overlay" class="drawer-overlay" onclick="closeCustomerDrawer()"></div>
-
-    <div id="customer-drawer" class="drawer-panel">
-        <div class="drawer-header">
-            <div>
-                <h2 id="drawer-customer-name">Loft Living CDO</h2>
-                <p class="sub-text" id="drawer-customer-address" style="margin-top: 5px;">Premium Partner • Macabalan, CDO</p>
-            </div>
-            <button class="close-btn" onclick="closeCustomerDrawer()">✕</button>
-        </div>
-
-        <div class="drawer-body">
-            <!-- SECTION 1: Contact & Status -->
-            <div class="profile-section">
-                <h4 class="section-title">ACCOUNT STATUS & CONTACT</h4>
-                <div class="contact-grid">
-                    <div>
-                        <span class="label">Contact Person</span>
-                        <span class="value" id="drawer-contact-person">Ian</span>
-                    </div>
-                    <div>
-                        <span class="label">Phone</span>
-                        <span class="value" id="drawer-phone">+63 917 123 4567</span>
-                    </div>
-                </div>
-                
-                <!-- ELITE TIER TOGGLE -->
-                <div class="tier-toggle-box">
-                    <div class="tier-info">
-                        <span class="tier-label">Elite Tier Status</span>
-                        <span class="tier-desc">Grants 10% volume discount & priority delivery</span>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="elite-toggle" onchange="toggleEliteStatus()">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-            </div>
-            
-            <!-- SECTION: Intelligence Insights (NEW) -->
-            <div class="profile-section">
-                <h4 class="section-title">CUSTOMER INTELLIGENCE</h4>
-                <div class="contact-grid">
-                    <div>
-                        <span class="label">Lifetime Value (CLV)</span>
-                        <span class="value" id="drawer-clv" style="color: #22c55e; font-weight: 800;">₱0.00</span>
-                    </div>
-                    <div>
-                        <span class="label">Order Frequency</span>
-                        <span class="value" id="drawer-frequency">Calculating...</span>
-                    </div>
-                </div>
-                <div id="drawer-churn-alert" style="display: none; margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); align-items: center; gap: 10px;">
-                    <span style="font-size: 1.2rem;">⚠️</span>
-                    <div>
-                        <div style="font-size: 0.75rem; font-weight: 800; color: #ef4444;">CHURN RISK DETECTED</div>
-                        <div style="font-size: 0.65rem; color: #cbd5e1;">Ordering frequency has slowed significantly in the last 14 days.</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 2: Financials & Receipts -->
-            <div class="profile-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 class="section-title" style="margin: 0;">PAYMENT & RECEIPT HISTORY</h4>
-                    <button class="btn-text">View Full Archive →</button>
-                </div>
-                <div class="history-table">
-                    <div class="history-row header">
-                        <span>Order ID</span>
-                        <span>Amount</span>
-                        <span>Status</span>
-                        <span>Receipt</span>
-                    </div>
-                    <div id="drawer-history-list">
-                        <div class="history-row">
-                            <span>IQ-9750</span>
-                            <span>₱2,550</span>
-                            <span class="status paid">PAID</span>
-                            <button class="btn-icon">📄</button>
-                        </div>
-                        <div class="history-row">
-                            <span>IQ-9742</span>
-                            <span>₱1,850</span>
-                            <span class="status paid">PAID</span>
-                            <button class="btn-icon">📄</button>
-                        </div>
-                        <div class="history-row">
-                            <span>IQ-9730</span>
-                            <span>₱4,200</span>
-                            <span class="status unpaid">PENDING</span>
-                            <button class="btn-icon">📄</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 3: Complaints History -->
-            <div class="profile-section">
-                <h4 class="section-title">ISSUE & RESOLUTION LOG</h4>
-                <div id="drawer-complaints-list">
-                    <div class="complaint-card resolved">
-                        <div class="complaint-header">
-                            <span class="date">April 28, 2026</span>
-                            <span class="badge badge-resolved">RESOLVED</span>
-                        </div>
-                        <p class="issue-text">"Received 3 bags with small holes/leaks..."</p>
-                        <p class="resolution-text"><strong>Resolution:</strong> Replaced 3 bags next day free of charge. Rider retrained on handling.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- PWA Install Prompt -->
     <div id="install-banner" class="install-banner">

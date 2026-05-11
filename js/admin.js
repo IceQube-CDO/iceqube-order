@@ -661,15 +661,25 @@ var admin = {
             return;
         }
 
-        feed.innerHTML = orders.slice(0, 5).map(o => `
-            <div class="feed-item">
-                <div class="feed-time">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                <div class="feed-content">
-                    <p><strong>Order ${o.order_id}</strong> - ${o.customer_name}</p>
-                    <small>${o.payment_method} • ₱${o.total_price}</small>
+        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+
+        feed.innerHTML = orders.slice(0, 5).map(o => {
+            const isElite = eliteList.includes(o.customer_name) || o.account_type === 'Elite';
+            return `
+                <div class="feed-item" style="${isElite ? 'border-left: 3px solid #eab308;' : ''}">
+                    <div class="feed-time">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div class="feed-content">
+                        <p>
+                            <strong>Order ${o.order_id}</strong> - ${o.customer_name}
+                            ${isElite ? '<span style="background: #eab308; color: #000; padding: 1px 4px; border-radius: 3px; font-size: 0.55rem; font-weight: 900; margin-left: 4px;">ELITE</span>' : ''}
+                        </p>
+                        <small>
+                            ${o.payment_method} • ₱${o.total_price}
+                        </small>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     },
 
     renderMockStats() {
@@ -902,7 +912,7 @@ var admin = {
         const listContainer = document.getElementById('customer-directory-list');
         if (!listContainer) return;
 
-        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO"]');
+        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
 
         const customers = {};
         orders.forEach(order => {
@@ -1150,6 +1160,8 @@ var admin = {
         
         if (!pendingBody || !ledgerBody) return;
 
+        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+
         // Use provided orders, or fallback to synced orders in localStorage
         let allOrders = (orders && orders.length > 0) ? [...orders] : JSON.parse(localStorage.getItem('ice_orders') || '[]');
 
@@ -1181,16 +1193,20 @@ var admin = {
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
-                    <td><b>${o.customer_name}</b></td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <b style="font-size: 1rem;">${o.customer_name}</b>
+                                ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
+                            </div>
+                        </div>
+                    </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
-                    <td>
-                        <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
-                               onchange="admin.updatePriorityFee('${o.id || o.order_id}', this.value)">
-                    </td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td>
                         <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)">
                             ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
@@ -1226,16 +1242,20 @@ var admin = {
                 <tr>
                     <td>${displayTime}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
-                    <td><b>${o.customer_name}</b></td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <b style="font-size: 1rem;">${o.customer_name}</b>
+                                ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
+                            </div>
+                        </div>
+                    </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td>
-                        <input type="number" class="status-select" style="width: 60px;" value="${o.priority_fee || 0}" 
-                               onchange="admin.updatePriorityFee('${o.id || o.order_id}', this.value)">
-                    </td>
+                    <td style="font-family: 'JetBrains Mono'; color: #64748b;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td style="text-align: center;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
                                 style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
@@ -1261,7 +1281,7 @@ var admin = {
 
     async updatePriorityFee(id, fee) {
         if (id.startsWith('mock')) {
-            console.log(`Mock Priority Fee updated for ${id}: ₱${fee}`);
+            console.log(`Mock Heavy Load Fee updated for ${id}: ₱${fee}`);
             return;
         }
         
@@ -1275,7 +1295,7 @@ var admin = {
                 },
                 body: JSON.stringify({ priority_fee: parseFloat(fee) })
             });
-            console.log('✅ Priority Fee Updated');
+            console.log('✅ Heavy Load Fee Updated');
             this.fetchRealStats(); // Refresh UI
         } catch (err) {
             console.error('Update Failed:', err);
@@ -2271,6 +2291,12 @@ function openCustomerDrawer(customerId) {
     
     document.getElementById('elite-toggle').checked = customer.isElite;
 
+    // Load Discounts
+    const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+    const customerDiscounts = discounts[customer.name] || { percent: 0, fixed: 0 };
+    document.getElementById('drawer-discount-percent').value = customerDiscounts.percent || 0;
+    document.getElementById('drawer-discount-fixed').value = (customerDiscounts.fixed || 0).toFixed(2);
+
     document.getElementById('drawer-clv').innerText = `₱${customer.totalRevenue.toLocaleString()}`;
     
     const msDiff = new Date(customer.lastOrderDate) - new Date(customer.firstOrderDate);
@@ -2307,7 +2333,12 @@ function openCustomerDrawer(customerId) {
         historyList.innerHTML = historyHtml;
     }
 
-    document.getElementById('customer-drawer-overlay').style.display = 'block';
+    const customerView = document.getElementById('customer-view');
+    if (customerView) customerView.classList.add('drawer-open');
+
+    const overlay = document.getElementById('customer-drawer-overlay');
+    if (overlay) overlay.style.display = 'block';
+
     setTimeout(() => {
         document.getElementById('customer-drawer').classList.add('open');
     }, 10);
@@ -2315,9 +2346,14 @@ function openCustomerDrawer(customerId) {
 
 function closeCustomerDrawer() {
     document.getElementById('customer-drawer').classList.remove('open');
+    
+    const customerView = document.getElementById('customer-view');
+    if (customerView) customerView.classList.remove('drawer-open');
+
+    const overlay = document.getElementById('customer-drawer-overlay');
     // Wait for slide animation to finish before hiding overlay
     setTimeout(() => {
-        document.getElementById('customer-drawer-overlay').style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
     }, 300);
 }
 
@@ -2333,7 +2369,7 @@ function toggleEliteStatus() {
         }
     }
 
-    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO"]');
+    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
 
     if (isElite) {
         console.log(`[SYSTEM] Upgrading ${customerName} to ELITE TIER.`);
@@ -2344,4 +2380,18 @@ function toggleEliteStatus() {
     }
     
     localStorage.setItem('iceqube_elite_customers', JSON.stringify(eliteList));
+}
+
+function saveCustomerDiscounts() {
+    const customerName = document.getElementById('drawer-customer-name').innerText;
+    const percent = parseFloat(document.getElementById('drawer-discount-percent').value) || 0;
+    const fixed = parseFloat(document.getElementById('drawer-discount-fixed').value) || 0;
+
+    const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+    discounts[customerName] = { percent, fixed };
+    
+    localStorage.setItem('iceqube_customer_discounts', JSON.stringify(discounts));
+    
+    console.log(`[SYSTEM] Pricing updated for ${customerName}: ${percent}% off and ₱${fixed} fixed discount.`);
+    alert(`Pricing settings saved for ${customerName}.`);
 }

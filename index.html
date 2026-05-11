@@ -960,6 +960,10 @@
                         <span style="opacity: 0.8;">Delivery Fee:</span>
                         <span id="payment-delivery-fee" style="font-weight: 600;">₱0</span>
                     </div>
+                    <div id="payment-priority-fee-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                        <span style="opacity: 0.8;">Heavy Load Surcharge:</span>
+                        <span id="payment-priority-fee" style="font-weight: 600; color: #f59e0b;">₱0</span>
+                    </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
                         <span style="font-weight: 600;">Total Amount:</span>
                         <span id="payment-total" style="font-weight: bold; font-size: 1.1rem; color: var(--accent);">₱0</span>
@@ -1355,7 +1359,7 @@
                 <div class="dispatch-body">
                     <div class="dispatch-main">
                         <h2 id="dispatch-time">Tomorrow, 9:00 AM</h2>
-                        <p id="dispatch-details">15 Bags • Half-Dice</p>
+                        <p id="dispatch-details">14 Bags • Half-Dice</p>
                     </div>
                     <button id="dispatch-manage-btn" class="manage-btn" onclick="app.openDeliveriesPanel()" aria-label="Manage Scheduled Deliveries">Manage Order ›</button>
                 </div>
@@ -2024,10 +2028,10 @@
     <div id="reorderModal" class="modal-overlay" onclick="if(event.target === this) closeReorderModal()">
         <div class="modal-card">
             <h3>Confirm Your Order</h3>
-            <p>Current Default: <strong>15 Bags (Half-Dice)</strong></p>
+            <p>Current Default: <strong id="reorder-modal-default">14 Bags (Half-Dice)</strong></p>
             
             <div class="modal-actions">
-                <button class="modal-btn primary" onclick="processOrder()">Continue with 15 Bags</button>
+                <button id="reorder-modal-btn" class="modal-btn primary" onclick="processOrder(14)">Continue with 14 Bags</button>
                 <button class="modal-btn secondary" onclick="goToEditQty()">Edit Quantity</button>
                 <button class="modal-btn cancel" onclick="closeReorderModal()">Cancel</button>
             </div>
@@ -2210,11 +2214,24 @@
                 </div>
             </div>
 
+            <div class="input-group" style="margin-bottom: 1rem;">
+                <label>Pinned Location</label>
+                <div id="profile-map-preview" class="map-preview" onclick="app.openMapForProfile()" style="width: 100%; height: 120px; border-radius: 16px; background: #f1f5f9; border: 1px solid var(--border); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.8rem; cursor: pointer; padding: 0;">
+                    <div id="profile-map-placeholder" style="display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>No location pinned yet</span>
+                    </div>
+                    <div class="map-overlay" style="pointer-events: none;">
+                        <div class="map-btn">Tap to Refine Pin</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="input-group">
                 <label>Default Delivery Address</label>
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1; position: relative;">
-                        <input type="text" id="profile-address" class="input-high-contrast" placeholder="Pin on map..." style="padding-left: 44px; padding-right: 40px;" onclick="app.openMapForProfile()">
+                        <input type="text" id="profile-address" class="input-high-contrast" placeholder="Pin on map..." style="padding-left: 44px; padding-right: 40px;">
                         <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                         </div>
@@ -2227,21 +2244,39 @@
                 <input type="hidden" id="profile-lng">
             </div>
 
+            <div class="input-group">
+                <label for="profile-instructions">Delivery Notes / Landmark</label>
+                <div style="position: relative;">
+                    <input type="text" id="profile-instructions" class="input-high-contrast" placeholder="e.g. Unit 402, beside the Blue Gate" style="padding-left: 44px;">
+                    <div style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                </div>
+            </div>
+
             <div class="input-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
                 <label style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Notification Channel</label>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; background: var(--bg-secondary); padding: 14px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <div style="display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 40px; height: 40px; border-radius: 12px; background: #0084ff; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3);">
+                    <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: #0084ff; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3); flex-shrink: 0;">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.914 1.455 5.518 3.733 7.234V22l3.355-1.84a10.27 10.27 0 0 0 2.912.418c5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.255 12.35l-2.503-2.674-4.887 2.674 5.375-5.71 2.503 2.674 4.887-2.674-5.375 5.71z"/></svg>
                         </div>
-                        <div>
+                        <div style="flex: 1;">
                             <p style="font-size: 0.95rem; font-weight: 800; margin: 0; color: var(--text-primary);">Messenger Updates</p>
-                            <p id="messenger-status-text" style="font-size: 0.75rem; color: var(--text-secondary); margin: 2px 0 0;">Verifying...</p>
+                            <input type="text" id="profile-messenger-input" placeholder="Enter Messenger ID / Link" style="font-size: 0.75rem; color: var(--text-secondary); background: transparent; border: none; outline: none; width: 100%; margin: 2px 0 0; padding: 0;" oninput="app.handleMessengerInput(this.value)">
                         </div>
                     </div>
-                    <div id="messenger-status-badge" class="status-badge" style="background: #fee2e2; color: #ef4444; font-size: 0.7rem; padding: 5px 10px; border-radius: 8px; font-weight: 800; letter-spacing: 0.02em;">OFF</div>
+                    <div id="messenger-status-badge" class="status-badge" style="background: #fee2e2; color: #ef4444; font-size: 0.7rem; padding: 5px 10px; border-radius: 8px; font-weight: 800; letter-spacing: 0.02em; cursor: pointer; user-select: none;" onclick="app.toggleMessengerNotifications()">OFF</div>
                 </div>
                 <input type="hidden" id="profile-messenger-id">
+            </div>
+
+            <!-- ACTIVE DISCOUNTS SECTION -->
+            <div id="profile-discounts-section" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
+                <label style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Active Promotions</label>
+                <div id="active-discounts-list" style="margin-top: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Injected dynamically -->
+                </div>
             </div>
 
             <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
