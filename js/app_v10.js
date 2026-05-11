@@ -156,6 +156,25 @@ const app = {
 
         // --- Sync Status Diagnostics ---
         this.updateSyncBadges();
+
+        // --- Order History Sync ---
+        this.renderOrderHistory();
+
+        // --- Sync Listeners ---
+        if (window.IceQubeSync) {
+            window.IceQubeSync.onOrderEvent((event) => {
+                if (event.type === 'NEW_ORDER' || event.type === 'SYSTEM_PURGE') {
+                    console.log(`🔔 [App] History update triggered by ${event.type}`);
+                    this.renderOrderHistory();
+                    if (event.type === 'NEW_ORDER') {
+                        this.showToast('New order placed!', 'success');
+                    } else if (event.type === 'SYSTEM_PURGE') {
+                        this.showToast('System data synchronized.', 'info');
+                        // If we are currently viewing the history panel, it will refresh automatically
+                    }
+                }
+            });
+        }
     },
 
     updateSyncBadges() {
@@ -189,6 +208,84 @@ const app = {
                 cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 5px; height: 5px; background: #f59e0b; border-radius: 50%;"></span> CLOUD (OFF)';
             }
         }
+    },
+
+    renderOrderHistory() {
+        const container = document.getElementById('history-list-container');
+        if (!container) return;
+
+        let orders = [];
+        try {
+            orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        } catch (e) {
+            console.error('Failed to parse orders for history:', e);
+        }
+
+        // Filter orders for this specific customer (based on companyName)
+        // If companyName is 'Guest Customer', we might want to show all local orders or just empty
+        const myOrders = orders.filter(o => {
+            if (this.user.companyName && this.user.companyName !== 'Guest Customer') {
+                return o.customer_name === this.user.companyName;
+            }
+            return true; // For guests, show all local orders for now
+        });
+
+        if (myOrders.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1rem; color: #94a3b8;">
+                    <p style="font-size: 0.9rem; margin: 0;">No past orders yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = myOrders.map(order => {
+            const dateStr = new Date(order.created_at || order.date || new Date()).toLocaleDateString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric'
+            });
+
+            // Calculate items summary
+            let itemsSummary = '';
+            const items = order.items;
+            if (items) {
+                const summaries = [];
+                ['fullDice', 'halfDice'].forEach(type => {
+                    if (items[type]) {
+                        const total = (items[type]['3kg'] || 0) + (items[type]['1kg'] || 0);
+                        if (total > 0) {
+                            summaries.push(`${total} Bags • ${type === 'fullDice' ? 'Full Dice' : 'Half-Dice'} (3kg)`);
+                        }
+                    }
+                });
+                itemsSummary = summaries.join(' & ');
+            } else {
+                itemsSummary = 'Details unavailable';
+            }
+
+            const isPO = order.payment_method === 'Purchase Order' || order.payment === 'Purchase Order';
+            
+            return `
+                <div class="history-card ${isPO ? 'po-account' : ''}" onclick="app.viewReceipt('${order.order_id}')">
+                    <div class="card-header">
+                        <div class="id-group">
+                            <strong class="order-id">${order.order_id.startsWith('#') ? order.order_id : '#' + order.order_id}</strong>
+                            ${isPO ? `<span class="po-tag">${order.po_number || 'PO #---'}</span>` : ''}
+                        </div>
+                        <span class="order-date">${dateStr}</span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <p>${itemsSummary}</p>
+                        <div class="total-row">
+                            <strong class="order-amount">₱${(parseFloat(order.total_price) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                            <span class="view-receipt-label">View Receipt ›</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     initAdminSecret() {
@@ -364,9 +461,14 @@ const app = {
     },
 
     openDebtSheet() {
+        const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
         if (this.user.accountType === 'Standard') {
+            const walletTitle = document.getElementById('wallet-sheet-title');
+            if (walletTitle) walletTitle.innerText = 'Wallet Top Up';
             this.toggleBottomSheet('wallet', true);
         } else {
+            const debtTitle = document.getElementById('debt-sheet-title');
+            if (debtTitle) debtTitle.innerText = isElite ? 'Ledger Settlement' : 'Total Debt Breakdown';
             if (typeof disablePaymentMethods === 'function') disablePaymentMethods();
             this.toggleBottomSheet('debt', true);
         }
@@ -977,19 +1079,20 @@ const app = {
         if (!btn) return;
 
         btn.classList.remove('safe', 'warning', 'critical');
+        const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
 
         if (ratio > 0.90) {
-            btn.innerText = "Looking Great!";
+            btn.innerText = isElite ? "Account Healthy" : "Looking Great!";
             btn.classList.add('safe');
         } else if (ratio > 0.66) {
-            btn.innerText = "Full Power";
+            btn.innerText = isElite ? "Balance Active" : "Full Power";
         } else if (ratio > 0.40) {
-            btn.innerText = "Half Power";
+            btn.innerText = isElite ? "Partial Debt" : "Half Power";
         } else if (ratio > 0.15) {
-            btn.innerText = "Top Up Soon";
+            btn.innerText = isElite ? "Settle Balance" : "Top Up Soon";
             btn.classList.add('warning');
         } else {
-            btn.innerText = "Recharge Now";
+            btn.innerText = isElite ? "Settle Balance" : "Recharge Now";
             btn.classList.add('critical');
         }
     },
@@ -1122,26 +1225,39 @@ const app = {
     applyQuickReorderDefaults() {
         this.isQuickReorder = true;
         this.orderData.logistics = 'Doorstep Delivery';
+
         // Use Profile Defaults if available, fallback to mock for demo
         const defaultName = (this.user.companyName && this.user.companyName !== 'Guest Customer') ? this.user.companyName : 'Loft Living CDO';
         const defaultPerson = this.user.contactPerson || 'Manager (Admin)';
         const defaultContact = this.user.contactNumber || '09171234567';
+        
+        // Priority: Saved profile location -> Hardcoded Fallback
+        const defaultLat = this.user.savedLat || 8.4772;
+        const defaultLng = this.user.savedLng || 124.6459;
+        const defaultAddr = this.user.savedAddress || 'Loft Living CDO';
+        const defaultInst = this.user.savedInstructions || 'Gate 2, Side Entrance. Regular delivery spot.';
 
         this.orderData.deliveryDetails = {
-            location: defaultName,
-            maps: 'https://maps.app.goo.gl/loft-living-mock',
-            lat: 8.4772,
-            lng: 124.6459,
+            location: defaultAddr,
+            establishment: defaultName,
+            maps: `https://www.google.com/maps?q=${defaultLat},${defaultLng}`,
+            lat: defaultLat,
+            lng: defaultLng,
             person: defaultPerson,
             contact: defaultContact,
-            instructions: 'Gate 2, Side Entrance. Regular delivery spot.'
+            instructions: defaultInst
         };
 
         if (document.getElementById('delivery-person')) {
             document.getElementById('delivery-person').value = this.orderData.deliveryDetails.person;
             document.getElementById('delivery-contact').value = this.formatPhone(this.orderData.deliveryDetails.contact);
             document.getElementById('delivery-instructions').value = this.orderData.deliveryDetails.instructions;
-            document.getElementById('delivery-maps').value = 'Pinned: Loft Living CDO';
+            
+            // For Quick Reorder, we show the address label clearly
+            const mapsInput = document.getElementById('delivery-maps');
+            if (mapsInput) {
+                mapsInput.value = `📍 ${defaultAddr}`;
+            }
             
             if (document.getElementById('btn-payment-delivery')) {
                 document.getElementById('btn-payment-delivery').disabled = false;
@@ -1340,7 +1456,7 @@ const app = {
         }
     },
 
-    nextStep() {
+    async nextStep() {
         if (this.currentStep < this.steps.length - 1) {
             const from = this.currentStep;
             
@@ -1356,10 +1472,11 @@ const app = {
                     if (this.orderData.logistics === 'Doorstep Delivery') {
                         // For Quick Reorder, we might need a quick fee refresh if distance is known
                         if (this.orderData.deliveryDetails && (this.orderData.deliveryDetails.lat || this.orderData.deliveryDetails.maps)) {
-                            this.calculateDeliveryFee();
+                            // V11.1: Crucial - We MUST await this so delivery fee isn't 0
+                            await this.calculateDeliveryFee();
                         }
                     }
-                    this.processFinalOrder(); 
+                    await this.processFinalOrder(); 
                     return; 
                 } else {
                     this.currentStep = 4; // Jump to Payment for Standard users
@@ -1874,8 +1991,7 @@ const app = {
                 const nearby = await new Promise((resolve) => {
                     placesService.nearbySearch({
                         location: { lat, lng },
-                        radius: 20, // Tight 20m radius for pinpoint precision
-                        rankBy: google.maps.places.RankBy.PROMINENCE
+                        rankBy: google.maps.places.RankBy.DISTANCE
                     }, (results, status) => {
                         if (status === google.maps.places.PlacesServiceStatus.OK) resolve(results);
                         else resolve(null);
@@ -1909,16 +2025,15 @@ const app = {
                             else reject(status);
                         });
                     }),
-                    new Promise((_, reject) => setTimeout(() => reject('timeout'), 1500))
+                    new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000))
                 ]);
 
                 if (response && response.length > 0) {
                     // Find anything specific (not a broad area or a whole district/barangay)
                     const areaTypes = [
-                        'locality', 'neighborhood', 'political', 'sublocality', 
+                        'locality', 'political', 
                         'administrative_area_level_1', 'administrative_area_level_2', 
-                        'administrative_area_level_3', 'administrative_area_level_4', 
-                        'administrative_area_level_5', 'country', 'postal_code'
+                        'country', 'postal_code'
                     ];
                     
                     // Try to find the most specific result that is NOT one of those area types
@@ -1955,6 +2070,8 @@ const app = {
             if (addrInput) addrInput.value = name;
             this._tempAddress = name;
             this._tempFullAddress = fullAddress;
+            this.updateMapPreview(this._tempEstablishment, fullAddress);
+            
             const satLabel = document.querySelector(".sat-label");
             if (satLabel) satLabel.innerText = name;
             const clearBtn = document.getElementById('map-search-clear');
@@ -2047,13 +2164,18 @@ const app = {
 
         // LAST RESORT FALLBACK
         if (!name) {
-            // Try to use a saved road from previous strategies
-            const savedRoad = (this._lastNominatimDetails && this._lastNominatimDetails.road) ? this._lastNominatimDetails.road : '';
-            const fallback = savedRoad ? `Near ${savedRoad}` : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            // Try to use a saved road or barangay from previous strategies
+            const savedRoad = (this._lastNominatimDetails && (this._lastNominatimDetails.road || this._lastNominatimDetails.suburb)) 
+                ? (this._lastNominatimDetails.road || this._lastNominatimDetails.suburb) 
+                : '';
+            
+            const fallback = savedRoad ? `Near ${savedRoad}` : `Pin at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             
             if (addrInput) addrInput.value = fallback;
             this._tempAddress = fallback;
-            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 PIN</span>`;
+            this._tempFullAddress = fallback;
+            this.updateMapPreview(null, fallback);
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#64748b;">📍 PIN</span>`;
         }
     },
     finalizeAddress(target, lat, lng) {
@@ -2079,59 +2201,91 @@ const app = {
 
         this._tempAddress = name;
         this._tempEstablishment = isPOI ? name : null;
+        this._tempFullAddress = target.formatted_address;
         this._tempLat = lat;
         this._tempLng = lng;
+        this.updateMapPreview(this._tempEstablishment, this._tempFullAddress || this._tempAddress);
         this.sanitizeSearchIcons();
     },
 
 
-    confirmMapLocation() {
-        if (!this._tempAddress) {
-            this._tempAddress = (this._tempLat && this._tempLng) 
-                ? `${this._tempLat.toFixed(4)}, ${this._tempLng.toFixed(4)}`
-                : "Selected Location";
-        }
-
-        if (this.mapContext === 'profile') {
-            const addrInput = document.getElementById('profile-address');
-            const latInput = document.getElementById('profile-lat');
-            const lngInput = document.getElementById('profile-lng');
-            
-            if (addrInput) addrInput.value = this._tempAddress;
-            if (latInput) latInput.value = this._tempLat || 0;
-            if (lngInput) lngInput.value = this._tempLng || 0;
-
-            // Update live state for preview
-            this.user.savedLat = this._tempLat;
-            this.user.savedLng = this._tempLng;
-            this.updateProfileMapPreview();
-
-            this.showToast("📍 Location Pinned to Profile", 'success');
-        } else {
-            // Regular Order Logic
-            // Note: We no longer auto-fill delivery-location with the map address (manual entry only)
-            
-            this.orderData.deliveryDetails.location = document.getElementById('delivery-location')?.value || this._tempAddress;
-            this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
-            if (this._tempEstablishment) {
-                this.orderData.deliveryDetails.establishment = this._tempEstablishment;
-            }
-            this.orderData.deliveryDetails.lat = this._tempLat || 0;
-            this.orderData.deliveryDetails.lng = this._tempLng || 0;
-            
-            const mapsInput = document.getElementById('delivery-maps');
-            if (mapsInput && this._tempLat && this._tempLng) {
-                const displayText = `📍 ${this._tempAddress}`;
-                mapsInput.value = displayText;
-                mapsInput.classList.add('populated');
-                mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
-                this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
-            }
-            this.calculateDeliveryFee();
-        }
+    updateMapPreview(estab, addr) {
+        const preview = document.getElementById('map-selection-preview');
+        const estabLabel = document.getElementById('preview-estab');
+        const addrLabel = document.getElementById('preview-addr');
         
-        this.hideSearchSuggestions();
-        this.closeMapOverlay();
+        if (preview && (estab || addr)) {
+            preview.style.display = 'block';
+            if (estabLabel) estabLabel.innerText = estab || "Residence / Private Area";
+            if (addrLabel) addrLabel.innerText = addr || "Determining coordinates...";
+        } else if (preview) {
+            preview.style.display = 'none';
+        }
+    },
+
+
+    confirmMapLocation() {
+        console.log("📍 Confirming Map Location...");
+        try {
+            if (!this._tempAddress) {
+                this._tempAddress = (this._tempLat && this._tempLng) 
+                    ? `${this._tempLat.toFixed(4)}, ${this._tempLng.toFixed(4)}`
+                    : "Selected Location";
+            }
+
+            if (this.mapContext === 'profile') {
+                console.log("Profile context detected");
+                const estabInput = document.getElementById('profile-establishment');
+                const addrInput = document.getElementById('profile-address');
+                const latInput = document.getElementById('profile-lat');
+                const lngInput = document.getElementById('profile-lng');
+                
+                // Antigravity: Removed automatic population of address/establishment fields 
+                // to respect manual input as requested by user.
+                
+                if (latInput) latInput.value = this._tempLat || 0;
+                if (lngInput) lngInput.value = this._tempLng || 0;
+
+                // Update live state for preview and persistence
+                if (!this.user) this.user = {};
+                this.user.savedLat = this._tempLat;
+                this.user.savedLng = this._tempLng;
+                this.user.savedAddress = addrInput?.value || this._tempAddress;
+                this.user.savedEstablishment = this._tempEstablishment || "";
+                
+                this.updateProfileMapPreview();
+                this.closeMapOverlay();
+                this.showToast("📍 Profile Location Updated", 'success');
+            } else {
+                console.log("Logistics context detected");
+                // Regular Order Logic
+                this.orderData.deliveryDetails.location = document.getElementById('delivery-location')?.value || this._tempAddress;
+                this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
+                if (this._tempEstablishment) {
+                    this.orderData.deliveryDetails.establishment = this._tempEstablishment;
+                }
+                this.orderData.deliveryDetails.lat = this._tempLat || 0;
+                this.orderData.deliveryDetails.lng = this._tempLng || 0;
+                
+                const mapsInput = document.getElementById('delivery-maps');
+                if (mapsInput && this._tempLat && this._tempLng) {
+                    const displayText = `📍 ${this._tempAddress}`;
+                    mapsInput.value = displayText;
+                    mapsInput.classList.add('populated');
+                    mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+                    this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
+                }
+                this.calculateDeliveryFee();
+            }
+            
+            this.hideSearchSuggestions();
+            this.closeMapOverlay();
+        } catch (err) {
+            console.error("❌ Map Confirmation Error:", err);
+            this.showToast("⚠️ Could not save location. Please try again.", 'error');
+            // Force close as fallback
+            this.closeMapOverlay();
+        }
     },
 
     sanitizeSearchIcons() {
@@ -2616,8 +2770,14 @@ const app = {
     },
 
     closeMapOverlay() {
+        console.log("📍 Closing Map Overlay...");
         this.hideSearchSuggestions();
-        document.getElementById('map-overlay').classList.remove('active');
+        const overlay = document.getElementById('map-overlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+            overlay.style.setProperty('display', 'none', 'important');
+            overlay.style.setProperty('pointer-events', 'none', 'important');
+        }
     },
 
     prevStep() {
@@ -2769,7 +2929,28 @@ const app = {
             });
         }
 
-        this.orderData.total = total3kg + total1kg;
+        this.orderData.subtotal = total3kg + total1kg;
+        
+        // Apply Partnership Discount
+        const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+        // Robust case-insensitive and trimmed lookup
+        const company = (this.user.companyName || '').trim().toUpperCase();
+        const dKey = Object.keys(discounts).find(k => k.trim().toUpperCase() === company);
+        const d = dKey ? discounts[dKey] : null;
+
+        this.orderData.discountAmount = 0;
+        this.orderData.discountLabel = '';
+
+        if (d) {
+            if (d.percent > 0) {
+                this.orderData.discountAmount = (this.orderData.subtotal * d.percent) / 100;
+                this.orderData.discountLabel = `${d.percent}% Partnership Discount`;
+            } else if (d.fixed > 0) {
+                this.orderData.discountAmount = d.fixed;
+                this.orderData.discountLabel = `₱${d.fixed} Fixed Discount`;
+            }
+        }
+        this.orderData.total = this.orderData.subtotal - this.orderData.discountAmount;
         this.calculatePriorityFee();
 
         const nextBtn = document.getElementById('qty-next');
@@ -4506,39 +4687,107 @@ const app = {
     },
 
     viewReceipt(orderId) {
-        // Mock Order Database
-        const orders = {
-            'IQ-9750': {
-                date: 'April 20, 2026',
-                customer: 'Loft Living CDO',
-                address: 'Piaping Itum, Macabalan, CDO',
-                items: [{ name: 'Full Dice (3kg)', qty: 14, unit: 'Bag', price: 170.00 }],
-                delivery: 0,
-                payment: 'Purchase Order (#8821)'
-            },
-            'IQ-9688': {
-                date: 'April 17, 2026',
-                customer: 'Loft Living CDO',
-                address: 'Piaping Itum, Macabalan, CDO',
-                items: [{ name: 'Half-Dice (3kg)', qty: 10, unit: 'Bag', price: 170.00 }],
-                delivery: 30,
-                payment: 'Purchase Order (#8815)'
-            },
-            'IQ-9521': {
-                date: 'April 12, 2026',
-                customer: 'Loft Living CDO',
-                address: 'Piaping Itum, Macabalan, CDO',
-                items: [{ name: 'Full Dice (3kg)', qty: 20, unit: 'Bag', price: 170.00 }],
-                delivery: 0,
-                payment: 'Purchase Order (#8792)'
-            }
-        };
+        // Fetch real orders from local storage
+        let ordersList = [];
+        try {
+            ordersList = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        } catch (e) {
+            console.error('Failed to parse orders:', e);
+        }
 
-        const order = orders[orderId];
-        if (!order) {
-            this.showToast('Receipt not found for Order #' + orderId, 'error');
+        // Find the specific order (handle optional # prefix)
+        const cleanId = orderId.startsWith('#') ? orderId.substring(1) : orderId;
+        const rawOrder = ordersList.find(o => {
+            const oId = o.order_id || o.id || '';
+            const oCleanId = oId.startsWith('#') ? oId.substring(1) : oId;
+            return oCleanId === cleanId;
+        });
+
+        if (!rawOrder) {
+            this.showToast('Receipt details not found. It may have been purged or is still syncing.', 'error');
             return;
         }
+
+        // --- Data Conversion for Receipt UI ---
+        // Map items from storage format {fullDice: {'3kg': 8}} to receipt format [{name, qty, unit, price}]
+        const mappedItems = [];
+        let items = rawOrder.items || {};
+        
+        // Handle Supabase JSON strings
+        if (typeof items === 'string') {
+            try {
+                items = JSON.parse(items);
+            } catch (e) {
+                console.warn('Failed to parse items string:', items);
+                items = {};
+            }
+        }
+
+        const wholesaleThreshold = 14; 
+        
+        ['fullDice', 'halfDice'].forEach(type => {
+            if (items[type]) {
+                ['3kg', '1kg'].forEach(size => {
+                    const qty = items[type][size] || 0;
+                    if (qty > 0) {
+                        // Calculate total quantity for this size across all types (Full/Half) to match ordering engine
+                        const totalSizeQty = (items.fullDice ? (items.fullDice[size] || 0) : 0) + (items.halfDice ? (items.halfDice[size] || 0) : 0);
+                        
+                        let price = 40;
+                        if (size === '3kg') {
+                            price = (totalSizeQty >= 14) ? 35 : 40;
+                        } else {
+                            price = (totalSizeQty >= 40) ? 14 : 15;
+                        }
+
+                        mappedItems.push({
+                            name: `${type === 'fullDice' ? 'Full Dice' : 'Half-Dice'} (${size})`,
+                            qty: qty,
+                            unit: 'Bag',
+                            price: price
+                        });
+                    }
+                });
+            }
+        });
+
+        const order = {
+            order_id: cleanId, // Store clean ID for formatting
+            date: new Date(rawOrder.created_at || rawOrder.date || new Date()).toLocaleDateString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric'
+            }),
+            customer: rawOrder.customer_name || 'Guest Customer',
+            address: rawOrder.delivery_address || 'N/A',
+            items: mappedItems,
+            delivery: parseFloat(rawOrder.delivery_fee) || 0,
+            priorityFee: parseFloat(rawOrder.priority_fee) || 0,
+            payment: rawOrder.payment_method || rawOrder.payment || 'Cash on Delivery',
+            total: parseFloat(rawOrder.total_price) || 0
+        };
+
+        // Use live profile details for a consistent demo experience
+        const displayCustomer = this.user.companyName && this.user.companyName !== 'Guest Customer' ? this.user.companyName : order.customer;
+        
+        // Sync Discount from Control Room (Admin) settings
+        const allDiscounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+        const customerPriceSettings = allDiscounts[displayCustomer] || { percent: 0, fixed: 0 };
+        
+        let dynamicDiscountAmount = 0;
+        let dynamicDiscountLabel = '';
+
+        // Calculate Subtotal for percentage calculation
+        const subtotal = order.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+
+        if (customerPriceSettings.percent > 0) {
+            dynamicDiscountAmount = subtotal * (customerPriceSettings.percent / 100);
+            dynamicDiscountLabel = `${customerPriceSettings.percent}% Partnership Discount`;
+        } else if (customerPriceSettings.fixed > 0) {
+            dynamicDiscountAmount = customerPriceSettings.fixed;
+            dynamicDiscountLabel = `Fixed Partnership Discount`;
+        }
+
+        const finalDiscountAmount = dynamicDiscountAmount || order.discountAmount || 0;
+        const finalDiscountLabel = dynamicDiscountLabel || order.discountLabel || 'Partnership Discount';
 
         // Simulate loading state for a premium feel
         const panel = document.getElementById('receipt-panel');
@@ -4553,31 +4802,64 @@ const app = {
 
         setTimeout(() => {
             // Populate Modal
-            document.getElementById('receipt-order-id').innerText = '#' + orderId;
+            document.getElementById('receipt-order-id').innerText = '#' + order.order_id;
             document.getElementById('receipt-date').innerText = order.date;
-            document.getElementById('receipt-customer-name').innerText = order.customer;
-            document.getElementById('receipt-customer-address').innerText = order.address;
+            document.getElementById('receipt-customer-name').innerText = displayCustomer;
+            document.getElementById('receipt-customer-address').innerText = this.user.savedAddress || order.address;
             document.getElementById('receipt-payment-method').innerText = order.payment;
+
+            // Update label based on tier
+            const receiptLabel = document.getElementById('receipt-client-label');
+            const isElite = this.user.accountType === 'Elite' || (this.user.companyName && this.user.companyName.includes('Loft'));
+            if (receiptLabel) receiptLabel.innerText = isElite ? 'ELITE CLIENT DETAILS' : 'CLIENT DETAILS';
 
             // Populate Items
             const itemsList = document.getElementById('receipt-items-list');
             itemsList.innerHTML = order.items.map(item => `
-                <div class="receipt-item">
+                <div class="receipt-item-row">
                     <div class="item-info">
                         <strong>${item.name}</strong>
-                        <span>${item.qty} ${item.unit}${item.qty > 1 ? 's' : ''} × ₱${item.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        <small>${item.qty} ${item.unit}${item.qty > 1 ? 's' : ''} × ₱${item.price.toFixed(2)}</small>
                     </div>
-                    <span class="item-price">₱${(item.qty * item.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    <div class="item-total">₱${(item.qty * item.price).toLocaleString()}</div>
                 </div>
             `).join('');
 
-            // Totals
-            const subtotal = order.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-            document.getElementById('receipt-subtotal').innerText = '₱' + subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('receipt-delivery').innerText = '₱' + order.delivery.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('receipt-total').innerText = '₱' + (subtotal + order.delivery).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            // --- BALANCED RECEIPT MATH ---
+            // 1. Calculate Gross Subtotal (Sum of all items)
+            const grossSubtotal = order.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+            document.getElementById('receipt-subtotal').innerText = '₱' + grossSubtotal.toLocaleString();
 
-            // Reveal Content
+            const deliveryFee = order.delivery || 0;
+            document.getElementById('receipt-delivery').innerText = '₱' + deliveryFee.toLocaleString();
+            
+            // 2. Identify the Master Total (What was actually paid)
+            const masterTotal = order.total || (grossSubtotal + deliveryFee);
+            
+            // 3. Calculate the "Actual" discount to make the math balance
+            // Discount = (Gross + Delivery) - MasterTotal
+            const actualDiscount = Math.max(0, (grossSubtotal + deliveryFee) - masterTotal);
+            
+            // Populate Discount Row
+            const discRow = document.getElementById('receipt-discount-row');
+            if (discRow) {
+                if (actualDiscount > 0) {
+                    discRow.style.display = 'flex';
+                    document.getElementById('receipt-discount-label').innerText = 'Partnership Discount';
+                    document.getElementById('receipt-discount-amount').innerText = '-₱' + actualDiscount.toLocaleString();
+                } else {
+                    discRow.style.display = 'none';
+                }
+            }
+
+            document.getElementById('receipt-total').innerText = '₱' + masterTotal.toLocaleString();
+
+            // Status Stamp
+            const stamp = document.getElementById('receipt-status-stamp');
+            if (stamp) {
+                stamp.innerText = order.payment && order.payment.includes('PO') ? 'PO AUTHORIZED' : 'PAID & VERIFIED';
+            }
+
             header.innerText = 'Digital Receipt';
             content.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
             content.style.opacity = '1';
@@ -4675,6 +4957,26 @@ const app = {
     },
 
     generateLedger(isCustomSubmit = false) {
+        // Update client info dynamically based on tier
+        const clientNameElem = document.getElementById('client-name');
+        const clientTierElem = document.getElementById('client-tier');
+        const clientLabelElem = document.getElementById('soa-client-label');
+        
+        if (clientNameElem) clientNameElem.innerText = this.user.companyName || 'Guest';
+        if (clientTierElem) clientTierElem.innerText = `Account Type: ${this.user.accountType || 'Standard'}`;
+        
+        if (clientLabelElem) {
+            const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+            clientLabelElem.innerText = isElite ? 'CLIENT:' : 'CUSTOMER:';
+        }
+
+        const soaAddress = document.getElementById('client-address');
+        const soaContact = document.getElementById('client-contact');
+        const soaPhone = document.getElementById('client-phone');
+        if (soaAddress) soaAddress.innerText = this.user.savedAddress || '';
+        if (soaContact) soaContact.innerText = this.user.contactPerson ? `Contact: ${this.user.contactPerson}` : '';
+        if (soaPhone) soaPhone.innerText = this.user.contactNumber || '';
+
         const tbody = document.getElementById('ledger-table-body');
         const timestamp = document.getElementById('generation-timestamp');
         const period = document.getElementById('soa-date-filter').value;
@@ -4702,7 +5004,7 @@ const app = {
         if (period === 'current') {
             data = [
                 { date: 'May 22, 2026', ref: 'Order #IQ-9812 (PO #8821)', charge: 850, payment: 0, balance: 1665 },
-                { date: 'May 20, 2026', ref: 'Order #IQ-9750 (PO #8821)', charge: 2550, payment: 0, balance: 815 },
+                { date: 'May 20, 2026', ref: 'Order #IQ-9750 (PO #8821) - Less 10% Disc', charge: 2142, payment: 0, balance: 815 },
                 { date: 'May 15, 2026', ref: 'Payment - GCash Receipt #7721', charge: 0, payment: 3000, balance: -1735 },
                 { date: 'May 12, 2026', ref: 'Order #IQ-9688 (PO #8815)', charge: 1700, payment: 0, balance: 1265 },
                 { date: 'May 01, 2026', ref: 'Opening Balance (Forwarded)', charge: 0, payment: 0, balance: -435 }
@@ -5469,6 +5771,11 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
         localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
         
+        // Broadcast profile update for Admin visibility
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishProfileUpdate(profile);
+        }
+        
         // Update live state
         this.user.companyName = establishment;
         this.user.contactPerson = contactPerson;
@@ -5574,6 +5881,11 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         // Save to localStorage
         localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
 
+        // Broadcast profile update for Admin visibility
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishProfileUpdate(profile);
+        }
+        
         // Update live app state
         this.user.companyName = profile.establishment;
         this.user.contactPerson = profile.contactPerson;
@@ -5650,8 +5962,10 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
     openMapForProfile() {
         console.log("📍 Opening Map for Profile Refinement...");
-        this.showToast("📍 Opening map...", 'info');
         this.mapContext = 'profile';
+        
+        const manualAddr = document.getElementById('profile-address')?.value.trim();
+        const manualEstab = document.getElementById('profile-establishment')?.value.trim();
         
         // Initialize map with saved location if available
         if (this.user.savedLat && this.user.savedLng) {
@@ -5659,7 +5973,21 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             this._tempLng = parseFloat(this.user.savedLng);
             this._tempAddress = this.user.savedAddress;
         }
+
         this.openMapOverlay();
+
+        // If there's manual input, search for it on the map
+        if (manualAddr || manualEstab) {
+            const searchQuery = manualEstab ? `${manualEstab}, ${manualAddr}` : manualAddr;
+            console.log("🔍 Searching for manual address:", searchQuery);
+            setTimeout(() => {
+                const searchInput = document.getElementById('map-search-input');
+                if (searchInput) {
+                    searchInput.value = searchQuery;
+                    this.searchLocation(searchQuery);
+                }
+            }, 500); // Wait for map to be ready
+        }
     },
 
     openMapOverlay() {
@@ -5667,10 +5995,16 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         const overlay = document.getElementById('map-overlay');
         if (!overlay) return;
 
-        // Force overlay visible
+        // Force overlay visible with extreme priority
         overlay.classList.add('active');
-        overlay.style.display = 'flex';
-        overlay.style.zIndex = '10000';
+        overlay.style.setProperty('display', 'flex', 'important');
+        overlay.style.setProperty('opacity', '1', 'important');
+        overlay.style.setProperty('visibility', 'visible', 'important');
+        overlay.style.setProperty('z-index', '20000', 'important');
+        overlay.style.setProperty('pointer-events', 'auto', 'important');
+        
+        console.log("📍 Overlay Force-Shown. Z-Index: 20000");
+        this.showToast("📍 Displaying Map", 'success');
 
         if (!this.mapInitialized) {
             if (window.google && this.googleMapsReady) {

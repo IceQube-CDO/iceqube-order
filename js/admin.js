@@ -57,7 +57,7 @@ var admin = {
                 try {
                     // 1. Local Purge
                     const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-                    const realOrders = orders.filter(o => o.is_real === true);
+                    const realOrders = orders.filter(o => o.is_real === true && o.po_number !== 'SYSTEM-GENERATED' && o.poNumber !== 'SYSTEM-GENERATED');
                     localStorage.setItem('ice_orders', JSON.stringify(realOrders));
                     console.log(`- Filtered Orders: ${realOrders.length} kept locally`);
 
@@ -71,12 +71,16 @@ var admin = {
 
                     localStorage.removeItem('ice_messages');
                     localStorage.setItem('ice_system_purged', 'true');
+                    
+                    if (window.IceQubeSync) {
+                        window.IceQubeSync.publishPurge();
+                    }
 
                     // 2. Cloud Purge (If active)
                     if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
-                        console.log('☁️ Attempting Cloud Purge (Orders where is_real is not true)...');
-                        // Delete non-real orders from Supabase
-                        const cloudResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(is_real.is.null,is_real.eq.false)`, {
+                        console.log('☁️ Attempting Cloud Purge (Test orders and SYSTEM-GENERATED)...');
+                        // Delete non-real orders OR system-generated test orders from Supabase
+                        const cloudResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(is_real.is.null,is_real.eq.false,po_number.eq.SYSTEM-GENERATED)`, {
                             method: 'DELETE',
                             headers: {
                                 'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -85,7 +89,7 @@ var admin = {
                         });
                         
                         if (!cloudResponse.ok) {
-                            console.warn('⚠️ Cloud Purge partially failed (check if is_real column exists):', cloudResponse.status);
+                            console.warn('⚠️ Cloud Purge partially failed:', cloudResponse.status);
                         } else {
                             console.log('✅ Cloud Purge successful');
                         }
@@ -261,6 +265,9 @@ var admin = {
                 if (event.type === 'NEW_ORDER') {
                     console.log("🔔 [Admin] New order detected via Sync:", event.payload.order_id);
                     this.handleIncomingOrder(event.payload);
+                } else if (event.type === 'PROFILE_UPDATED') {
+                    console.log("👤 [Admin] Profile update detected via Sync:", event.payload.establishment);
+                    this.fetchRealStats(); // Refresh everything to reflect new profile data
                 }
             });
 
@@ -584,6 +591,10 @@ var admin = {
             }
             const orders = await response.json();
             console.log(`✅ Received ${orders.length} orders from Supabase.`);
+            
+            // Sync cloud data to local storage so purged/deleted items stay gone
+            localStorage.setItem('ice_orders', JSON.stringify(orders));
+            
             this.updateDashboardUI(orders);
         } catch (err) {
             console.warn('Live fetch failed, falling back to mock:', err);
@@ -913,16 +924,19 @@ var admin = {
         if (!listContainer) return;
 
         const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+        const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
 
         const customers = {};
         orders.forEach(order => {
             if (!order.customer_name) return;
             const name = order.customer_name;
             if (!customers[name]) {
+                const profile = profiles[name] || {};
                 customers[name] = {
                     name: name,
-                    address: order.delivery_address || 'No Address Provided',
-                    phone: order.customer_phone || 'No Phone provided',
+                    address: profile.address || order.delivery_address || 'No Address Provided',
+                    phone: profile.contactNumber || order.contact_number || order.customer_phone || 'No Phone provided',
+                    contactPerson: profile.contactPerson || order.receiver_name || name,
                     totalRevenue: 0,
                     orders: [],
                     firstOrderDate: order.created_at,
@@ -1162,8 +1176,8 @@ var admin = {
 
         const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
 
-        // Use provided orders, or fallback to synced orders in localStorage
-        let allOrders = (orders && orders.length > 0) ? [...orders] : JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        // Use provided orders (from cloud) or fallback to local only if orders is null/undefined
+        let allOrders = Array.isArray(orders) ? [...orders] : JSON.parse(localStorage.getItem('ice_orders') || '[]');
 
         // SANITIZE: Remove any broken or malformed test data
         allOrders = allOrders.filter(o => o && o.order_id && o.created_at && !o.order_id.includes('undefined'));
@@ -1204,8 +1218,8 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono';">₱${(o.delivery_fee || 0).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono';">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td>
                         <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)">
@@ -1253,9 +1267,9 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(parseFloat(o.total_price) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono'; color: #64748b;">₱${(o.priority_fee || 0).toLocaleString()}</td>
+                    <td style="font-family: 'JetBrains Mono'; color: #64748b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
                     <td style="text-align: center;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
                                 style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
@@ -1279,6 +1293,42 @@ var admin = {
         }).join('');
     },
 
+    async deleteOrder(id) {
+        if (!confirm('Are you sure you want to PERMANENTLY delete this order? This will remove it from the cloud and all customer apps.')) return;
+        
+        console.log(`🗑️ Deleting Order ${id}...`);
+        
+        // 1. Remove from local storage
+        const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const filtered = orders.filter(o => (o.id || o.order_id) !== id);
+        localStorage.setItem('ice_orders', JSON.stringify(filtered));
+        
+        // 2. Remove from Cloud (Supabase)
+        if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                const encodedId = encodeURIComponent(id);
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(id.eq.${encodedId},order_id.eq.${encodedId})`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+                if (!response.ok) console.warn('Cloud delete failed or item not found in cloud.');
+            } catch (err) {
+                console.error('Cloud delete error:', err);
+            }
+        }
+        
+        // 3. Broadcast to Customer App
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishPurge(); // Re-use purge event to trigger refresh
+        }
+        
+        // 4. Refresh UI
+        this.fetchRealStats();
+    },
+
     async updatePriorityFee(id, fee) {
         if (id.startsWith('mock')) {
             console.log(`Mock Heavy Load Fee updated for ${id}: ₱${fee}`);
@@ -1286,7 +1336,7 @@ var admin = {
         }
         
         try {
-            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -1459,7 +1509,7 @@ var admin = {
         }
         
         try {
-            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -1485,7 +1535,7 @@ var admin = {
         }
 
         try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -2284,18 +2334,29 @@ function openCustomerDrawer(customerId) {
     const customer = admin.customerData?.find(c => c.name === customerId);
     if (!customer) return;
 
+    const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+    const profile = profiles[customer.name] || {};
+
     document.getElementById('drawer-customer-name').innerText = customer.name;
-    document.getElementById('drawer-customer-address').innerText = customer.address;
-    document.getElementById('drawer-contact-person').innerText = customer.name;
-    document.getElementById('drawer-phone').innerText = customer.phone;
+    document.getElementById('drawer-customer-address').innerText = profile.address || customer.address;
+    document.getElementById('drawer-contact-person').innerText = profile.contactPerson || customer.contactPerson || customer.name;
+    document.getElementById('drawer-phone').innerText = profile.contactNumber || customer.phone;
     
     document.getElementById('elite-toggle').checked = customer.isElite;
 
     // Load Discounts
     const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
     const customerDiscounts = discounts[customer.name] || { percent: 0, fixed: 0 };
+    
+    // Set both input and display values
     document.getElementById('drawer-discount-percent').value = customerDiscounts.percent || 0;
+    document.getElementById('display-discount-percent').innerText = customerDiscounts.percent || 0;
+    
     document.getElementById('drawer-discount-fixed').value = (customerDiscounts.fixed || 0).toFixed(2);
+    document.getElementById('display-discount-fixed').innerText = (customerDiscounts.fixed || 0).toFixed(2);
+
+    // Default to locked mode
+    togglePricingEdit(false);
 
     document.getElementById('drawer-clv').innerText = `₱${customer.totalRevenue.toLocaleString()}`;
     
@@ -2354,7 +2415,35 @@ function closeCustomerDrawer() {
     // Wait for slide animation to finish before hiding overlay
     setTimeout(() => {
         if (overlay) overlay.style.display = 'none';
+        // Reset pricing UI on close
+        togglePricingEdit(false);
     }, 300);
+}
+
+// Pricing Lock/Edit Toggle
+function togglePricingEdit(isEditing) {
+    const displayMode = document.getElementById('pricing-display-mode');
+    const editMode = document.getElementById('pricing-edit-mode');
+    const editBtn = document.getElementById('pricing-edit-btn');
+    const actions = document.getElementById('pricing-actions');
+    const savedStatus = document.getElementById('pricing-saved-status');
+
+    if (isEditing) {
+        displayMode.style.display = 'none';
+        editMode.style.display = 'grid';
+        editBtn.style.display = 'none';
+        actions.style.display = 'flex';
+        savedStatus.style.display = 'none';
+    } else {
+        displayMode.style.display = 'grid';
+        editMode.style.display = 'none';
+        editBtn.style.display = 'flex';
+        actions.style.display = 'none';
+        
+        // Update display values from inputs in case they were changed but not saved (though cancel would usually reset them)
+        document.getElementById('display-discount-percent').innerText = document.getElementById('drawer-discount-percent').value;
+        document.getElementById('display-discount-fixed').innerText = parseFloat(document.getElementById('drawer-discount-fixed').value).toFixed(2);
+    }
 }
 
 // Elite Toggle Logic
@@ -2392,6 +2481,26 @@ function saveCustomerDiscounts() {
     
     localStorage.setItem('iceqube_customer_discounts', JSON.stringify(discounts));
     
+    // Sync to other tabs
+    if (window.IceQubeSync) {
+        window.IceQubeSync.publishPurge(); 
+    }
+    
     console.log(`[SYSTEM] Pricing updated for ${customerName}: ${percent}% off and ₱${fixed} fixed discount.`);
     alert(`Pricing settings saved for ${customerName}.`);
+    
+    // Update display mode and lock it
+    document.getElementById('display-discount-percent').innerText = percent;
+    document.getElementById('display-discount-fixed').innerText = fixed.toFixed(2);
+    
+    togglePricingEdit(false);
+    
+    // Show saved status briefly
+    const savedStatus = document.getElementById('pricing-saved-status');
+    savedStatus.style.display = 'flex';
+    
+    // Auto-hide saved status after 3 seconds
+    setTimeout(() => {
+        savedStatus.style.display = 'none';
+    }, 3000);
 }

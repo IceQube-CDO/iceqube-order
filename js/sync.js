@@ -91,6 +91,29 @@ window.IceQubeSync = {
         deliveriesChannel.postMessage(event);
     },
 
+    // Called by Customer App when profile is updated (Account Settings)
+    publishProfileUpdate: function(profile) {
+        console.log("📡 [Sync] Publishing Profile Update:", profile.establishment);
+        
+        // Save to the global customer directory map for Admin visibility
+        const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+        directory[profile.establishment] = profile;
+        localStorage.setItem('iceqube_customer_profiles', JSON.stringify(directory));
+        
+        ordersChannel.postMessage({
+            type: 'PROFILE_UPDATED',
+            payload: profile
+        });
+    },
+
+    // Called by Admin app when purging test data
+    publishPurge: function() {
+        console.log("📡 [Sync] Publishing System Purge");
+        ordersChannel.postMessage({
+            type: 'SYSTEM_PURGE'
+        });
+    },
+
     // --- SUBSCRIBERS ---
 
     // Listen for events on the Orders Channel

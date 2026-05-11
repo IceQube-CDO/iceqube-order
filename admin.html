@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Control Room (IceQube)</title>
+    <title>IceQube CDO | Control Room</title>
     <link rel="manifest" href="manifest_admin.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1402,6 +1402,12 @@
                 gap: 1.5rem 0; /* Remove horizontal gap when closed */
             }
         }
+
+        /* Pricing Lock Styles */
+        .locked-price-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px; }
+        .locked-value { font-size: 1.1rem; font-weight: 800; color: white; font-family: 'JetBrains Mono', monospace; }
+        .btn-pricing-action { padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-pricing-action:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
     </style>
 </head>
 <body class="admin-mode">
@@ -1750,8 +1756,25 @@
                     
                     <!-- SECTION: Custom Pricing & Discounts -->
                     <div class="profile-section">
-                        <h4 class="section-title">CUSTOM PRICING & DISCOUNTS</h4>
-                        <div class="contact-grid">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 class="section-title" style="margin: 0; border: none; padding: 0;">CUSTOM PRICING & DISCOUNTS</h4>
+                            <button id="pricing-edit-btn" class="btn-pricing-action" onclick="togglePricingEdit(true)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                        </div>
+
+                        <div id="pricing-display-mode" class="contact-grid">
+                            <div class="locked-price-card">
+                                <span class="label">Special Discount</span>
+                                <div class="locked-value"><span id="display-discount-percent">0</span>%</div>
+                            </div>
+                            <div class="locked-price-card">
+                                <span class="label">Fixed Discount</span>
+                                <div class="locked-value">₱<span id="display-discount-fixed">0.00</span></div>
+                            </div>
+                        </div>
+
+                        <div id="pricing-edit-mode" class="contact-grid" style="display: none;">
                             <div>
                                 <span class="label">Special Discount (%)</span>
                                 <input type="number" id="drawer-discount-percent" value="0" step="0.1" min="0" max="100" 
@@ -1763,7 +1786,19 @@
                                        style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
                             </div>
                         </div>
-                        <button class="btn-text" style="margin-top: 15px; width: 100%; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #22c55e; border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.2); font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(34, 197, 94, 0.2)'" onmouseout="this.style.background='rgba(34, 197, 94, 0.1)'" onclick="saveCustomerDiscounts()">Apply Pricing Changes</button>
+                        
+                        <div id="pricing-actions" style="display: none; margin-top: 15px; gap: 10px;">
+                            <button class="btn-text" style="flex: 2; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #22c55e; border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.2); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="saveCustomerDiscounts()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                Save Changes
+                            </button>
+                            <button class="btn-text" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); color: #94a3b8; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); font-weight: 700; cursor: pointer;" onclick="togglePricingEdit(false)">Cancel</button>
+                        </div>
+                        
+                        <div id="pricing-saved-status" style="display: none; margin-top: 12px; text-align: center; color: #22c55e; font-size: 0.7rem; font-weight: 800; align-items: center; justify-content: center; gap: 6px; background: rgba(34, 197, 94, 0.05); padding: 8px; border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.1);">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            SAVED & ACTIVE FOR CUSTOMER
+                        </div>
                     </div>
                     
                     <!-- SECTION: Intelligence Insights (NEW) -->
@@ -2647,7 +2682,7 @@
                 <img src="assets/logo-192.png" alt="Control Room">
             </div>
             <div class="install-text-group">
-                <h4>Control Room (IceQube)</h4>
+                <h4>IceQube <span style="color: #0284c7;">CDO</span> Control Room</h4>
                 <p>Install the desktop app for a faster, dedicated command experience.</p>
             </div>
             <div class="install-btn-group">
