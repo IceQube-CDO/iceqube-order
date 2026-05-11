@@ -1862,6 +1862,63 @@
             openOrderDetails(dispatch.orderId);
             
             console.log("🔔 Incoming Dispatch:", dispatch.orderId);
+            startBuzzer();
+        }
+
+        let buzzerActive = false;
+        let buzzerInterval = null;
+        let audioCtx = null;
+
+        function startBuzzer() {
+            if (buzzerActive) return;
+            buzzerActive = true;
+            
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            buzzerInterval = setInterval(() => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.2);
+                
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.35);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            }, 500);
+            
+            // Stop buzzer on any interaction
+            const stopHandler = () => {
+                stopBuzzer();
+                document.removeEventListener('click', stopHandler);
+                document.removeEventListener('touchstart', stopHandler);
+                document.removeEventListener('keydown', stopHandler);
+            };
+            document.addEventListener('click', stopHandler);
+            document.addEventListener('touchstart', stopHandler);
+            document.addEventListener('keydown', stopHandler);
+        }
+
+        function stopBuzzer() {
+            buzzerActive = false;
+            if (buzzerInterval) {
+                clearInterval(buzzerInterval);
+                buzzerInterval = null;
+            }
         }
 
         function simulateIncoming() {

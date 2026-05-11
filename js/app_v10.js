@@ -75,6 +75,10 @@ const app = {
         }
 
         this.isQuickReorder = false;
+        
+        // --- Profile Management (Must run BEFORE UI rendering) ---
+        this.loadUserProfile();
+        
         this.showStep(0);
         this.updateProgress();
         this.checkUserPrivileges();
@@ -143,9 +147,6 @@ const app = {
             this.showInstallButtons(false);
             this.deferredPrompt = null;
         });
-
-        // --- Profile Management ---
-        this.loadUserProfile();
 
         // --- Sync Status Diagnostics ---
         this.updateSyncBadges();
@@ -221,6 +222,7 @@ const app = {
         messengerId: null,
         role: 'Owner', 
         balance: 0.00,
+        walletBalance: 500.00,
         creditLimit: 50000.00
     },
     invoices: [],
@@ -354,13 +356,511 @@ const app = {
     },
 
     openDebtSheet() {
-        if (typeof disablePaymentMethods === 'function') disablePaymentMethods();
-        this.toggleBottomSheet('debt', true);
+        if (this.user.accountType === 'Standard') {
+            this.toggleBottomSheet('wallet', true);
+        } else {
+            if (typeof disablePaymentMethods === 'function') disablePaymentMethods();
+            this.toggleBottomSheet('debt', true);
+        }
     },
 
     handlePowerButtonClick(event) {
         if (event) event.stopPropagation();
         this.openDebtSheet();
+    },
+    
+    topUpAmount: 500,
+    setTopUpAmount(amt, el) {
+        this.topUpAmount = parseFloat(amt) || 0;
+        const display = document.getElementById('topup-display-amount');
+        if (display) display.innerText = `₱${this.topUpAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        
+        if (el) {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            const customInput = document.getElementById('custom-topup-amount');
+            if (customInput) customInput.value = '';
+        }
+    },
+    processTopUp(method) {
+        if (!this.topUpAmount || this.topUpAmount <= 0) {
+            if (typeof this.showToast === 'function') {
+                this.showToast('Please select or enter an amount.', 'error');
+            }
+            return;
+        }
+
+        // Show Verification View
+        const title = document.getElementById('verify-method-title');
+        const qr = document.getElementById('payment-qr-image');
+        const accName = document.getElementById('verify-acc-name');
+        const accNum = document.getElementById('verify-acc-num');
+        const accLabelText = document.getElementById('verify-acc-label-text');
+
+        if (title) title.innerText = `${method} Payment`;
+        
+        // Use Real Payment Info
+        const name = "LAWRENCE FE BACAYO";
+        const number = method === 'GCash' ? '09610391173' : '017630929031';
+        const providerName = method === 'GCash' ? 'GCash' : 'GoTyme Bank';
+
+        if (accName) accName.innerText = name;
+        if (accNum) accNum.innerText = number;
+        if (accLabelText) {
+            accLabelText.innerText = providerName;
+            accLabelText.style.color = method === 'GCash' ? '#007DFE' : '#22c55e';
+        }
+
+        if (qr) {
+            const qrMethod = method === 'GCash' ? 'gcash' : 'bank';
+            const qrString = this.generateQRPhString(this.topUpAmount, qrMethod);
+            qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrString)}`;
+        }
+
+        this._topupMethod = method;
+        this.setWalletStep('verify');
+    },
+
+    setWalletStep(step) {
+        const selectView = document.getElementById('wallet-step-select');
+        const verifyView = document.getElementById('wallet-step-verify');
+        const backBtn = document.getElementById('wallet-sheet-back-btn');
+
+        if (step === 'verify') {
+            if (selectView) selectView.style.display = 'none';
+            if (verifyView) verifyView.style.display = 'block';
+            if (backBtn) backBtn.onclick = () => this.setWalletStep('select');
+        } else {
+            if (selectView) selectView.style.display = 'block';
+            if (verifyView) verifyView.style.display = 'none';
+            if (backBtn) backBtn.onclick = () => this.toggleBottomSheet('wallet', false);
+            
+            // Reset verification state
+            const status = document.getElementById('receipt-status');
+            const confirmBtn = document.getElementById('btn-confirm-topup');
+            if (status) status.innerText = 'Upload Reference Photo';
+            if (confirmBtn) {
+                confirmBtn.style.opacity = '0.5';
+                confirmBtn.style.pointerEvents = 'none';
+            }
+        }
+    },
+
+    handleReceiptUpload(input) {
+        if (input.files && input.files[0]) {
+            const status = document.getElementById('receipt-status');
+            const confirmBtn = document.getElementById('btn-confirm-topup');
+            if (status) status.innerText = '✅ Receipt Uploaded';
+            if (confirmBtn) {
+                confirmBtn.style.opacity = '1';
+                confirmBtn.style.pointerEvents = 'auto';
+            }
+        }
+    },
+
+    confirmTopUp() {
+        const amount = parseFloat(this.topUpAmount);
+        const method = this._topupMethod || 'Payment';
+
+        const btn = document.getElementById('btn-confirm-topup');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Verifying...';
+        }
+
+        setTimeout(() => {
+            this.user.walletBalance = (this.user.walletBalance || 0) + amount;
+            
+            if (typeof this.showToast === 'function') {
+                this.showToast(`₱${amount.toLocaleString(undefined, {minimumFractionDigits:2})} added via ${method}.`, 'success');
+            }
+
+            this.toggleBottomSheet('wallet', false);
+            this.updateCreditUI();
+            this.setWalletStep('select'); // Reset for next time
+
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Confirm Payment';
+            }
+        }, 1500);
+    },
+
+    toggleStandardBoxMode(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        this.standardBoxMode = this.standardBoxMode === 'elite_path' ? 'wallet' : 'elite_path';
+        this.renderStandardPowerBox();
+    },
+
+    renderStandardPowerBox() {
+        const creditCard = document.getElementById('credit-card');
+        const powerText = document.getElementById('available-power-text');
+        const rechargeBtn = document.getElementById('recharge-btn');
+        const batteryFill = document.getElementById('battery-fill');
+        const batteryOuter = document.querySelector('.battery-outer.standalone');
+
+        if (!this.standardBoxMode) this.standardBoxMode = 'wallet';
+
+        // SYNC DISPATCH BOX WITH TIER & ORDER STATUS
+        const dispatchDot = document.getElementById('dispatch-dot');
+        const dispatchTitle = document.getElementById('dispatch-title');
+        const dispatchTime = document.getElementById('dispatch-time');
+        const dispatchDetails = document.getElementById('dispatch-details');
+        const dispatchBtn = document.getElementById('dispatch-manage-btn');
+        const dispatchFooter = document.getElementById('dispatch-footer');
+        const dispatchRef = document.getElementById('dispatch-payment-ref');
+        const dispatchStatus = document.getElementById('dispatch-subscription-status');
+
+        let orders = [];
+        try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
+        // Only consider orders that haven't been completed or cancelled
+        const activeOrders = orders.filter(o => ['Pending', 'Processing', 'Dispatched'].includes(o.status));
+        const hasActiveOrders = activeOrders.length > 0;
+
+        console.log('📦 Dispatch Logic Check:', { hasActiveOrders, count: activeOrders.length });
+
+        if (!hasActiveOrders) {
+            if (dispatchDot) dispatchDot.style.background = '#64748b';
+            if (dispatchTitle) dispatchTitle.innerText = 'No Dispatch Scheduled';
+            if (dispatchTime) dispatchTime.innerText = 'Need more ice?';
+            if (dispatchDetails) dispatchDetails.innerText = 'Schedule your next delivery below.';
+            if (dispatchBtn) {
+                dispatchBtn.style.display = 'none';
+            }
+            if (dispatchFooter) dispatchFooter.style.display = 'none';
+        } else {
+            if (dispatchDot) dispatchDot.style.background = '';
+            if (dispatchTitle) dispatchTitle.innerText = 'Upcoming Dispatch';
+            if (dispatchTime) dispatchTime.innerText = 'Tomorrow, 9:00 AM';
+            if (dispatchDetails) dispatchDetails.innerText = '15 Bags • Half-Dice';
+            if (dispatchBtn) {
+                dispatchBtn.style.display = 'block';
+                dispatchBtn.innerText = 'Manage Order ›';
+                dispatchBtn.onclick = () => this.openDeliveriesPanel();
+            }
+            if (dispatchFooter) dispatchFooter.style.display = 'flex';
+
+            if (dispatchRef && dispatchStatus) {
+                if (this.user.accountType === 'Elite' || this.user.accountType === 'PO') {
+                    dispatchRef.innerText = 'PO #8821';
+                    dispatchStatus.innerText = 'Subscription Active';
+                    dispatchStatus.style.color = '';
+                } else {
+                    dispatchRef.innerText = 'Order #IQ-9812';
+                    dispatchStatus.innerText = 'Order Confirmed';
+                    dispatchStatus.style.color = '#60a5fa'; // Standard Blue
+                }
+            }
+        }
+
+        if (!creditCard) return;
+
+        const tag = creditCard.querySelector('.tag');
+        const title = creditCard.querySelector('h3');
+        const titleGroup = creditCard.querySelector('.title-group');
+        
+        // Clean up any existing toggle button
+        const existingToggle = creditCard.querySelector('.mode-toggle-btn');
+        if (existingToggle) existingToggle.remove();
+
+        if (this.standardBoxMode === 'elite_path') {
+            // CALCULATE DYNAMIC VOLUME (60x 3kg OR 150x 1kg within 30 days)
+            let bags3kg = 0;
+            let bags1kg = 0;
+            try {
+                const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                orders.forEach(o => {
+                    if (o.customer_name === this.user.companyName) {
+                        const orderDate = new Date(o.date);
+                        if (orderDate >= thirtyDaysAgo) {
+                            bags3kg += (o.qty_3kg || 0);
+                            bags1kg += (o.qty_1kg || 0);
+                        }
+                    }
+                });
+            } catch(e) {}
+
+            let progress = (bags3kg / 60) + (bags1kg / 150);
+            
+            // For demonstration, let's force the progress to 70% so you can see the 'in-progress' state
+            if (progress === 0) progress = 0.70; 
+            
+            let percent = Math.min(100, Math.floor(progress * 100));
+            let isQualified = progress >= 1.0;
+
+            if (isQualified) {
+                // ELITE PATH GAMIFICATION - QUALIFIED STATE
+                if (tag) {
+                    tag.innerText = 'Goal Reached';
+                    tag.style.background = 'rgba(16, 185, 129, 0.2)';
+                    tag.style.color = '#10b981';
+                    tag.style.border = '1px solid #10b981';
+                }
+                if (title) title.innerText = 'Qualification Reached';
+                
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'mode-toggle-btn';
+                toggleBtn.style.cssText = 'background: none; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; display: block; margin-top: 6px; color: var(--text-secondary); text-decoration: underline;';
+                toggleBtn.onclick = (e) => this.toggleStandardBoxMode(e);
+                toggleBtn.innerHTML = '← Back to Wallet';
+                if (titleGroup) titleGroup.appendChild(toggleBtn);
+
+                // Change Main Metric
+                if (powerText) {
+                    powerText.innerText = `100% Volume Goal`;
+                    powerText.style.color = '#10b981';
+                }
+
+                // Change Button
+                if (rechargeBtn) {
+                    rechargeBtn.innerText = 'Accept PO Line';
+                    rechargeBtn.style.background = '#10b981';
+                    rechargeBtn.style.color = '#fff';
+                    rechargeBtn.style.border = 'none';
+                    rechargeBtn.style.fontWeight = '700';
+                    rechargeBtn.disabled = false;
+                    rechargeBtn.className = 'recharge-btn';
+                    
+                    rechargeBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // User Accepts PO! Upgrade account.
+                        this.user.accountType = 'Elite'; 
+                        this.user.creditLimit = 2500;
+                        this.user.balance = 0;
+                        
+                        if (typeof this.showToast === 'function') {
+                            this.showToast('Welcome to Elite Tier! PO Credit Line activated.', 'success');
+                        }
+                        
+                        this.standardBoxMode = null;
+                        
+                        // RESTORE ORIGINAL DOM FOR ELITE BOX
+                        if(tag) { tag.innerText = 'Elite Tier'; tag.style = ''; }
+                        if(title) { title.innerText = 'Available Power'; }
+                        if(powerText) { powerText.style.color = ''; }
+                        
+                        if(rechargeBtn) {
+                            rechargeBtn.innerText = 'Recharge Now';
+                            rechargeBtn.style = '';
+                            rechargeBtn.className = 'recharge-btn';
+                            rechargeBtn.onclick = (ev) => this.handlePowerButtonClick(ev);
+                        }
+
+                        const cardBottom = creditCard.querySelector('.card-bottom');
+                        if (cardBottom) {
+                            cardBottom.innerHTML = `
+                                <div class="stat">
+                                    <span>MAX LIMIT</span>
+                                    <strong id="max-limit-amt">₱2,500</strong>
+                                </div>
+                                <div class="stat text-right clickable-stat" onclick="app.toggleBottomSheet('debt', true)">
+                                    <span>TOTAL DEBT</span>
+                                    <strong id="total-debt-text">₱0.00</strong>
+                                </div>
+                            `;
+                        }
+                        
+                        const existingToggle = creditCard.querySelector('.mode-toggle-btn');
+                        if (existingToggle) existingToggle.remove();
+
+                        creditCard.onclick = () => this.openDebtSheet();
+                        creditCard.style.cursor = 'pointer';
+
+                        this.updateCreditUI();
+                    };
+                }
+
+                // Change Card Bottom
+                const cardBottom = creditCard.querySelector('.card-bottom');
+                if (cardBottom) {
+                    cardBottom.style.display = 'block';
+                    cardBottom.innerHTML = `
+                        <div class="stat" style="width: 100%; display: block; border-right: none; padding-right: 0;">
+                            <span style="font-size: 0.75rem; letter-spacing: 0.5px; opacity: 0.8; display: block; margin-bottom: 4px;">CONGRATULATIONS</span>
+                            <strong style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; white-space: normal; line-height: 1.4; display: block;">You've unlocked a ₱2,500 PO Credit Line! Accept to activate.</strong>
+                        </div>
+                    `;
+                }
+
+                creditCard.onclick = null;
+                creditCard.style.cursor = 'default';
+
+                if (batteryFill) {
+                    batteryFill.style.height = '100%';
+                    batteryFill.className = 'battery-fill safe';
+                }
+                if (batteryOuter) {
+                    batteryOuter.classList.remove('glow-warning', 'glow-critical');
+                    batteryOuter.classList.add('glow-safe');
+                }
+
+            } else {
+                // ELITE PATH GAMIFICATION - IN PROGRESS
+                if (tag) {
+                    tag.innerText = 'Level 2';
+                    tag.style.background = 'rgba(234, 179, 8, 0.2)';
+                    tag.style.color = '#eab308';
+                    tag.style.border = '1px solid #eab308';
+                }
+                if (title) title.innerText = 'Elite Tier Progress';
+                
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'mode-toggle-btn';
+                toggleBtn.style.cssText = 'background: none; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; display: block; margin-top: 6px; color: var(--text-secondary); text-decoration: underline;';
+                toggleBtn.onclick = (e) => this.toggleStandardBoxMode(e);
+                toggleBtn.innerHTML = '← Back to Wallet';
+                if (titleGroup) titleGroup.appendChild(toggleBtn);
+
+                // Change Main Metric
+                if (powerText) {
+                    powerText.innerText = `${percent}% Volume Goal`;
+                    powerText.style.color = '#eab308';
+                }
+
+                // Change Button
+                if (rechargeBtn) {
+                    let cheerMessage = percent >= 80 ? "Almost there! 🚀" : 
+                                       percent >= 50 ? "Halfway there! 💪" : 
+                                       "Keep going! ✨";
+                                       
+                    rechargeBtn.innerText = cheerMessage;
+                    rechargeBtn.style.background = 'rgba(234, 179, 8, 0.15)';
+                    rechargeBtn.style.color = '#eab308'; // Make text gold to match theme and be visible
+                    rechargeBtn.style.border = '1px solid rgba(234, 179, 8, 0.4)';
+                    rechargeBtn.style.fontWeight = '700';
+                    rechargeBtn.style.letterSpacing = '0.5px';
+                    rechargeBtn.style.boxShadow = '0 0 12px rgba(234, 179, 8, 0.2)'; // Yellow glow!
+                    rechargeBtn.disabled = false;
+                    rechargeBtn.className = 'recharge-btn';
+                    
+                    rechargeBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (typeof this.showEliteUpgrade === 'function') {
+                            this.showEliteUpgrade();
+                        }
+                    };
+                }
+
+                // Change Card Bottom
+                const cardBottom = creditCard.querySelector('.card-bottom');
+                if (cardBottom) {
+                    cardBottom.style.display = 'block';
+                    cardBottom.innerHTML = `
+                        <div class="stat" style="width: 100%; display: block; border-right: none; padding-right: 0;">
+                            <span style="font-size: 0.75rem; letter-spacing: 0.5px; opacity: 0.8; display: block; margin-bottom: 4px;">NEXT MILESTONE</span>
+                            <strong style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; white-space: normal; line-height: 1.4; display: block;">Reach 60 (3kg) or 150 (1kg) cumulative bags within 30 days to unlock PO status!</strong>
+                        </div>
+                    `;
+                }
+
+                // Disable click on the card itself
+                creditCard.onclick = null;
+                creditCard.style.cursor = 'default';
+
+                // Set Battery Fill
+                if (batteryFill) {
+                    batteryFill.style.height = `${percent}%`;
+                    batteryFill.className = 'battery-fill warning';
+                }
+                if (batteryOuter) {
+                    batteryOuter.classList.remove('glow-safe', 'glow-critical');
+                    batteryOuter.classList.add('glow-warning');
+                }
+            }
+        } else {
+            // WALLET MODE
+            if (tag) {
+                tag.innerText = 'Standard Tier';
+                tag.style.background = 'rgba(59, 130, 246, 0.15)';
+                tag.style.color = '#60a5fa'; // Blue
+                tag.style.border = '1px solid rgba(59, 130, 246, 0.4)';
+            }
+            if (title) title.innerText = 'Wallet Balance';
+            
+            // Change Main Metric
+            if (powerText) {
+                powerText.innerText = `₱${(this.user.walletBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+                powerText.style.color = ''; // Inherit default
+            }
+
+            // Change Button
+            if (rechargeBtn) {
+                rechargeBtn.innerText = 'Top Up';
+                rechargeBtn.style.background = '';
+                rechargeBtn.style.color = '';
+                rechargeBtn.style.border = '';
+                rechargeBtn.style.fontWeight = '';
+                rechargeBtn.disabled = false;
+                rechargeBtn.className = 'recharge-btn safe';
+                
+                rechargeBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.openDebtSheet();
+                };
+            }
+
+            // CALCULATE PROGRESS FOR DISPLAY
+            let bags3kg = 0;
+            let bags1kg = 0;
+            try {
+                const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                orders.forEach(o => {
+                    if (o.customer_name === this.user.companyName) {
+                        const orderDate = new Date(o.date);
+                        if (orderDate >= thirtyDaysAgo) {
+                            bags3kg += (o.qty_3kg || 0);
+                            bags1kg += (o.qty_1kg || 0);
+                        }
+                    }
+                });
+            } catch(e) {}
+
+            let progress = (bags3kg / 60) + (bags1kg / 150);
+            if (progress === 0) progress = 0.70; // Demo fallback
+            let percent = Math.min(100, Math.floor(progress * 100));
+
+            // Change Card Bottom
+            const cardBottom = creditCard.querySelector('.card-bottom');
+            if (cardBottom) {
+                cardBottom.style.display = 'block';
+                cardBottom.innerHTML = `
+                    <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 4px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                                <span style="font-size: 0.7rem; color: #eab308; font-weight: 800; display: block; letter-spacing: 0.5px;">PO CREDIT LINE</span>
+                                <span style="font-size: 0.65rem; color: #eab308; background: rgba(234,179,8,0.1); padding: 2px 6px; border-radius: 4px; font-weight: 800;">${percent}%</span>
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.2; display: block;">Reach 60/150 bags to unlock.</span>
+                        </div>
+                        <button onclick="app.toggleStandardBoxMode(event)" style="background: #eab308; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(234,179,8,0.25);">View Progress</button>
+                    </div>
+                `;
+            }
+
+            // Enable click on the card itself
+            creditCard.onclick = () => this.openDebtSheet();
+            creditCard.style.cursor = 'pointer';
+
+            // Set Battery Fill to 40% Blue
+            if (batteryFill) {
+                batteryFill.style.height = '40%';
+                batteryFill.className = 'battery-fill safe';
+            }
+            if (batteryOuter) {
+                batteryOuter.classList.remove('glow-warning', 'glow-critical');
+                batteryOuter.classList.add('glow-safe');
+            }
+        }
     },
 
     updateCreditUI() {
@@ -371,7 +871,18 @@ const app = {
         const currentDebtAmt = document.getElementById('current-debt-amt');
         const creditCard = document.getElementById('credit-card');
 
+        if (this.user.accountType !== 'Elite' && this.user.accountType !== 'PO') {
+            this.renderStandardPowerBox();
+            return;
+        }
+
         if (!availableAmt || !batteryFill) return;
+
+        // Reset the blue gamification background back to the premium dark Elite style
+        if (creditCard) {
+            creditCard.style.background = 'rgba(15, 23, 42, 0.4)';
+            creditCard.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+        }
 
         const balance = this.user.balance;
         const limit = this.user.creditLimit;
@@ -728,6 +1239,15 @@ const app = {
         
         this.lastStepIndex = index;
         this.updateProgress();
+
+        // Ensure the step container and the app shell scroll to the top
+        const appEl = document.getElementById('app');
+        if (appEl) appEl.scrollTop = 0;
+        
+        const stepEl = steps[index];
+        if (stepEl) stepEl.scrollTop = 0;
+        
+        window.scrollTo(0, 0);
 
         // Show PWA install banner only on the landing page (step 0) and ONLY if not already installed
         const pwaBanner = document.getElementById('pwa-install-banner');
@@ -2631,6 +3151,11 @@ const app = {
         cards.forEach(card => card.classList.remove('selected'));
         element.classList.add('selected');
         
+        const walletSubtitle = document.getElementById('wallet-balance-subtitle');
+        if (walletSubtitle) {
+            walletSubtitle.innerText = `Balance: ₱${(this.user.walletBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        }
+        
         const btn = document.getElementById('btn-finish-order');
         const codBox = document.getElementById('cod-verification-box');
         const poBox = document.getElementById('po-entry-box');
@@ -2661,6 +3186,19 @@ const app = {
             btn.disabled = false;
             codBox.classList.remove('active');
             poBox.classList.add('active');
+        } else if (method === 'IceQube Wallet') {
+            const total = this.orderData.total + (this.orderData.deliveryFee || 0);
+            const balance = this.user.walletBalance || 0;
+            
+            if (balance < total) {
+                btn.innerText = `Insufficient Wallet Balance (₱${balance})`;
+                btn.disabled = true;
+            } else {
+                btn.innerText = `Pay with Wallet (Balance: ₱${balance})`;
+                btn.disabled = false;
+            }
+            codBox.classList.remove('active');
+            poBox.classList.remove('active');
         } else {
             const total = this.orderData.total + (this.orderData.deliveryFee || 0);
             btn.innerText = `Place Order & Pay ₱${total}`;
@@ -3115,6 +3653,26 @@ const app = {
                     this.orderData.poNumber = 'SYSTEM-GENERATED';
                 }
             }
+            
+            if (this.orderData.payment === 'IceQube Wallet') {
+                const totalCost = this.orderData.total + (this.orderData.deliveryFee || 0);
+                if (this.user.walletBalance >= totalCost) {
+                    this.user.walletBalance -= totalCost;
+                    if (typeof this.showToast === 'function') {
+                        this.showToast(`₱${totalCost} deducted from your IceQube Wallet.`, 'success');
+                    }
+                    this.updateCreditUI();
+                } else {
+                    if (typeof this.showToast === 'function') {
+                        this.showToast('Insufficient wallet balance.', 'error');
+                    }
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                    }
+                    return;
+                }
+            }
 
             const orderId = `#IQ-${Math.floor(Math.random() * 90000) + 10000}`;
             const now = new Date();
@@ -3236,6 +3794,12 @@ const app = {
             // Show the complete step explicitly
             const completeStep = document.getElementById('step-complete');
             if (completeStep) {
+                // Reset scroll positions
+                const appEl = document.getElementById('app');
+                if (appEl) appEl.scrollTop = 0;
+                completeStep.scrollTop = 0;
+                window.scrollTo(0, 0);
+
                 completeStep.style.display = 'block';
                 completeStep.classList.add('active');
                 completeStep.classList.add('slide-in-right');
@@ -3460,6 +4024,11 @@ const app = {
     },
 
     async sendConfirmation() {
+        if (!MESSENGER_CONFIG.RECIPIENT_ID) {
+            console.log('No Messenger PSID detected. Skipping external notification.');
+            return;
+        }
+
         const orderId = document.getElementById('finish-id-new').innerText.replace('Order ', '');
         const timing = document.getElementById('finish-timing-new').innerText;
         const qtyText = document.getElementById('finish-qty-new').innerText;
@@ -3470,12 +4039,19 @@ const app = {
         summaryText += `Items: ${qtyText}\n`;
         summaryText += `Timing: ${timing}\n`;
         summaryText += `Total: ₱${total}\n`;
-        summaryText += `Status: ${this.orderData.payment === 'Cash on Delivery' ? 'Pending (COD)' : 'Paid'}\n`;
+        summaryText += `Payment: ${this.orderData.payment}\n`;
+        summaryText += `Status: ${this.orderData.payment === 'Cash on Delivery' ? 'Processing (COD)' : 'Paid & Processing'}\n`;
         
-        summaryText += `\n📍 Macabalan Hub Pickup Info:\n`;
-        summaryText += `Address: Near Piaping Itum Chapel, Macabalan\n`;
-        summaryText += `Details: Parallel to the main road near Macabalan Port.\n`;
-        summaryText += `Maps: https://www.google.com/maps/place/IceQube/@8.5020476,124.6582801,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu&g_ep=EgoyMDI2MDQxNS4wIKXMDSoASAFQAw%3D%3D\n`;
+        if (this.orderData.logistics === 'Self-Pickup') {
+            summaryText += `\n📍 Macabalan Hub Pickup Info:\n`;
+            summaryText += `Address: Near Piaping Itum Chapel, Macabalan\n`;
+            summaryText += `Maps: https://www.google.com/maps/place/IceQube/@8.5020476,124.660855,17z\n`;
+        } else {
+            summaryText += `\n🚚 Doorstep Delivery:\n`;
+            summaryText += `Rider is being assigned. Please keep your phone reachable.\n`;
+        }
+
+        summaryText += `\nThank you for choosing IceQube! Stay cool! 🧊`;
 
         console.log('Dispatching Messenger notification via Supabase Proxy...');
 
@@ -3538,6 +4114,38 @@ const app = {
             
             this.currentStep = automateIndex;
             this.showStep(this.currentStep, 'next', from);
+
+            // Custom UI for Standard Tier
+            const autoTitle = document.getElementById('automate-billing-title');
+            const autoDesc = document.getElementById('automate-billing-desc');
+            const autoBtn = document.getElementById('automate-billing-btn');
+            const autoBox = document.getElementById('automate-billing-box');
+
+            if (this.user.accountType === 'Standard') {
+                if (autoTitle) autoTitle.innerText = 'Wallet Automation';
+                if (autoDesc) autoDesc.innerText = 'Scheduled deliveries will be automatically deducted from your Wallet Balance. Ensure you have sufficient funds before each arrival!';
+                if (autoBtn) autoBtn.style.display = 'none'; 
+                if (autoBox) {
+                    autoBox.style.background = 'rgba(59, 130, 246, 0.08)';
+                    autoBox.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                }
+            } else {
+                if (autoTitle) autoTitle.innerText = 'PO Billing';
+                if (autoDesc) autoDesc.innerText = 'Scheduled deliveries will be charged to your active PO Credit Line. You can manually settle your balance via GCash or Bank Transfer at your convenience.';
+                if (autoBtn) {
+                    autoBtn.style.display = 'block';
+                    autoBtn.innerText = 'View Debt Breakdown →';
+                    autoBtn.onclick = (e) => {
+                        e.preventDefault();
+                        app.prevStep(); 
+                        setTimeout(() => app.openDebtSheet(), 300);
+                    };
+                }
+                if (autoBox) {
+                    autoBox.style.background = 'rgba(234, 179, 8, 0.08)'; // Elite Gold
+                    autoBox.style.borderColor = 'rgba(234, 179, 8, 0.2)';
+                }
+            }
         }
     },
 
@@ -4590,6 +5198,14 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 this.user.savedLat = profile.lat || null;
                 this.user.savedLng = profile.lng || null;
                 
+                // Sync Elite Status from Admin
+                const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+                if (eliteList.includes(this.user.companyName)) {
+                    this.user.accountType = 'Elite';
+                } else {
+                    this.user.accountType = 'Standard';
+                }
+                
                 // Pre-fill Edit Modal
                 const estInput = document.getElementById('profile-establishment');
                 const perInput = document.getElementById('profile-contact-person');
@@ -4617,7 +5233,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
                 this.updateMessengerStatusUI();
 
-                console.log("👤 Profile Loaded:", this.user.companyName);
+                console.log("👤 Profile Loaded:", this.user.companyName, "Tier:", this.user.accountType);
             } catch (e) {
                 console.error("Error parsing profile:", e);
             }
@@ -5460,6 +6076,9 @@ function executeOptimisticUnlock(paidAmount) {
 
 // Helper: Dynamically updates the main dashboard without a page reload
 function updateDashboardUI(newPower, newDebt) {
+    if (typeof app !== 'undefined' && app.user && app.user.accountType !== 'Elite' && app.user.accountType !== 'PO') {
+        return; // UI is handled by gamification rendering
+    }
     const batteryElement = document.getElementById('battery-container');
     const batteryFill = document.getElementById('battery-fill');
     

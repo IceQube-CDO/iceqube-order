@@ -315,6 +315,7 @@ var admin = {
             this.deductPackagingSupplies(order);
 
             this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
+            this.startBuzzer();
             
             // AUTOMATIC DISPATCH TRIGGER
             if (this.vacationMode) {
@@ -413,6 +414,58 @@ var admin = {
         // Browser notification if permitted
         if (Notification.permission === "granted") {
             new Notification(title, { body: sub, icon: './assets/logo.png' });
+        }
+    },
+
+    startBuzzer() {
+        if (this.buzzerActive) return;
+        this.buzzerActive = true;
+        
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+
+        this.buzzerInterval = setInterval(() => {
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
+            osc.frequency.setValueAtTime(600, this.audioCtx.currentTime + 0.2);
+            
+            gain.gain.setValueAtTime(0, this.audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.5, this.audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.5, this.audioCtx.currentTime + 0.35);
+            gain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.4);
+            
+            osc.connect(gain);
+            gain.connect(this.audioCtx.destination);
+            
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.4);
+        }, 500);
+        
+        // Stop buzzer on any interaction
+        const stopHandler = () => {
+            this.stopBuzzer();
+            document.removeEventListener('click', stopHandler);
+            document.removeEventListener('touchstart', stopHandler);
+            document.removeEventListener('keydown', stopHandler);
+        };
+        document.addEventListener('click', stopHandler);
+        document.addEventListener('touchstart', stopHandler);
+        document.addEventListener('keydown', stopHandler);
+    },
+
+    stopBuzzer() {
+        this.buzzerActive = false;
+        if (this.buzzerInterval) {
+            clearInterval(this.buzzerInterval);
+            this.buzzerInterval = null;
         }
     },
 
@@ -585,6 +638,7 @@ var admin = {
         // 5. Secondary Updates
         this.updateOperationFeed(orders);
         this.updateCashflowView(orders);
+        this.updateCustomerDirectory(orders);
         this.updateAlertCenter(orders);
 
         // 6. Vacation Mode Auto-Dispatch (On-Load Check)
@@ -842,6 +896,84 @@ var admin = {
         document.getElementById('modal-rider-phone').innerText = phone;
         document.getElementById('payout-modal').style.display = 'flex';
         console.log(`🏦 Preparing Payout for ${name}...`);
+    },
+
+    updateCustomerDirectory(orders) {
+        const listContainer = document.getElementById('customer-directory-list');
+        if (!listContainer) return;
+
+        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO"]');
+
+        const customers = {};
+        orders.forEach(order => {
+            if (!order.customer_name) return;
+            const name = order.customer_name;
+            if (!customers[name]) {
+                customers[name] = {
+                    name: name,
+                    address: order.delivery_address || 'No Address Provided',
+                    phone: order.customer_phone || 'No Phone provided',
+                    totalRevenue: 0,
+                    orders: [],
+                    firstOrderDate: order.created_at,
+                    lastOrderDate: order.created_at,
+                    isElite: eliteList.includes(name)
+                };
+            }
+            customers[name].totalRevenue += parseFloat(order.total_price) || 0;
+            customers[name].orders.push(order);
+            
+            if (new Date(order.created_at) < new Date(customers[name].firstOrderDate)) {
+                customers[name].firstOrderDate = order.created_at;
+            }
+            if (new Date(order.created_at) > new Date(customers[name].lastOrderDate)) {
+                customers[name].lastOrderDate = order.created_at;
+            }
+        });
+
+        const customerArray = Object.values(customers).sort((a, b) => b.totalRevenue - a.totalRevenue);
+        this.customerData = customerArray;
+
+        if (customerArray.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; color: #64748b; padding: 40px; font-size: 0.9rem;">No customers recorded yet.</div>';
+            return;
+        }
+
+        this.renderCustomerList(customerArray);
+    },
+
+    renderCustomerList(customers) {
+        const listContainer = document.getElementById('customer-directory-list');
+        if (!listContainer) return;
+
+        let html = '';
+        customers.forEach(customer => {
+            html += `
+                <div class="customer-row" style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="openCustomerDrawer('${customer.name.replace(/'/g, "\\'")}')">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-weight: 600; color: white;">${customer.name}</span>
+                        <span style="font-size: 0.75rem; color: #94a3b8;">${customer.address}</span>
+                    </div>
+                    <div style="text-align: right; display: flex; flex-direction: column;">
+                        <span style="color: #22c55e; font-weight: bold;">₱${customer.totalRevenue.toLocaleString()}</span>
+                        <span style="font-size: 0.7rem; color: #64748b;">${customer.orders.length} orders</span>
+                    </div>
+                </div>
+            `;
+        });
+        listContainer.innerHTML = html;
+    },
+
+    filterCustomerDirectory() {
+        const query = document.getElementById('customer-search-input')?.value.toLowerCase() || '';
+        if (!this.customerData) return;
+        
+        const filtered = this.customerData.filter(c => 
+            c.name.toLowerCase().includes(query) || 
+            c.address.toLowerCase().includes(query) ||
+            c.phone.toLowerCase().includes(query)
+        );
+        this.renderCustomerList(filtered);
     },
 
     updateCashflowView(orders) {
@@ -2129,39 +2261,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Drawer Controls
 function openCustomerDrawer(customerId) {
-    // In a real app, you would fetch the customer data from Supabase using customerId here
-    // and populate the HTML fields dynamically before opening the drawer.
+    const customer = admin.customerData?.find(c => c.name === customerId);
+    if (!customer) return;
+
+    document.getElementById('drawer-customer-name').innerText = customer.name;
+    document.getElementById('drawer-customer-address').innerText = customer.address;
+    document.getElementById('drawer-contact-person').innerText = customer.name;
+    document.getElementById('drawer-phone').innerText = customer.phone;
     
-    // Update content based on customer (mock logic)
-    document.getElementById('drawer-customer-name').innerText = customerId;
-    if (customerId === 'Loft Living CDO') {
-        document.getElementById('drawer-customer-address').innerText = 'Premium Partner • Macabalan, CDO';
-        document.getElementById('drawer-contact-person').innerText = 'Ian';
-        document.getElementById('drawer-phone').innerText = '+63 917 123 4567';
-        document.getElementById('elite-toggle').checked = true;
-        document.getElementById('drawer-clv').innerText = '₱385,200';
-        document.getElementById('drawer-frequency').innerText = 'Every 1.8 days';
+    document.getElementById('elite-toggle').checked = customer.isElite;
+
+    document.getElementById('drawer-clv').innerText = `₱${customer.totalRevenue.toLocaleString()}`;
+    
+    const msDiff = new Date(customer.lastOrderDate) - new Date(customer.firstOrderDate);
+    const daysDiff = msDiff / (1000 * 60 * 60 * 24);
+    
+    if (customer.orders.length > 1 && daysDiff > 0) {
+        const freq = daysDiff / (customer.orders.length - 1);
+        document.getElementById('drawer-frequency').innerText = `Every ${freq.toFixed(1)} days`;
+        
+        const daysSinceLastOrder = (new Date() - new Date(customer.lastOrderDate)) / (1000 * 60 * 60 * 24);
+        if (daysSinceLastOrder > 14 && customer.orders.length > 2) {
+            document.getElementById('drawer-churn-alert').style.display = 'flex';
+        } else {
+            document.getElementById('drawer-churn-alert').style.display = 'none';
+        }
+    } else {
+        document.getElementById('drawer-frequency').innerText = '1st Order Only';
         document.getElementById('drawer-churn-alert').style.display = 'none';
-    } else if (customerId === 'Fat Monk Coffee') {
-        document.getElementById('drawer-customer-address').innerText = 'Standard Account • Uptown CDO';
-        document.getElementById('drawer-contact-person').innerText = 'Sarah';
-        document.getElementById('drawer-phone').innerText = '+63 918 555 1234';
-        document.getElementById('elite-toggle').checked = false;
-        document.getElementById('drawer-clv').innerText = '₱142,500';
-        document.getElementById('drawer-frequency').innerText = 'Every 3.1 days';
-        document.getElementById('drawer-churn-alert').style.display = 'none';
-    } else if (customerId === 'The Backyard Grill') {
-        document.getElementById('drawer-customer-address').innerText = 'Standard Account • Kauswagan, CDO';
-        document.getElementById('drawer-contact-person').innerText = 'Chef Mike';
-        document.getElementById('drawer-phone').innerText = '+63 915 777 8888';
-        document.getElementById('elite-toggle').checked = false;
-        document.getElementById('drawer-clv').innerText = '₱42,800';
-        document.getElementById('drawer-frequency').innerText = 'Every 5.2 days (Slowing)';
-        document.getElementById('drawer-churn-alert').style.display = 'flex';
+    }
+
+    const historyList = document.getElementById('drawer-history-list');
+    if (historyList) {
+        let historyHtml = '';
+        customer.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10).forEach(order => {
+            historyHtml += `
+                <div class="history-row">
+                    <span>${order.order_id}</span>
+                    <span>₱${order.total_price}</span>
+                    <span><span class="badge-resolved">${order.delivery_status || 'Completed'}</span></span>
+                    <button class="btn-icon">📄</button>
+                </div>
+            `;
+        });
+        historyList.innerHTML = historyHtml;
     }
 
     document.getElementById('customer-drawer-overlay').style.display = 'block';
-    // Small timeout ensures the display block renders before the CSS transition fires
     setTimeout(() => {
         document.getElementById('customer-drawer').classList.add('open');
     }, 10);
@@ -2180,10 +2326,22 @@ function toggleEliteStatus() {
     const isElite = document.getElementById('elite-toggle').checked;
     const customerName = document.getElementById('drawer-customer-name').innerText;
     
+    if (admin.customerData) {
+        const customer = admin.customerData.find(c => c.name === customerName);
+        if (customer) {
+            customer.isElite = isElite;
+        }
+    }
+
+    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO"]');
+
     if (isElite) {
         console.log(`[SYSTEM] Upgrading ${customerName} to ELITE TIER.`);
-        // Here you would trigger an API call to Supabase to update the customer's tier
+        if (!eliteList.includes(customerName)) eliteList.push(customerName);
     } else {
         console.log(`[SYSTEM] Downgrading ${customerName} to STANDARD TIER.`);
+        eliteList = eliteList.filter(name => name !== customerName);
     }
+    
+    localStorage.setItem('iceqube_elite_customers', JSON.stringify(eliteList));
 }

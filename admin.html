@@ -1644,8 +1644,10 @@
             <div class="cc-card"> <!-- Left Column -->
                 <div class="metric-label">Customer Directory</div>
                 <div style="margin-top: 1rem;">
-                    <input type="text" placeholder="Search customer records..." style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; margin-bottom: 1.5rem;">
-                    <div style="text-align: center; color: #64748b; padding: 40px; font-size: 0.9rem;">No customers recorded yet.</div>
+                    <input type="text" id="customer-search-input" placeholder="Search customer records..." style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; margin-bottom: 1.5rem;" oninput="admin.filterCustomerDirectory()">
+                    <div id="customer-directory-list" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="text-align: center; color: #64748b; padding: 40px; font-size: 0.9rem;">No customers recorded yet.</div>
+                    </div>
                 </div>
             </div>
 

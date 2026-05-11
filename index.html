@@ -859,6 +859,18 @@
                 <div class="step-body">
                     <p class="subtitle">Choose how you'd like to pay for this order.</p>
                 <div class="selection-grid">
+                    <div id="card-payment-wallet" class="card" onclick="app.selectPayment('IceQube Wallet', this)">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; align-items: center; color: #3b82f6;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600;">IceQube Wallet</h3>
+                                <p id="wallet-balance-subtitle">Use your topped-up balance.</p>
+                            </div>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
                     <div class="card" onclick="app.selectPayment('GCash', this)">
                         <div style="display: flex; gap: 1rem; align-items: center;">
                             <div style="display: flex; align-items: center; color: #007DFE;">
@@ -1067,8 +1079,10 @@
             <!-- Step 6: COMPLETE (New Modern Design) -->
             <section id="step-complete" class="step-content">
                 <div class="success-header">
-                    <div class="success-check">✓</div>
-                    <h2>Order Confirmed!</h2>
+                    <div class="success-check">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h2>Order Confirmed!!</h2>
                     <p class="order-id" id="finish-id-new">Order #IQ-4492</p>
                 </div>
 
@@ -1135,14 +1149,14 @@
                 <div class="step-body">
                     <p class="subtitle">Choose which days you want IceQube to arrive automatically.</p>
 
-                <div style="background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 1rem; margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
-                    <div style="display: flex; align-items: center; color: var(--accent);">
+                <div id="automate-billing-box" style="background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 1rem; margin-top: 0.5rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div id="automate-billing-icon" style="display: flex; align-items: center; color: var(--accent);">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                     </div>
                     <div>
-                        <h4 style="color: var(--accent); margin-bottom: 0.25rem;">Seamless Billing</h4>
-                        <p style="font-size: 0.875rem; line-height: 1.4; color: var(--text-secondary);">Setting up a subscription? Link your GCash or Maya now to enable automated morning clearing and skip the cash handling.</p>
-                        <button class="ghost-link" style="margin-top: 8px; text-align: left; padding: 0; width: auto; font-size: 0.8125rem;" onclick="app.togglePanel('auto-settle', true)">Link Payment Source →</button>
+                        <h4 id="automate-billing-title" style="color: var(--accent); margin-bottom: 0.25rem;">Seamless Billing</h4>
+                        <p id="automate-billing-desc" style="font-size: 0.875rem; line-height: 1.4; color: var(--text-secondary);">Setting up a subscription? Link your GCash or Maya now to enable automated morning clearing and skip the cash handling.</p>
+                        <button id="automate-billing-btn" class="ghost-link" style="margin-top: 8px; text-align: left; padding: 0; width: auto; font-size: 0.8125rem;" onclick="app.togglePanel('auto-settle', true)">Link Payment Source →</button>
                     </div>
                 </div>
                 
@@ -1330,8 +1344,8 @@
             <div class="dispatch-card" aria-label="Upcoming Delivery Details">
                 <div class="dispatch-header">
                     <div class="status-indicator" aria-label="Status: Active">
-                        <span class="status-dot"></span>
-                        <strong>Upcoming Dispatch</strong>
+                        <span class="status-dot" id="dispatch-dot"></span>
+                        <strong id="dispatch-title">Upcoming Dispatch</strong>
                     </div>
                     <button class="auto-link" onclick="app.goToAutomate(true)" aria-label="Manage Automation Settings">
                         <span class="icon">🔄</span> Auto-On
@@ -1340,15 +1354,15 @@
                 
                 <div class="dispatch-body">
                     <div class="dispatch-main">
-                        <h2>Tomorrow, 9:00 AM</h2>
-                        <p>15 Bags • Half-Dice</p>
+                        <h2 id="dispatch-time">Tomorrow, 9:00 AM</h2>
+                        <p id="dispatch-details">15 Bags • Half-Dice</p>
                     </div>
-                    <button class="manage-btn" onclick="app.openDeliveriesPanel()" aria-label="Manage Scheduled Deliveries">Manage Order ›</button>
+                    <button id="dispatch-manage-btn" class="manage-btn" onclick="app.openDeliveriesPanel()" aria-label="Manage Scheduled Deliveries">Manage Order ›</button>
                 </div>
 
-                <div class="dispatch-footer">
-                    <span>PO #8821</span>
-                    <span style="font-size: 11px; opacity: 0.7;">Subscription Active</span>
+                <div class="dispatch-footer" id="dispatch-footer">
+                    <span id="dispatch-payment-ref">PO #8821</span>
+                    <span id="dispatch-subscription-status" style="font-size: 11px; opacity: 0.7;">Subscription Active</span>
                 </div>
             </div>
 
@@ -1366,8 +1380,8 @@
                         <div class="command-card" id="credit-card" onclick="app.openDebtSheet()">
                             <div class="card-top">
                                 <div class="title-group">
-                                    <span class="tag">Elite Tier</span>
-                                    <h3>Available Power</h3>
+                                    <span class="tag" id="power-tag">Elite Tier</span>
+                                    <h3 id="power-title">Available Power</h3>
                                 </div>
                                 <button id="recharge-btn" class="recharge-btn" onclick="app.handlePowerButtonClick(event)">Recharge Now</button>
                             </div>
@@ -1376,7 +1390,7 @@
                                 <h2 id="available-power-text" style="margin-bottom: 0;">₱125</h2>
                             </div>
 
-                            <div class="card-bottom">
+                            <div class="card-bottom" id="power-card-bottom">
                                 <div class="stat">
                                     <span>MAX LIMIT</span>
                                     <strong id="max-limit-amt">₱2,500</strong>
@@ -2022,55 +2036,8 @@
 
 
     <!-- Auto-Settlement Side Panel -->
-    <div id="auto-settle-overlay" class="global-dimmer" onclick="app.togglePanel('auto-settle', false)"></div>
-    <div id="auto-settle-panel" class="side-panel">
-        <div class="panel-header">
-            <button onclick="app.togglePanel('auto-settle', false)" class="close-btn back-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            </button>
-            <h2 style="flex: 1; margin-left: 8px;">Auto-Settlement</h2>
-            <img src="./assets/logo.png" class="tiny-logo" alt="IceQube">
-        </div>
+    <!-- Auto-Settlement feature removed -->
 
-        <div class="panel-body" style="padding: 20px;">
-            <div class="secure-badge">
-                <span class="icon">🔒</span> End-to-End Encrypted
-            </div>
-
-            <p class="instruction">Choose your primary payment source for automated clearing.</p>
-
-            <div class="provider-list">
-                <div class="provider-item active" onclick="app.selectAuthProvider('GCash', this)">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/GCash_logo.png/640px-GCash_logo.png" alt="GCash">
-                    <div class="p-info">
-                        <strong>GCash</strong>
-                        <span>Verified Account</span>
-                    </div>
-                    <div class="p-check">✓</div>
-                </div>
-
-                <div class="provider-item" onclick="app.selectAuthProvider('Maya', this)">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Maya_logo.png/1200px-Maya_logo.png" alt="Maya">
-                    <div class="p-info">
-                        <strong>Maya</strong>
-                        <span>Link via Wallet</span>
-                    </div>
-                    <div class="p-check">✓</div>
-                </div>
-            </div>
-
-            <div class="limit-setting">
-                <label>Weekly Auto-Pay Limit</label>
-                <div class="limit-input">
-                    <span>₱</span>
-                    <input type="number" id="auto-pay-limit" value="5000" step="500">
-                </div>
-                <small>Safety first: We will never charge more than this limit without a manual override.</small>
-            </div>
-
-            <button class="pill-btn primary" style="width: 100%; margin-top: 2rem;" onclick="app.confirmLinking()">Link Account & Enable</button>
-        </div>
-    </div>
 
     <!-- Permissions Panel -->
     <div id="permissions-overlay" class="panel-overlay" onclick="app.togglePanel('permissions', false)"></div>
@@ -2277,14 +2244,99 @@
                 <input type="hidden" id="profile-messenger-id">
             </div>
 
-            <button class="btn-primary" onclick="app.saveUserProfile()" style="margin-top: 2rem; width: 100%; height: 56px; border-radius: 16px; font-size: 1.05rem; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);">
+            <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+                <button onclick="localStorage.removeItem('ice_orders'); location.reload();" style="width: 100%; background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">Reset Demo Orders (Test Empty State)</button>
+            </div>
+            
+            <button class="btn-primary" onclick="app.saveUserProfile()" style="margin-top: 1rem; width: 100%; height: 56px; border-radius: 16px; font-size: 1.05rem; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);">
                 Save & Update Profile
             </button>
         </div>
     </div>
 
-    <!-- Debt Breakdown Bottom Sheet -->
-    <div id="debt-overlay" class="sheet-overlay" onclick="app.toggleBottomSheet('debt', false)"></div>
+    <!-- Wallet Top Up Bottom Sheet -->
+    <div id="wallet-overlay" class="sheet-overlay" onclick="app.toggleBottomSheet('wallet', false)"></div>
+    <div id="wallet-sheet" class="bottom-sheet dark-sheet">
+        <div class="debt-breakdown-inner">
+            <div class="sheet-header" style="position: relative;">
+                <div class="handle"></div>
+                <button id="wallet-sheet-back-btn" onclick="app.toggleBottomSheet('wallet', false)" style="position: absolute; left: 15px; top: 20px; background: transparent; border: none; padding: 10px; cursor: pointer; z-index: 10;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h3>Wallet Top Up</h3>
+                <h1 id="topup-display-amount">₱500.00</h1>
+            </div>
+
+            <div id="wallet-step-select" style="padding: 0 20px 20px;">
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; text-align: center;">Choose an amount to add to your wallet.</p>
+                
+                <div class="topup-presets" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1.5rem;">
+                    <button class="preset-btn active" onclick="app.setTopUpAmount(500, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱500</button>
+                    <button class="preset-btn" onclick="app.setTopUpAmount(1000, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱1,000</button>
+                    <button class="preset-btn" onclick="app.setTopUpAmount(2000, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱2,000</button>
+                </div>
+
+                <div class="custom-pay-wrapper" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: center; gap: 15px;">
+                    <span style="color: #eab308; font-size: 2rem; font-weight: 800; line-height: 1; position: static;">₱</span>
+                    <div class="input-group" style="width: 160px; background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 0; position: relative;">
+                        <input type="number" id="custom-topup-amount" placeholder="0" oninput="app.setTopUpAmount(this.value)" style="background: transparent; border: none; color: white; font-size: 1.5rem; font-weight: 700; width: 100%; outline: none; padding: 0; text-align: center; -moz-appearance: textfield;">
+                    </div>
+                </div>
+
+                <h3 style="color: #64748b; margin-bottom: 1rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; text-align: center;">Choose Payment Method</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="payment-option-btn" onclick="window.app.processTopUp('GCash')" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; border-radius: 12px; background: #007DFE; color: white; border: none; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(0,125,254,0.2);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                        Pay with GCash
+                    </button>
+                    <button class="payment-option-btn" onclick="window.app.processTopUp('Bank')" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); font-weight: 700; font-size: 0.95rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"/><path d="M5 21V10.9"/><path d="M9 21V10.9"/><path d="M15 21V10.9"/><path d="M19 21V10.9"/></svg>
+                        Bank Transfer
+                    </button>
+                </div>
+            </div>
+
+            <div id="wallet-step-verify" style="padding: 0 20px 20px; display: none; text-align: center;">
+                <p id="verify-method-title" style="color: #eab308; font-weight: 800; font-size: 1.1rem; margin-bottom: 0.5rem;">GCash Payment</p>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">Scan the QR code below and upload your receipt.</p>
+                
+                <div style="background: white; padding: 15px; border-radius: 16px; display: inline-block; margin-bottom: 1.25rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                    <img id="payment-qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=GCash-Payment-IceQube" style="width: 200px; height: 200px; display: block; border-radius: 8px;">
+                </div>
+
+                <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 1.5rem; text-align: left; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <span style="font-size: 0.65rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Bank / Provider</span>
+                            <span id="verify-acc-label-text" style="color: #22c55e; font-weight: 800; font-size: 1rem;">GoTyme Bank</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <span style="font-size: 0.65rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Account Name</span>
+                        <span id="verify-acc-name" style="color: white; font-weight: 700; font-size: 0.95rem;">LAWRENCE FE BACAYO</span>
+                    </div>
+                    <div>
+                        <span id="verify-acc-num-label" style="font-size: 0.65rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Account Number</span>
+                        <span id="verify-acc-num" style="color: #eab308; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px;">017630929031</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <label for="topup-receipt" style="display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.03); border: 2px dashed rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s ease;">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span id="receipt-status" style="display: block; color: #94a3b8; font-size: 0.9rem; font-weight: 600;">Upload Reference Photo</span>
+                    </label>
+                    <input type="file" id="topup-receipt" style="display: none;" onchange="app.handleReceiptUpload(this)">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button class="payment-option-btn" onclick="app.setWalletStep('select')" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 12px; font-weight: 700;">Back</button>
+                    <button id="btn-confirm-topup" class="payment-option-btn" onclick="app.confirmTopUp()" style="flex: 2; background: #22c55e; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 800; opacity: 0.5; pointer-events: none;">Confirm Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="debt-sheet" class="bottom-sheet dark-sheet">
         <div class="debt-breakdown-inner">
             <div class="sheet-header" style="position: relative;">
@@ -2329,7 +2381,6 @@
                         <div class="l-info">
                             <strong>Order #IQ-9788</strong>
                             <span>Delivered Apr 20 • 3 Bags</span>
-                            <span class="warning-text">Due Tomorrow</span>
                         </div>
                         <div class="l-action">
                             <div class="l-amount">₱815.00</div>

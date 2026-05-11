@@ -7526,3 +7526,24 @@ img[src*="staticmaperror"], div[style*="z-index: 1000001"], .dismissButton {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+
+/* Wallet Top Up Styles */
+.preset-btn {
+    transition: all 0.2s ease;
+}
+
+.preset-btn.active {
+    background: #eab308 !important;
+    border-color: #eab308 !important;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+}
+
+.payment-option-btn {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.payment-option-btn:active {
+    transform: scale(0.98);
+}
