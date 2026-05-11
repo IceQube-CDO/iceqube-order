@@ -3209,18 +3209,49 @@ const app = {
     },
 
     sendVerificationCode() {
-        const phone = document.getElementById('cod-phone-input').value;
-        if (!phone) {
-            this.showToast('Please enter a contact number.', 'error');
+        const phoneInput = document.getElementById('cod-phone-input');
+        const phone = phoneInput.value.replace(/\D/g, '');
+        
+        if (phone.length < 11) {
+            this.showToast('Please enter a valid 11-digit mobile number.', 'error');
             return;
         }
 
         const btnSend = document.getElementById('btn-send-otp');
+        const originalText = btnSend.innerText;
+        
         btnSend.disabled = true;
-        btnSend.innerText = 'Code Sent!';
+        btnSend.innerText = 'Sending...';
 
-        document.getElementById('otp-reveal-section').classList.add('active');
-        console.log(`Sending 4-digit OTP to ${phone}... (Mock OTP: Any 4 digits)`);
+        // Simulate network delay for verification
+        setTimeout(() => {
+            // Generate a random 4-digit OTP
+            this._currentOTP = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            btnSend.innerText = 'Code Sent!';
+            btnSend.style.background = '#22c55e'; // Turn green on success
+            
+            document.getElementById('otp-reveal-section').classList.add('active');
+            
+            // For testing/demo purposes, show the code in a toast and console
+            this.showToast(`Verification code sent! Demo Code: ${this._currentOTP}`, 'success');
+            console.log(`[IceQube Verification] OTP for ${phone}: ${this._currentOTP}`);
+            
+            // Focus OTP input
+            setTimeout(() => {
+                const otpInput = document.getElementById('cod-otp-input');
+                if (otpInput) otpInput.focus();
+            }, 500);
+
+            // Re-enable after 30 seconds for resend (optional improvement)
+            setTimeout(() => {
+                if (!this.orderData.codVerified) {
+                    btnSend.disabled = false;
+                    btnSend.innerText = 'Resend Code';
+                    btnSend.style.background = ''; // Reset color
+                }
+            }, 30000);
+        }, 1500);
     },
 
     verifyOTP() {
@@ -3229,22 +3260,29 @@ const app = {
         const phoneInput = document.getElementById('cod-phone-input');
 
         if (otp.length === 4) {
-            this.orderData.codVerified = true;
-            
-            // Automatically record the number for the buyer's account (localStorage)
-            if (phoneInput && phoneInput.value) {
-                localStorage.setItem('ice_verified_phone', phoneInput.value);
-            }
+            if (otp === this._currentOTP || otp === '1234') { // Allow '1234' as universal debug code
+                this.orderData.codVerified = true;
+                
+                // Automatically record the number for the buyer's account (localStorage)
+                if (phoneInput && phoneInput.value) {
+                    localStorage.setItem('ice_verified_phone', phoneInput.value);
+                }
 
-            const codBox = document.getElementById('cod-verification-box');
-            codBox.classList.add('verified');
-            
-            document.getElementById('cod-phone-group').style.display = 'none';
-            document.getElementById('otp-reveal-section').classList.remove('active');
-            document.getElementById('cod-verified-msg').style.display = 'block';
-            document.getElementById('cod-verification-text').innerText = 'Verification Successful';
-            
-            document.getElementById('btn-finish-order').disabled = false;
+                const codBox = document.getElementById('cod-verification-box');
+                codBox.classList.add('verified');
+                
+                document.getElementById('cod-phone-group').style.display = 'none';
+                document.getElementById('otp-reveal-section').classList.remove('active');
+                document.getElementById('cod-verified-msg').style.display = 'block';
+                document.getElementById('cod-verification-text').innerText = 'Verification Successful';
+                
+                this.showToast('Number verified successfully!', 'success');
+                document.getElementById('btn-finish-order').disabled = false;
+            } else {
+                this.showToast('Invalid verification code. Please try again.', 'error');
+                otpInput.value = '';
+                otpInput.focus();
+            }
         }
     },
 
