@@ -3110,8 +3110,9 @@ const app = {
             if (this.orderData.bonusState3kg) {
                 const fd3 = this.orderData.qty.fullDice['3kg'];
                 const hd3 = this.orderData.qty.halfDice['3kg'];
-                // Adjust to exactly 14 bags
-                const diff = 14 - (fd3 + hd3);
+                const m3kg = this.pricingMatrix.products.bag3kg;
+                // Adjust to exactly threshold
+                const diff = m3kg.threshold - (fd3 + hd3);
                 if (fd3 > 0) {
                     this.orderData.qty.fullDice['3kg'] += diff;
                     document.getElementById('qty-fullDice-3kg').value = this.orderData.qty.fullDice['3kg'];
@@ -3124,8 +3125,9 @@ const app = {
             if (this.orderData.bonusState1kg) {
                 const fd1 = this.orderData.qty.fullDice['1kg'];
                 const hd1 = this.orderData.qty.halfDice['1kg'];
-                // Adjust to exactly 40 bags
-                const diff = 40 - (fd1 + hd1);
+                const m1kg = this.pricingMatrix.products.bag1kg;
+                // Adjust to exactly threshold
+                const diff = m1kg.threshold - (fd1 + hd1);
                 if (fd1 > 0) {
                     this.orderData.qty.fullDice['1kg'] += diff;
                     document.getElementById('qty-fullDice-1kg').value = this.orderData.qty.fullDice['1kg'];
@@ -3527,10 +3529,12 @@ const app = {
             const fd = this.orderData.qty.fullDice;
             const hd = this.orderData.qty.halfDice;
             
-            if (fd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['3kg']}x Full-Dice (3kg)</span><span>₱${fd['3kg'] * (this.orderData.bulkState3kg ? 35 : 40)}</span></div>`;
-            if (fd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['1kg']}x Full-Dice (1kg)</span><span>₱${fd['1kg'] * (this.orderData.bulkState1kg ? 14 : 15)}</span></div>`;
-            if (hd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['3kg']}x Half-Dice (3kg)</span><span>₱${hd['3kg'] * (this.orderData.bulkState3kg ? 35 : 40)}</span></div>`;
-            if (hd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['1kg']}x Half-Dice (1kg)</span><span>₱${hd['1kg'] * (this.orderData.bulkState1kg ? 14 : 15)}</span></div>`;
+            const m3kg = this.pricingMatrix.products.bag3kg;
+            const m1kg = this.pricingMatrix.products.bag1kg;
+            if (fd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['3kg']}x Full-Dice (3kg)</span><span>₱${fd['3kg'] * (this.orderData.bulkState3kg ? m3kg.bulk : m3kg.standard)}</span></div>`;
+            if (fd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['1kg']}x Full-Dice (1kg)</span><span>₱${fd['1kg'] * (this.orderData.bulkState1kg ? m1kg.bulk : m1kg.standard)}</span></div>`;
+            if (hd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['3kg']}x Half-Dice (3kg)</span><span>₱${hd['3kg'] * (this.orderData.bulkState3kg ? m3kg.bulk : m3kg.standard)}</span></div>`;
+            if (hd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['1kg']}x Half-Dice (1kg)</span><span>₱${hd['1kg'] * (this.orderData.bulkState1kg ? m1kg.bulk : m1kg.standard)}</span></div>`;
             
             summaryList.innerHTML = html || '<p style="opacity:0.6;font-size:0.8rem;">No items selected</p>';
         }

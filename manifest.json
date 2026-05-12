@@ -1,7 +1,7 @@
 {
   "name": "IceQube CDO",
   "short_name": "IceQube CDO",
-  "description": "Premium Alkaline Ice Delivery in Cagayan de Oro",
+  "description": "Premium Ice Cube Delivery in Cagayan de Oro",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
