@@ -42,6 +42,17 @@ var admin = {
     })),
     utilityPaidDates: JSON.parse(localStorage.getItem('iceqube_utility_paid_dates') || '{}'),
     rental: JSON.parse(localStorage.getItem('iceqube_rental') || '15000'),
+    pricingMatrix: JSON.parse(localStorage.getItem('iceqube_global_pricing') || JSON.stringify({
+        products: {
+            bag3kg: { standard: 40, bulk: 35, threshold: 14 },
+            bag1kg: { standard: 15, bulk: 14, threshold: 40 }
+        },
+        delivery: {
+            baseFare: 30,
+            perKmRate: 10,
+            freeThreshold: 0 // 0 means no free delivery by default
+        }
+    })),
     cashflowFilter: 'daily', 
     vacationMode: JSON.parse(localStorage.getItem('iceqube_vacation_mode') || 'false'),
     autoDispatchType: 'broadcast',
@@ -208,6 +219,23 @@ var admin = {
 
         // Purge button listener moved to onclick in HTML for robustness
 
+        // Data Migration/Validation for Pricing Matrix
+        if (!this.pricingMatrix || !this.pricingMatrix.products || !this.pricingMatrix.delivery) {
+            console.log('Migrating old pricing matrix structure...');
+            this.pricingMatrix = {
+                products: {
+                    bag3kg: { standard: 40, bulk: 35, threshold: 14 },
+                    bag1kg: { standard: 15, bulk: 14, threshold: 40 }
+                },
+                delivery: {
+                    baseFare: 30,
+                    perKmRate: 10,
+                    freeThreshold: 0
+                }
+            };
+            localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+        }
+
         this.updateAlertCenter([]);
         this.startDataSync();
         this.updateConsumablesUI();
@@ -215,6 +243,7 @@ var admin = {
         this.updateAssetsUI();
         this.updateUtilitiesUI();
         this.updateRentalUI();
+        this.updatePricingUI();
         this.checkMonthlyReset();
         this.updateDates();
 
@@ -569,14 +598,21 @@ var admin = {
     },
 
     async fetchRealStats() {
+        const badge = document.getElementById('cloud-sync-badge');
+        const dot = document.getElementById('cloud-dot');
+
         if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             console.log('Using mock data: Supabase not configured.');
-            console.log("🛠️ DEVELOPMENT MODE: Using Mock Data (Live Sync Disabled)");
+            if (badge) {
+                badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> CLOUD SYNC (OFF)';
+            }
             this.renderMockStats();
             return;
         }
 
-        // TODO: Real Supabase fetch logic here
         console.log('Fetching from Supabase...');
         try {
             const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc`, {
@@ -592,12 +628,25 @@ var admin = {
             const orders = await response.json();
             console.log(`✅ Received ${orders.length} orders from Supabase.`);
             
+            if (badge) {
+                badge.style.background = 'rgba(34, 197, 94, 0.1)';
+                badge.style.color = '#22c55e';
+                badge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> CLOUD LIVE';
+            }
+
             // Sync cloud data to local storage so purged/deleted items stay gone
             localStorage.setItem('ice_orders', JSON.stringify(orders));
             
             this.updateDashboardUI(orders);
         } catch (err) {
             console.warn('Live fetch failed, falling back to mock:', err);
+            if (badge) {
+                badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> OFFLINE';
+            }
             this.renderMockStats();
         }
     },
@@ -672,7 +721,7 @@ var admin = {
             return;
         }
 
-        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
 
         feed.innerHTML = orders.slice(0, 5).map(o => {
             const isElite = eliteList.includes(o.customer_name) || o.account_type === 'Elite';
@@ -731,6 +780,8 @@ var admin = {
     },
 
     switchView(viewId) {
+        localStorage.setItem('admin_last_tab', viewId);
+        
         const views = {
             ops: document.getElementById('ops-view'),
             customers: document.getElementById('customer-view'),
@@ -739,19 +790,10 @@ var admin = {
             consumables: document.getElementById('consumables-view'),
             finance: document.getElementById('finance-view'),
             cashflow: document.getElementById('cashflow-view'),
-            orders: document.getElementById('orders-view')
+            orders: document.getElementById('orders-view'),
+            matrix: document.getElementById('matrix-view')
         };
-        
-        // Update active tab styling in all tab containers
-        document.querySelectorAll('.cc-tab').forEach(tab => {
-            const onclick = tab.getAttribute('onclick');
-            if (onclick && onclick.includes(`'${viewId}'`)) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-        
+
         Object.keys(views).forEach(key => {
             if (views[key]) {
                 if (key === viewId) {
@@ -759,6 +801,16 @@ var admin = {
                 } else {
                     views[key].style.display = 'none';
                 }
+            }
+        });
+
+        // Update active tab styling
+        document.querySelectorAll('.cc-tab').forEach(tab => {
+            const onclick = tab.getAttribute('onclick');
+            if (onclick && onclick.includes(`'${viewId}'`)) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
             }
         });
 
@@ -773,8 +825,257 @@ var admin = {
         }
         if (viewId === 'consumables') this.updateConsumablesUI();
         if (viewId === 'finance') this.loadPnL('mtd');
+        if (viewId === 'matrix') this.updatePricingUI();
         
         this.animateCards();
+    },
+
+    toggleReceipt(show, orderId = null) {
+        const overlay = document.getElementById('receipt-overlay');
+        const panel = document.getElementById('receipt-panel');
+        if (!overlay || !panel) return;
+
+        if (show && orderId) {
+            this.populateReceipt(orderId);
+        }
+
+        if (show) {
+            overlay.classList.add('active');
+            panel.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        } else {
+            overlay.classList.remove('active');
+            panel.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+    },
+
+    populateReceipt(orderId) {
+        const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+        const targetClean = clean(orderId);
+        
+        // Search in all possible sources
+        const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        let order = (this.allOrders || []).find(o => clean(o.order_id) === targetClean || clean(o.id) === targetClean) || 
+                    localOrders.find(o => clean(o.order_id) === targetClean || clean(o.id) === targetClean);
+
+        // If still not found, check customer data nested orders
+        if (!order && this.customerData) {
+            for (const customer of this.customerData) {
+                const found = customer.orders.find(o => clean(o.order_id) === targetClean || clean(o.id) === targetClean);
+                if (found) {
+                    order = found;
+                    break;
+                }
+            }
+        }
+
+        if (!order) {
+            console.error('[ADMIN] Order not found for receipt:', orderId);
+            return;
+        }
+
+        try {
+            console.log('[ADMIN] Populating receipt for:', order.order_id, order);
+
+            // Basic Info
+            const orderIdEl = document.getElementById('receipt-order-id');
+            const dateEl = document.getElementById('receipt-date');
+            const custNameEl = document.getElementById('receipt-customer-name');
+            const custAddrEl = document.getElementById('receipt-customer-address');
+            const itemsList = document.getElementById('receipt-items-list');
+            const subtotalEl = document.getElementById('receipt-subtotal');
+            const discountRow = document.getElementById('receipt-discount-row');
+            const discountAmtEl = document.getElementById('receipt-discount-amount');
+            const deliveryEl = document.getElementById('receipt-delivery');
+            const totalEl = document.getElementById('receipt-total');
+            const paymentMethodEl = document.getElementById('receipt-payment-method');
+
+            if (orderIdEl) orderIdEl.innerText = order.order_id || `#${order.id}` || 'N/A';
+            if (dateEl) dateEl.innerText = order.created_at ? new Date(order.created_at).toLocaleDateString('en-PH', { 
+                year: 'numeric', month: 'long', day: 'numeric' 
+            }) : 'N/A';
+            // Customer
+            const clientLabel = document.querySelector('#receipt-panel .receipt-customer .section-label');
+            const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+            const isElite = Array.isArray(eliteList) && (eliteList.includes(order.customer_name) || order.account_type === 'Elite');
+            
+            if (clientLabel) clientLabel.innerText = isElite ? 'ELITE CLIENT DETAILS' : 'CLIENT DETAILS';
+            if (custNameEl) custNameEl.innerText = order.customer_name || 'Customer';
+            if (custAddrEl) custAddrEl.innerText = order.delivery_address || order.address || 'No address provided';
+
+            // Items - Use robust parsing
+            const parsedItems = this.parseItems(order.items);
+            const fd = parsedItems.fullDice || {};
+            const hd = parsedItems.halfDice || {};
+            
+            // Map structured items using Snapshot (if available) or Global Matrix
+            const itemEntries = [];
+            const matrix = parsedItems._matrix || this.pricingMatrix;
+            const m3kg = matrix.products.bag3kg;
+            const m1kg = matrix.products.bag1kg;
+
+            const total3kgQty = (parseFloat(fd['3kg']) || 0) + (parseFloat(hd['3kg']) || 0);
+            const total1kgQty = (parseFloat(fd['1kg']) || 0) + (parseFloat(hd['1kg']) || 0);
+
+            const price3kg = (total3kgQty >= m3kg.threshold) ? m3kg.bulk : m3kg.standard;
+            const price1kg = (total1kgQty >= m1kg.threshold) ? m1kg.bulk : m1kg.standard;
+
+            if (fd['3kg']) itemEntries.push({ name: '3kg Ice Cube (Full Dice)', qty: fd['3kg'], price: price3kg });
+            if (hd['3kg']) itemEntries.push({ name: '3kg Ice Cube (Half Dice)', qty: hd['3kg'], price: price3kg });
+            if (fd['1kg']) itemEntries.push({ name: '1kg Ice Cube (Full Dice)', qty: fd['1kg'], price: price1kg });
+            if (hd['1kg']) itemEntries.push({ name: '1kg Ice Cube (Half Dice)', qty: hd['1kg'], price: price1kg });
+            
+            if (parsedItems.raw && itemEntries.length === 0) {
+                itemEntries.push({ name: parsedItems.raw, qty: 1, price: parseFloat(order.subtotal || order.total_price) || 0 });
+            }
+
+            // Totals - Robust number parsing
+            const parseMoney = val => {
+                if (!val) return 0;
+                if (typeof val === 'number') return val;
+                return parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0;
+            };
+
+            const delivery = parseMoney(order.delivery_fee);
+            const totalVal = parseMoney(order.total_price);
+            let discount = parseMoney(order.discount_total);
+            let subtotalVal = parseMoney(order.subtotal);
+
+            // --- SMART DERIVATION FALLBACK ---
+            if (discount === 0 && (this.customerData || localStorage.getItem('iceqube_customer_discounts'))) {
+                const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+                const custName = order.customer_name || '';
+                const expectedSubtotal = itemEntries.reduce((sum, item) => sum + (item.qty * item.price), 0);
+                const actualPaidSubtotal = totalVal - delivery;
+
+                if (expectedSubtotal > actualPaidSubtotal && actualPaidSubtotal > 0) {
+                    discount = expectedSubtotal - actualPaidSubtotal;
+                    subtotalVal = expectedSubtotal;
+                }
+            }
+
+            if (subtotalVal === 0) {
+                subtotalVal = totalVal - delivery + discount;
+            }
+
+            // Render Rows - Columnar Layout (Detailed Breakdown)
+            let itemsHtml = `
+                <div class="receipt-item-header" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.6rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;">
+                    <div>Item Description</div>
+                    <div style="text-align: center;">Unit Cost</div>
+                    <div style="text-align: center;">Quantity</div>
+                    <div style="text-align: right;">Total</div>
+                </div>
+            `;
+
+            itemEntries.forEach(item => {
+                const qty = parseInt(item.qty) || 0;
+                const unitPrice = item.price;
+                let lineTotal = qty * unitPrice;
+                if (itemEntries.length === 1) lineTotal = subtotalVal;
+
+                itemsHtml += `
+                    <div class="receipt-item-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; align-items: center; font-family: 'Outfit', sans-serif;">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a; line-height: 1.2;">
+                            ${item.name.split(' (')[0]}<br>
+                            <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(${item.name.split(' (')[1]}</span>
+                        </div>
+                        <div style="text-align: center; font-size: 0.8rem; color: #64748b; font-weight: 500;">₱${unitPrice.toFixed(0)}</div>
+                        <div style="text-align: center; font-size: 0.85rem; font-weight: 700; color: #0f172a;">${qty}</div>
+                        <div style="text-align: right; font-weight: 800; font-size: 0.9rem; color: #0f172a;">₱${lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                    </div>
+                `;
+            });
+            
+            if (itemEntries.length === 0 && order.items) {
+                itemsHtml = `<div style="text-align: center; color: #64748b; font-size: 0.85rem;">${this.formatOrderItems(order)}</div>`;
+            }
+
+            if (itemsList) itemsList.innerHTML = itemsHtml || '<p style="text-align: center; color: #94a3b8; font-size: 0.8rem;">No items found</p>';
+            if (subtotalEl) subtotalEl.innerText = `₱${subtotalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            
+            if (discountRow) {
+                if (discount > 0) {
+                    discountRow.style.display = 'flex';
+                    if (discountAmtEl) discountAmtEl.innerText = `-₱${discount.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                } else {
+                    discountRow.style.display = 'none';
+                }
+            }
+
+            if (deliveryEl) deliveryEl.innerText = `₱${delivery.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            if (totalEl) totalEl.innerText = `₱${totalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            
+            // Payment Tag Logic
+            const methodEl = document.getElementById('receipt-payment-method');
+            const iconEl = document.querySelector('.payment-tag .tag-icon');
+            let method = order.payment_method || 'Cash on Delivery';
+            let icon = '💵';
+            
+            if (method.toLowerCase().includes('purchase order') || method.toLowerCase().includes('po')) {
+                method = 'Purchase Order';
+                icon = '💳';
+            } else if (method.toLowerCase().includes('gcash')) {
+                icon = '📱';
+            }
+            
+            if (methodEl) methodEl.innerText = method;
+            if (iconEl) iconEl.innerText = icon;
+            
+        } catch (err) {
+            console.error('[ADMIN] Error populating receipt:', err);
+            // Fallback for totals if items loop failed
+            document.getElementById('receipt-total').innerText = `₱${(parseFloat(order.total_price) || 0).toLocaleString()}`;
+        }
+    },
+
+    printReceipt() {
+        const receiptContent = document.querySelector('.receipt-paper').innerHTML;
+        const printWindow = window.open('', '_blank', 'width=800,height=900');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>IceQube Receipt</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Inter', sans-serif; padding: 40px; background: white; color: #0f172a; }
+                        .receipt-logo { height: 40px; margin-bottom: 10px; }
+                        .receipt-title h1 { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.5rem; }
+                        .receipt-title p { margin: 0; color: #0284c7; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+                        .receipt-header { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+                        .receipt-meta { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 0.75rem; color: #64748b; }
+                        .meta-item strong { display: block; color: #0f172a; font-size: 0.9rem; margin-top: 4px; }
+                        .section-label { font-size: 0.65rem; color: #94a3b8; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; }
+                        .receipt-customer { margin-bottom: 30px; }
+                        .receipt-customer strong { display: block; font-size: 1rem; }
+                        .receipt-customer p { margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem; }
+                        .receipt-item-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 12px; font-size: 0.65rem; font-weight: 800; color: #94a3b8; }
+                        .receipt-item-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; align-items: center; }
+                        .receipt-item-row strong { font-family: 'Outfit', sans-serif; font-size: 0.85rem; }
+                        .unit-cost, .qty { text-align: center; font-size: 0.85rem; }
+                        .total { text-align: right; font-weight: 800; }
+                        .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #64748b; }
+                        .grand-total { border-top: 2px solid #0f172a; padding-top: 12px; margin-top: 12px; font-size: 1.1rem; color: #0f172a; font-weight: 900; }
+                        .payment-tag { background: #f1f5f9; padding: 6px 12px; border-radius: 6px; display: inline-block; margin-top: 20px; font-size: 0.8rem; font-weight: 700; }
+                        .receipt-footer { margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                        .barcode { font-family: monospace; opacity: 0.3; margin-top: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt-paper">
+                        ${receiptContent}
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() { window.close(); };
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     },
 
     loadPnL(period) {
@@ -923,7 +1224,7 @@ var admin = {
         const listContainer = document.getElementById('customer-directory-list');
         if (!listContainer) return;
 
-        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+        const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
         const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
 
         const customers = {};
@@ -1206,7 +1507,7 @@ var admin = {
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
@@ -1255,7 +1556,7 @@ var admin = {
             return `
                 <tr>
                     <td>${displayTime}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent);">${o.order_id}</td>
+                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
@@ -2265,6 +2566,88 @@ var admin = {
         }
     },
 
+    updatePricingUI() {
+        // Sync inputs with current matrix state
+        const fields = {
+            'm-3kg-std': this.pricingMatrix.products.bag3kg.standard,
+            'm-3kg-bulk': this.pricingMatrix.products.bag3kg.bulk,
+            'm-3kg-threshold': this.pricingMatrix.products.bag3kg.threshold,
+            'm-1kg-std': this.pricingMatrix.products.bag1kg.standard,
+            'm-1kg-bulk': this.pricingMatrix.products.bag1kg.bulk,
+            'm-1kg-threshold': this.pricingMatrix.products.bag1kg.threshold,
+            'm-del-base': this.pricingMatrix.delivery.baseFare,
+            'm-del-km': this.pricingMatrix.delivery.perKmRate
+        };
+
+        for (const [id, val] of Object.entries(fields)) {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        }
+    },
+
+    toggleMatrixLock(cardId, btn) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        
+        const inputs = card.querySelectorAll('.matrix-input');
+        const isLocked = inputs[0].hasAttribute('readonly');
+        
+        if (isLocked) {
+            // UNLOCK
+            inputs.forEach(input => input.removeAttribute('readonly'));
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L22 2"/></svg> SYNCHRONIZE';
+            inputs[0].focus();
+        } else {
+            // LOCK & SAVE
+            this.savePricingMatrix(btn);
+            inputs.forEach(input => input.setAttribute('readonly', true));
+            
+            const type = cardId.split('-').pop(); // pricing, thresholds, logistics
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> EDIT ${type.toUpperCase()}`;
+        }
+    },
+
+    savePricingMatrix(triggerBtn = null) {
+        const newMatrix = {
+            products: {
+                bag3kg: {
+                    standard: parseFloat(document.getElementById('m-3kg-std').value) || 0,
+                    bulk: parseFloat(document.getElementById('m-3kg-bulk').value) || 0,
+                    threshold: parseInt(document.getElementById('m-3kg-threshold').value) || 0
+                },
+                bag1kg: {
+                    standard: parseFloat(document.getElementById('m-1kg-std').value) || 0,
+                    bulk: parseFloat(document.getElementById('m-1kg-bulk').value) || 0,
+                    threshold: parseInt(document.getElementById('m-1kg-threshold').value) || 0
+                }
+            },
+            delivery: {
+                baseFare: parseFloat(document.getElementById('m-del-base').value) || 0,
+                perKmRate: parseFloat(document.getElementById('m-del-km').value) || 0,
+                freeThreshold: 0
+            }
+        };
+
+        this.pricingMatrix = newMatrix;
+        localStorage.setItem('iceqube_global_pricing', JSON.stringify(newMatrix));
+        
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishPricingUpdate(newMatrix);
+        }
+
+        this.showNotification("Matrix Updated", "Global pricing has been synchronized.");
+        
+        // Visual feedback
+        const btn = triggerBtn || document.querySelector('#matrix-view .btn-primary');
+        if (btn) {
+            const original = btn.innerHTML;
+            btn.innerHTML = '✅ SYNCED';
+            setTimeout(() => {
+                btn.innerHTML = original;
+            }, 2000);
+        }
+    },
+
     updateRentDisplay() {
         const val = parseFloat(document.getElementById('bill-rent').value) || 0;
         this.rental = val;
@@ -2321,6 +2704,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+
 document.addEventListener('DOMContentLoaded', () => {
     try {
         admin.init();
@@ -2342,18 +2726,31 @@ function openCustomerDrawer(customerId) {
     document.getElementById('drawer-contact-person').innerText = profile.contactPerson || customer.contactPerson || customer.name;
     document.getElementById('drawer-phone').innerText = profile.contactNumber || customer.phone;
     
-    document.getElementById('elite-toggle').checked = customer.isElite;
-
-    // Load Discounts
+    // Load Discounts & Tier
     const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-    const customerDiscounts = discounts[customer.name] || { percent: 0, fixed: 0 };
+    const custPricing = discounts[customer.name] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard' };
     
-    // Set both input and display values
-    document.getElementById('drawer-discount-percent').value = customerDiscounts.percent || 0;
-    document.getElementById('display-discount-percent').innerText = customerDiscounts.percent || 0;
+    // Set Tier Selection
+    const tierSelect = document.getElementById('elite-tier-select');
+    if (tierSelect) {
+        // Fallback for legacy data that only has isElite boolean
+        const currentTier = custPricing.tier || (customer.isElite ? 'Elite Gold' : 'Standard');
+        tierSelect.value = currentTier;
+        const tierDisplay = document.getElementById('display-customer-tier');
+        if (tierDisplay) tierDisplay.innerText = currentTier;
+        
+        updateTierVisuals(currentTier);
+    }
+
+    // Set Discounts & Credit Limit
+    document.getElementById('drawer-discount-percent').value = custPricing.percent || 0;
+    document.getElementById('display-discount-percent').innerText = custPricing.percent || 0;
     
-    document.getElementById('drawer-discount-fixed').value = (customerDiscounts.fixed || 0).toFixed(2);
-    document.getElementById('display-discount-fixed').innerText = (customerDiscounts.fixed || 0).toFixed(2);
+    document.getElementById('drawer-discount-fixed').value = (custPricing.fixed || 0).toFixed(2);
+    document.getElementById('display-discount-fixed').innerText = (custPricing.fixed || 0).toFixed(2);
+
+    document.getElementById('drawer-credit-limit').value = custPricing.creditLimit || 0;
+    document.getElementById('display-credit-limit').innerText = (custPricing.creditLimit || 0).toLocaleString();
 
     // Default to locked mode
     togglePricingEdit(false);
@@ -2387,7 +2784,7 @@ function openCustomerDrawer(customerId) {
                     <span>${order.order_id}</span>
                     <span>₱${order.total_price}</span>
                     <span><span class="badge-resolved">${order.delivery_status || 'Completed'}</span></span>
-                    <button class="btn-icon">📄</button>
+                    <button class="btn-icon" onclick="admin.toggleReceipt(true, '${order.order_id}')">📄</button>
                 </div>
             `;
         });
@@ -2440,58 +2837,107 @@ function togglePricingEdit(isEditing) {
         editBtn.style.display = 'flex';
         actions.style.display = 'none';
         
-        // Update display values from inputs in case they were changed but not saved (though cancel would usually reset them)
+        // Update display values from inputs
+        const currentTier = document.getElementById('elite-tier-select').value;
+        document.getElementById('display-customer-tier').innerText = currentTier;
+        updateTierVisuals(currentTier);
+        
         document.getElementById('display-discount-percent').innerText = document.getElementById('drawer-discount-percent').value;
         document.getElementById('display-discount-fixed').innerText = parseFloat(document.getElementById('drawer-discount-fixed').value).toFixed(2);
+        document.getElementById('display-credit-limit').innerText = parseInt(document.getElementById('drawer-credit-limit').value).toLocaleString();
     }
 }
 
-// Elite Toggle Logic
-function toggleEliteStatus() {
-    const isElite = document.getElementById('elite-toggle').checked;
+// Tiered Elite Logic
+function handleTierChange() {
+    const tier = document.getElementById('elite-tier-select').value;
     const customerName = document.getElementById('drawer-customer-name').innerText;
     
+    updateTierVisuals(tier);
+    
+    const creditInput = document.getElementById('drawer-credit-limit');
+    const creditDisplay = document.getElementById('display-credit-limit');
+
+    console.log(`[SYSTEM] Tier changing to ${tier} for ${customerName}`);
+
+    // Update Elite status in memory if available
     if (admin.customerData) {
         const customer = admin.customerData.find(c => c.name === customerName);
         if (customer) {
-            customer.isElite = isElite;
+            customer.isElite = (tier !== 'Standard');
+            customer.tier = tier;
         }
     }
 
-    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+    // Default Credit Limits (Option A)
+    let defaultLimit = 0;
+    if (tier === 'Elite Gold') defaultLimit = 2500;
+    else if (tier === 'Elite Platinum') defaultLimit = 5000;
+    else if (tier === 'Elite Diamond') defaultLimit = 10000;
 
-    if (isElite) {
-        console.log(`[SYSTEM] Upgrading ${customerName} to ELITE TIER.`);
+    // Apply default limit (Visual update only until saved)
+    creditInput.value = defaultLimit;
+    creditDisplay.innerText = defaultLimit.toLocaleString();
+
+    // Sync elite list for legacy/external lookups
+    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+    if (tier !== 'Standard') {
         if (!eliteList.includes(customerName)) eliteList.push(customerName);
     } else {
-        console.log(`[SYSTEM] Downgrading ${customerName} to STANDARD TIER.`);
         eliteList = eliteList.filter(name => name !== customerName);
     }
-    
     localStorage.setItem('iceqube_elite_customers', JSON.stringify(eliteList));
 }
 
+function updateTierVisuals(tier) {
+    const tierCard = document.getElementById('tier-card');
+    const tierLabel = document.getElementById('tier-label');
+    const tierValue = document.getElementById('display-customer-tier');
+    
+    if (!tierCard) return;
+
+    // Reset classes
+    tierCard.className = 'locked-price-card';
+    tierLabel.className = 'label';
+    tierValue.className = 'locked-value';
+
+    // Apply tier specific classes
+    const tierSlug = tier.split(' ')[1]?.toLowerCase() || 'standard';
+    tierCard.classList.add(`tier-card-${tierSlug}`);
+    tierLabel.classList.add(`tier-text-${tierSlug}`);
+    tierValue.classList.add(`tier-text-${tierSlug}`);
+}
+
 function saveCustomerDiscounts() {
-    const customerName = document.getElementById('drawer-customer-name').innerText;
+    const customerName = document.getElementById('drawer-customer-name').innerText.trim();
+    const tier = document.getElementById('elite-tier-select').value;
     const percent = parseFloat(document.getElementById('drawer-discount-percent').value) || 0;
     const fixed = parseFloat(document.getElementById('drawer-discount-fixed').value) || 0;
+    const creditLimit = parseInt(document.getElementById('drawer-credit-limit').value) || 0;
 
     const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-    discounts[customerName] = { percent, fixed };
+    discounts[customerName] = { 
+        tier,
+        percent, 
+        fixed,
+        creditLimit 
+    };
     
     localStorage.setItem('iceqube_customer_discounts', JSON.stringify(discounts));
+    localStorage.setItem('iceqube_system_purged', Date.now()); // Force storage event for listeners
     
     // Sync to other tabs
     if (window.IceQubeSync) {
         window.IceQubeSync.publishPurge(); 
     }
     
-    console.log(`[SYSTEM] Pricing updated for ${customerName}: ${percent}% off and ₱${fixed} fixed discount.`);
-    alert(`Pricing settings saved for ${customerName}.`);
+    console.log(`[SYSTEM] Pricing updated for ${customerName}: Tier=${tier}, Limit=₱${creditLimit}`);
+    alert(`Settings saved for ${customerName}.`);
     
     // Update display mode and lock it
     document.getElementById('display-discount-percent').innerText = percent;
     document.getElementById('display-discount-fixed').innerText = fixed.toFixed(2);
+    document.getElementById('display-credit-limit').innerText = creditLimit.toLocaleString();
     
     togglePricingEdit(false);
     

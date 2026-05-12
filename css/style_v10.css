@@ -7230,26 +7230,54 @@ body.soa-active .app-header {
     margin-bottom: 1.5rem;
 }
 
-.receipt-item {
-    display: flex;
-    justify-content: space-between;
+.receipt-item-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.2fr;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.6rem;
+    color: #94a3b8;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.receipt-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.2fr;
+    gap: 8px;
+    margin-bottom: 12px;
     align-items: center;
-    margin-bottom: 0.75rem;
 }
 
-.item-info strong {
-    display: block;
-    font-size: 0.95rem;
-    color: #1e293b;
-}
-
-.item-info span {
-    font-size: 0.75rem;
-    color: #64748b;
-}
-
-.item-price {
+.receipt-item-row strong {
+    font-size: 0.85rem;
     font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+    font-family: 'Outfit', sans-serif;
+}
+
+.receipt-item-row .unit-cost {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.receipt-item-row .qty {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.receipt-item-row .total {
+    text-align: right;
+    font-weight: 800;
+    font-size: 0.9rem;
     color: #0f172a;
 }
 
@@ -7330,7 +7358,17 @@ body.soa-active .app-header {
 }
 
 /* Print Overrides */
+/* Print Overrides */
 @media print {
+    html, body {
+        background: white !important;
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
     body * {
         visibility: hidden;
     }
@@ -7339,14 +7377,19 @@ body.soa-active .app-header {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
+    .receipt-panel, .receipt-content-wrapper {
+        background: white !important;
+        background-color: white !important;
+    }
     .receipt-paper {
-        position: fixed;
+        position: absolute;
         left: 0;
         top: 0;
         width: 100%;
         height: auto;
-        box-shadow: none;
-        padding: 40px;
+        box-shadow: none !important;
+        padding: 0;
+        margin: 0;
         border: none;
         background: white !important;
     }

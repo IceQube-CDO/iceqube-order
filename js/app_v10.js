@@ -19,6 +19,30 @@ window.initIceQubeMap = function() {
 };
 
 const app = {
+    pricingMatrix: {
+        products: {
+            bag3kg: { standard: 40, bulk: 35, threshold: 14 },
+            bag1kg: { standard: 15, bulk: 14, threshold: 40 }
+        },
+        delivery: {
+            baseFare: 30,
+            perKmRate: 10,
+            freeThreshold: 0
+        }
+    },
+
+    loadPricingMatrix() {
+        const saved = localStorage.getItem('iceqube_global_pricing');
+        if (saved) {
+            try {
+                this.pricingMatrix = JSON.parse(saved);
+                console.log("✅ Pricing Matrix Loaded:", this.pricingMatrix);
+            } catch (e) {
+                console.warn("Failed to parse saved pricing matrix, using defaults.");
+            }
+        }
+    },
+
     showToast(message, type = 'info') {
         let container = document.querySelector('.toast-container');
         if (!container) {
@@ -77,6 +101,20 @@ const app = {
         }
 
         this.isQuickReorder = false;
+        
+        // Load Global Pricing Matrix
+        this.loadPricingMatrix();
+
+        // Listen for sync updates
+        if (window.IceQubeSync) {
+            window.IceQubeSync.onOrderEvent((event) => {
+                if (event.type === 'PRICING_UPDATED') {
+                    console.log("🔄 [App] Pricing matrix updated via Sync");
+                    this.pricingMatrix = event.payload;
+                    this.updateTotal();
+                }
+            });
+        }
         
         // --- Profile Management (Must run BEFORE UI rendering) ---
         try {
@@ -164,17 +202,28 @@ const app = {
         if (window.IceQubeSync) {
             window.IceQubeSync.onOrderEvent((event) => {
                 if (event.type === 'NEW_ORDER' || event.type === 'SYSTEM_PURGE') {
-                    console.log(`🔔 [App] History update triggered by ${event.type}`);
+                    console.log(`🔔 [App] Sync update triggered by ${event.type}`);
                     this.renderOrderHistory();
-                    if (event.type === 'NEW_ORDER') {
+                    if (event.type === 'SYSTEM_PURGE') {
+                        window._isSyncTriggered = true;
+                        this.loadUserProfile();
+                        this.updateCreditUI();
+                    } else if (event.type === 'NEW_ORDER') {
                         this.showToast('New order placed!', 'success');
-                    } else if (event.type === 'SYSTEM_PURGE') {
-                        this.showToast('System data synchronized.', 'info');
-                        // If we are currently viewing the history panel, it will refresh automatically
                     }
                 }
             });
         }
+        // --- Storage Event Fallback (for cross-tab sync without BroadcastChannel) ---
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'iceqube_customer_discounts' || e.key === 'iceqube_system_purged') {
+                console.log(`📡 [Storage] Sync update triggered by ${e.key}`);
+                window._isSyncTriggered = true;
+                this.loadUserProfile();
+                this.updateCreditUI();
+                this.renderOrderHistory();
+            }
+        });
     },
 
     updateSyncBadges() {
@@ -208,6 +257,54 @@ const app = {
                 cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 5px; height: 5px; background: #f59e0b; border-radius: 50%;"></span> CLOUD (OFF)';
             }
         }
+    },
+
+    printReceipt() {
+        const receiptContent = document.querySelector('.receipt-paper').innerHTML;
+        const printWindow = window.open('', '_blank', 'width=800,height=900');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>IceQube Receipt</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Inter', sans-serif; padding: 40px; background: white; color: #0f172a; }
+                        .receipt-logo { height: 40px; margin-bottom: 10px; }
+                        .receipt-title h1 { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.5rem; }
+                        .receipt-title p { margin: 0; color: #0284c7; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+                        .receipt-header { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+                        .receipt-meta { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 0.75rem; color: #64748b; }
+                        .meta-item strong { display: block; color: #0f172a; font-size: 0.9rem; margin-top: 4px; }
+                        .section-label { font-size: 0.65rem; color: #94a3b8; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; }
+                        .receipt-customer { margin-bottom: 30px; }
+                        .receipt-customer strong { display: block; font-size: 1rem; }
+                        .receipt-customer p { margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem; }
+                        .receipt-item-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 12px; font-size: 0.65rem; font-weight: 800; color: #94a3b8; }
+                        .receipt-item-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; align-items: center; }
+                        .receipt-item-row strong { font-family: 'Outfit', sans-serif; font-size: 0.85rem; }
+                        .unit-cost, .qty { text-align: center; font-size: 0.85rem; }
+                        .total { text-align: right; font-weight: 800; }
+                        .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #64748b; }
+                        .grand-total { border-top: 2px solid #0f172a; padding-top: 12px; margin-top: 12px; font-size: 1.1rem; color: #0f172a; font-weight: 900; }
+                        .payment-tag { background: #f1f5f9; padding: 6px 12px; border-radius: 6px; display: inline-block; margin-top: 20px; font-size: 0.8rem; font-weight: 700; }
+                        .receipt-footer { margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                        .barcode { font-family: monospace; opacity: 0.3; margin-top: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt-paper">
+                        ${receiptContent}
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() { window.close(); };
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     },
 
     renderOrderHistory() {
@@ -319,6 +416,7 @@ const app = {
     },
     user: {
         accountType: 'Standard', 
+        tier: 'Standard',
         companyName: 'Guest Customer',
         contactPerson: '',
         contactNumber: '',
@@ -1006,12 +1104,15 @@ const app = {
     },
 
     updateCreditUI() {
-        const availableAmt = document.getElementById('available-amt');
+        const availableAmt = document.getElementById('available-power-text');
         const maxLimitAmt = document.getElementById('max-limit-amt');
         const batteryFill = document.getElementById('battery-fill');
         const batteryPercent = document.getElementById('battery-percent');
         const currentDebtAmt = document.getElementById('current-debt-amt');
         const creditCard = document.getElementById('credit-card');
+        const powerTag = document.getElementById('power-tag');
+        const powerTitle = document.getElementById('power-title');
+        const rechargeBtn = document.getElementById('recharge-btn');
 
         if (this.user.accountType !== 'Elite' && this.user.accountType !== 'PO') {
             this.renderStandardPowerBox();
@@ -1019,6 +1120,15 @@ const app = {
         }
 
         if (!availableAmt || !batteryFill) return;
+
+        // Reset Elite Visuals (in case we were just in Standard mode)
+        if (powerTag) powerTag.innerText = this.user.tier || 'Elite Tier';
+        if (powerTitle) powerTitle.innerText = 'Available Power';
+        if (rechargeBtn) {
+            rechargeBtn.innerText = 'Recharge Now';
+            rechargeBtn.style = '';
+            rechargeBtn.onclick = (e) => this.handlePowerButtonClick(e);
+        }
 
         // Reset the blue gamification background back to the premium dark Elite style
         if (creditCard) {
@@ -1462,10 +1572,9 @@ const app = {
             
             // Skip Logistics (Step 3) and possibly Payment (Step 4) if it's a Quick Reorder
             if (this.isQuickReorder && this.currentStep === 2) {
-                const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
-                const isElite = eliteList.includes(this.user.companyName) || this.user.accountType === 'Elite';
+                const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
 
-                if (isElite || this.user.accountType === 'PO') {
+                if (isElite) {
                     this.orderData.payment = 'Purchase Order';
                     // Ensure fees are computed before final processing
                     this.calculatePriorityFee();
@@ -2867,51 +2976,68 @@ const app = {
         const hd3 = this.orderData.qty.halfDice['3kg'];
         const hd1 = this.orderData.qty.halfDice['1kg'];
         
+        const m3kg = this.pricingMatrix.products.bag3kg;
+        const m1kg = this.pricingMatrix.products.bag1kg;
+
+        // Update Labels
+        const labels3kg = ['label-price-3kg-full', 'label-price-3kg-half'];
+        const labels1kg = ['label-price-1kg-full', 'label-price-1kg-half'];
+        labels3kg.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = `₱${m3kg.standard} / bag`;
+        });
+        labels1kg.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = `₱${m1kg.standard} / bag`;
+        });
+
         const q3kg = fd3 + hd3;
-        let total3kg = q3kg * 40;
+        let total3kg = q3kg * m3kg.standard;
         this.orderData.bonusState3kg = false;
         this.orderData.bulkState3kg = false;
 
-        if (q3kg >= 14) {
-            total3kg = q3kg * 35;
+        if (q3kg >= m3kg.threshold) {
+            total3kg = q3kg * m3kg.bulk;
             this.orderData.bulkState3kg = true;
-        } else if (q3kg === 13) {
-            total3kg = 490; // Force total to ₱490 for 13 bags (Paradox Protection)
+        } else if (q3kg === m3kg.threshold - 1 && m3kg.threshold > 1) {
+            // Paradox Protection: Force total to bulk price if 1 bag away
+            total3kg = (m3kg.threshold * m3kg.bulk); 
             this.orderData.bonusState3kg = true;
         }
 
         const q1kg = fd1 + hd1;
-        let total1kg = q1kg * 15;
+        let total1kg = q1kg * m1kg.standard;
         this.orderData.bonusState1kg = false;
         this.orderData.bulkState1kg = false;
 
-        if (q1kg >= 40) {
-            total1kg = q1kg * 14;
+        if (q1kg >= m1kg.threshold) {
+            total1kg = q1kg * m1kg.bulk;
             this.orderData.bulkState1kg = true;
-        } else if (q1kg === 38 || q1kg === 39) {
-            total1kg = 560; // Force total to ₱560 for 38/39 bags (Paradox Protection)
+        } else if (q1kg >= m1kg.threshold - 2 && m1kg.threshold > 2) {
+            // Paradox Protection: Force total to bulk price if 1-2 bags away
+            total1kg = (m1kg.threshold * m1kg.bulk);
             this.orderData.bonusState1kg = true;
         }
 
         const promoBoxes = document.querySelectorAll('.bulk-promo-box');
         if (promoBoxes.length > 0) {
-            let notice = 'Wholesale: 14+ 3kg (₱35) or 40+ 1kg (₱14)';
+            let notice = `Wholesale: ${m3kg.threshold}+ 3kg (₱${m3kg.bulk}) or ${m1kg.threshold}+ 1kg (₱${m1kg.bulk})`;
             let reached = false;
             
             if (this.orderData.bulkState3kg && this.orderData.bulkState1kg) {
-                notice = '🔥 Bulk Applied: 3kg (₱35) & 1kg (₱14)';
+                notice = `🔥 Bulk Applied: 3kg (₱${m3kg.bulk}) & 1kg (₱${m1kg.bulk})`;
                 reached = true;
             } else if (this.orderData.bulkState3kg) {
-                notice = '🔥 Bulk Applied: 3kg bags now ₱35';
+                notice = `🔥 Bulk Applied: 3kg bags now ₱${m3kg.bulk}`;
                 reached = true;
             } else if (this.orderData.bulkState1kg) {
-                notice = '🔥 Bulk Applied: 1kg bags now ₱14';
+                notice = `🔥 Bulk Applied: 1kg bags now ₱${m1kg.bulk}`;
                 reached = true;
             } else if (this.orderData.bonusState3kg) {
-                notice = '🎁 14th bag of 3kg is FREE!';
+                notice = `🎁 ${m3kg.threshold}th bag of 3kg is FREE!`;
                 reached = true;
             } else if (this.orderData.bonusState1kg) {
-                notice = '🎁 40+ bags of 1kg unlocks ₱14 rate!';
+                notice = `🎁 ${m1kg.threshold}+ bags of 1kg unlocks ₱${m1kg.bulk} rate!`;
                 reached = true;
             }
             
@@ -3248,8 +3374,8 @@ const app = {
 
         // Rate Card logic based on Distance
         const calculateMaximFee = (distanceInKm) => {
-            const baseFare = 30;
-            const perKmRate = 10;
+            const baseFare = this.pricingMatrix.delivery.baseFare;
+            const perKmRate = this.pricingMatrix.delivery.perKmRate;
             if (distanceInKm <= 1) return baseFare;
             return baseFare + (Math.ceil(distanceInKm - 1) * perKmRate);
         };
@@ -4235,7 +4361,9 @@ const app = {
             receiver_name: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.person) ? this.orderData.deliveryDetails.person : customerName,
             contact_number: contactNumber,
             delivery_notes: (this.isQuickReorder ? '[⚡ QUICK REORDER] ' : '') + ((this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.'),
-            items: this.orderData.qty,
+            items: { ...this.orderData.qty, _matrix: this.pricingMatrix },
+            subtotal: this.orderData.subtotal || 0,
+            discount_total: this.orderData.discountAmount || 0,
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
             delivery_status: 'Pending',
@@ -4723,25 +4851,27 @@ const app = {
             }
         }
 
-        const wholesaleThreshold = 14; 
+        const matrix = items._matrix || this.pricingMatrix;
+        const m3kg = matrix.products.bag3kg;
+        const m1kg = matrix.products.bag1kg;
         
         ['fullDice', 'halfDice'].forEach(type => {
             if (items[type]) {
                 ['3kg', '1kg'].forEach(size => {
                     const qty = items[type][size] || 0;
                     if (qty > 0) {
-                        // Calculate total quantity for this size across all types (Full/Half) to match ordering engine
                         const totalSizeQty = (items.fullDice ? (items.fullDice[size] || 0) : 0) + (items.halfDice ? (items.halfDice[size] || 0) : 0);
                         
-                        let price = 40;
+                        let price = 0;
                         if (size === '3kg') {
-                            price = (totalSizeQty >= 14) ? 35 : 40;
+                            price = (totalSizeQty >= m3kg.threshold) ? m3kg.bulk : m3kg.standard;
                         } else {
-                            price = (totalSizeQty >= 40) ? 14 : 15;
+                            price = (totalSizeQty >= m1kg.threshold) ? m1kg.bulk : m1kg.standard;
                         }
 
                         mappedItems.push({
-                            name: `${type === 'fullDice' ? 'Full Dice' : 'Half-Dice'} (${size})`,
+                            baseName: `${size} Ice Cube`,
+                            typeLabel: type === 'fullDice' ? 'Full Dice' : 'Half Dice',
                             qty: qty,
                             unit: 'Bag',
                             price: price
@@ -4808,22 +4938,45 @@ const app = {
             document.getElementById('receipt-customer-address').innerText = this.user.savedAddress || order.address;
             document.getElementById('receipt-payment-method').innerText = order.payment;
 
+            // Update Icon based on payment method
+            const tagIcon = document.getElementById('receipt-tag-icon');
+            if (tagIcon) {
+                const method = (order.payment || '').toLowerCase();
+                if (method.includes('cash')) tagIcon.innerText = '💵';
+                else if (method.includes('wallet')) tagIcon.innerText = '👛';
+                else if (method.includes('po') || method.includes('purchase order')) tagIcon.innerText = '💳';
+                else tagIcon.innerText = '🧾';
+            }
+
             // Update label based on tier
             const receiptLabel = document.getElementById('receipt-client-label');
-            const isElite = this.user.accountType === 'Elite' || (this.user.companyName && this.user.companyName.includes('Loft'));
+            const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
             if (receiptLabel) receiptLabel.innerText = isElite ? 'ELITE CLIENT DETAILS' : 'CLIENT DETAILS';
 
             // Populate Items
             const itemsList = document.getElementById('receipt-items-list');
-            itemsList.innerHTML = order.items.map(item => `
+            let itemsHtml = `
+                <div class="receipt-item-header">
+                    <div>Item Description</div>
+                    <div style="text-align: center;">Unit Cost</div>
+                    <div style="text-align: center;">Quantity</div>
+                    <div style="text-align: right;">Total</div>
+                </div>
+            `;
+            
+            itemsHtml += order.items.map(item => `
                 <div class="receipt-item-row">
-                    <div class="item-info">
-                        <strong>${item.name}</strong>
-                        <small>${item.qty} ${item.unit}${item.qty > 1 ? 's' : ''} × ₱${item.price.toFixed(2)}</small>
-                    </div>
-                    <div class="item-total">₱${(item.qty * item.price).toLocaleString()}</div>
+                    <strong>
+                        ${item.baseName}<br>
+                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(${item.typeLabel})</span>
+                    </strong>
+                    <div class="unit-cost">₱${item.price.toFixed(0)}</div>
+                    <div class="qty">${item.qty}</div>
+                    <div class="total">₱${(item.qty * item.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>
             `).join('');
+            
+            itemsList.innerHTML = itemsHtml;
 
             // --- BALANCED RECEIPT MATH ---
             // 1. Calculate Gross Subtotal (Sum of all items)
@@ -5670,12 +5823,48 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 this.user.savedLat = profile.lat || null;
                 this.user.savedLng = profile.lng || null;
                 
-                // Sync Elite Status from Admin
-                const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
-                if (eliteList.includes(this.user.companyName)) {
-                    this.user.accountType = 'Elite';
+                // Sync Elite Status & Tier from Admin
+                const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+                const companyName = (this.user.companyName || "").trim().toLowerCase();
+                
+                // Case-insensitive lookup
+                let custPricing = null;
+                const discountKeys = Object.keys(discounts);
+                console.log(`🔍 [Sync] Checking tier for: "${companyName}". Available keys:`, discountKeys);
+                const matchKey = discountKeys.find(k => k.trim().toLowerCase() === companyName);
+                
+                if (matchKey) {
+                    custPricing = discounts[matchKey];
+                }
+                
+                console.log(`🔍 [Sync] Checking tier for: "${companyName}" (Matched Key: "${matchKey}")`, { hasPricing: !!custPricing });
+
+                if (custPricing) {
+                    this.user.tier = custPricing.tier || 'Standard';
+                    this.user.creditLimit = custPricing.creditLimit || 0;
+                    this.user.accountType = (this.user.tier !== 'Standard') ? 'Elite' : 'Standard';
+                    console.log(`✅ [Sync] Match found! Tier: ${this.user.tier}, Type: ${this.user.accountType}`);
                 } else {
-                    this.user.accountType = 'Standard';
+                    // Fallback for legacy sync
+                    const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+                    const isLegacyElite = eliteList.some(name => (name || "").trim().toLowerCase() === companyName);
+                    
+                    if (isLegacyElite) {
+                        this.user.accountType = 'Elite';
+                        this.user.tier = 'Elite Gold'; // Default legacy fallback
+                        this.user.creditLimit = 2500;
+                        console.log(`⚠️ [Sync] Using legacy Elite fallback for ${companyName}`);
+                    } else {
+                        this.user.accountType = 'Standard';
+                        this.user.tier = 'Standard';
+                        console.log(`ℹ️ [Sync] No Elite status found for ${companyName}, defaulting to Standard.`);
+                    }
+                }
+
+                // Notify user of sync (if triggered by event)
+                if (window._isSyncTriggered) {
+                    this.showToast(`✨ Profile synchronized: ${this.user.tier}`, 'success');
+                    delete window._isSyncTriggered;
                 }
                 
                 // Pre-fill Edit Modal

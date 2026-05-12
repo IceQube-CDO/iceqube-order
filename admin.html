@@ -14,6 +14,75 @@
     <link rel="stylesheet" href="css/style_v10.css?v=10.0.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        /* Print Fixes */
+        @media print {
+            * { background: transparent !important; color: black !important; box-shadow: none !important; filter: none !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            html, body { background: white !important; background-color: white !important; width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+            body > *:not(.receipt-panel) { display: none !important; }
+            .receipt-panel { display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; background: white !important; background-color: white !important; z-index: 99999 !important; }
+            .receipt-paper { background: white !important; background-color: white !important; padding: 0 !important; margin: 0 !important; width: 100% !important; box-shadow: none !important; }
+            .panel-overlay, .receipt-actions, .hide-on-print, .dashboard-container, #admin-gate { display: none !important; }
+        }
+        
+        /* Receipt Specific */
+        /* Receipt Specific (Matched to Customer App v10) */
+        .receipt-panel { background: #ffffff !important; }
+        .receipt-content-wrapper { padding: 0 !important; overflow-y: auto; }
+        .receipt-paper { background: white; color: #0f172a; padding: 2.5rem 1.5rem; margin: 0; width: 100%; box-shadow: none; position: relative; overflow: hidden; }
+        .receipt-paper::after {
+            content: 'ICEQUBE AUTHENTIC';
+            position: absolute;
+            bottom: 100px;
+            right: -20px;
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: rgba(67, 130, 236, 0.05);
+            transform: rotate(-35deg);
+            border: 2px solid rgba(67, 130, 236, 0.05);
+            padding: 10px 40px;
+            white-space: nowrap;
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+        .receipt-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 2.5rem; }
+        .receipt-logo { height: 39px; width: auto; margin-bottom: 0; }
+        .receipt-title h1 { margin: 0; font-size: 2.2rem; font-weight: 500; font-family: 'Outfit', sans-serif; letter-spacing: -0.03em; color: #0f172a; line-height: 1; }
+        .receipt-title p { margin: 2px 0 0 0; font-size: 0.6rem; font-weight: 800; color: #0284c7; letter-spacing: 0.2em; text-transform: uppercase; }
+        
+        .receipt-meta { display: flex; justify-content: space-between; margin-bottom: 2rem; font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .meta-item strong { display: block; color: #0f172a; font-size: 0.95rem; margin-top: 4px; font-weight: 800; text-transform: none; letter-spacing: normal; }
+        
+        .receipt-divider { border-top: 1px solid #f1f5f9; margin: 1.5rem 0; }
+        .section-label { font-size: 0.65rem; color: #94a3b8; font-weight: 800; margin-bottom: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+        
+        .receipt-item-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+        .receipt-item-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; align-items: center; }
+
+        .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.95rem; color: #64748b; font-weight: 500; }
+        .total-row strong { color: #0f172a; font-weight: 700; }
+        .grand-total { border-top: 2px solid #0f172a; margin-top: 12px; padding-top: 12px; font-size: 1.15rem; font-weight: 900; color: #0f172a; }
+        
+        .receipt-footer { text-align: center; margin-top: 3rem; border-top: 1px solid #f1f5f9; padding-top: 2.5rem; }
+        .payment-tag { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px; 
+            background: #f8fafc; 
+            padding: 10px 20px; 
+            border-radius: 10px; 
+            margin-bottom: 1.25rem; 
+            border: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .receipt-footer p { color: #94a3b8; font-size: 0.75rem; font-style: italic; font-weight: 600; margin-top: 10px; }
+        .barcode { font-family: monospace; text-align: center; margin-top: 1.5rem; letter-spacing: 4px; color: #e2e8f0; font-size: 0.8rem; opacity: 0.5; }
+
+        .receipt-actions { padding: 1.5rem; background: white; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 10px; }
+        .btn-report-issue { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; font-weight: 700; padding: 14px; border-radius: 12px; cursor: pointer; }
+        
         /* PWA Install Banner */
         .install-banner {
             position: fixed;
@@ -214,6 +283,101 @@
             background: var(--admin-accent);
             border-color: var(--admin-accent);
             box-shadow: 0 0 15px var(--admin-accent);
+        }
+
+        /* --- Panel & Modal System (Adapted from index.html) --- */
+        .panel-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            z-index: 50000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .panel-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        .bottom-panel {
+            position: fixed;
+            bottom: 0; left: 50%; width: 100%; max-width: 480px;
+            height: 90vh;
+            background: #f8fafc;
+            border-radius: 32px 32px 0 0;
+            transform: translate(-50%, 100%);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 50001;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -20px 50px rgba(0,0,0,0.3);
+            color: #0f172a;
+            overflow: hidden;
+        }
+        .bottom-panel.active {
+            transform: translate(-50%, 0);
+        }
+        .bottom-panel-handle {
+            width: 40px; height: 5px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin: 12px auto 8px;
+            flex-shrink: 0;
+        }
+        .panel-header {
+            padding: 0.5rem 1.5rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            flex-shrink: 0;
+        }
+        .panel-header h2 { 
+            margin: 0; 
+            font-size: 1.3rem; 
+            font-weight: 800; 
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+        .close-btn {
+            background: #f1f5f9;
+            border: none;
+            width: 40px; height: 40px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+        .close-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .panel-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Print Overrides for Admin Receipt */
+        @media print {
+            body * { visibility: hidden !important; }
+            #receipt-panel, #receipt-panel * { visibility: visible !important; }
+            #receipt-panel {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                transform: none !important;
+                box-shadow: none !important;
+                background: white !important;
+            }
+            .hide-on-print { display: none !important; }
         }
 
         .cc-grid {
@@ -1341,8 +1505,9 @@
         .profile-section { margin-bottom: 30px; }
         .section-title { font-size: 11px; color: #64748b; font-weight: 800; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
 
-        /* Contact Grid */
+        /* Contact & Pricing Grids */
         .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
         .value { display: block; font-size: 14px; color: white; font-weight: 500; }
 
@@ -1404,13 +1569,126 @@
         }
 
         /* Pricing Lock Styles */
-        .locked-price-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px; }
+        .locked-price-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px; transition: all 0.3s ease; }
+        .matrix-input { width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1rem; transition: all 0.2s ease; }
+        .matrix-input:focus { border-color: #0ea5e9; background: rgba(14, 165, 233, 0.05); outline: none; box-shadow: 0 0 15px rgba(14, 165, 233, 0.2); }
+        .matrix-input[readonly] { pointer-events: none; opacity: 0.5; cursor: not-allowed; }
         .locked-value { font-size: 1.1rem; font-weight: 800; color: white; font-family: 'JetBrains Mono', monospace; }
+        
+        /* Tier Specific Styles */
+        .tier-card-standard { border-color: rgba(59, 130, 246, 0.3) !important; background: rgba(59, 130, 246, 0.05) !important; }
+        .tier-card-gold { 
+            border-color: #eab308 !important; 
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(234, 179, 8, 0.05)) !important; 
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.15) inset, 0 4px 15px rgba(234, 179, 8, 0.1); 
+        }
+        .tier-card-platinum { 
+            border-color: rgba(148, 163, 184, 0.6) !important; 
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(148, 163, 184, 0.08)) !important; 
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05) inset, 0 4px 15px rgba(255, 255, 255, 0.05); 
+        }
+        .tier-card-diamond { 
+            border-color: #22d3ee !important; 
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(30, 64, 175, 0.1)) !important; 
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.1) inset, 0 4px 15px rgba(34, 211, 238, 0.1); 
+        }
+        
+        .tier-text-standard { color: #60a5fa !important; }
+        .tier-text-gold { color: #eab308 !important; text-shadow: 0 0 8px rgba(234, 179, 8, 0.3); }
+        .tier-text-platinum { color: #f1f5f9 !important; text-shadow: 0 0 8px rgba(255, 255, 255, 0.2); }
+        .tier-text-diamond { color: #22d3ee !important; text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); }
+
         .btn-pricing-action { padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
         .btn-pricing-action:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
     </style>
 </head>
 <body class="admin-mode">
+    <!-- Digital Receipt System -->
+    <div id="receipt-overlay" class="panel-overlay" onclick="admin.toggleReceipt(false)"></div>
+    <div id="receipt-panel" class="bottom-panel receipt-panel">
+        <div class="bottom-panel-handle"></div>
+        <div class="panel-header">
+            <button onclick="admin.toggleReceipt(false)" class="close-btn back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Digital Receipt</h2>
+        </div>
+        
+        <div class="panel-content receipt-content-wrapper">
+            <div class="receipt-paper">
+                <div class="receipt-header">
+                    <img src="./assets/logo.png" alt="IceQube Logo" class="receipt-logo">
+                    <div class="receipt-title">
+                        <h1>IceQube <span style="color: #0284c7; font-size: 0.9em;">CDO</span></h1>
+                        <p>PREMIUM ALKALINE ICE</p>
+                    </div>
+                </div>
+
+                <div class="receipt-meta">
+                    <div class="meta-item">
+                        <span>ORDER ID</span>
+                        <strong id="receipt-order-id">#IQ-0000</strong>
+                    </div>
+                    <div class="meta-item">
+                        <span>DATE</span>
+                        <strong id="receipt-date">-</strong>
+                    </div>
+                </div>
+
+                <div class="receipt-divider"></div>
+
+                <div class="receipt-customer">
+                    <p class="section-label">CLIENT DETAILS</p>
+                    <strong id="receipt-customer-name">-</strong>
+                    <p id="receipt-customer-address">-</p>
+                </div>
+
+                <div class="receipt-items">
+                    <p class="section-label">ORDER SUMMARY</p>
+                    <div id="receipt-items-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="receipt-totals">
+                    <div class="total-row">
+                        <span>Subtotal</span>
+                        <span id="receipt-subtotal">₱0.00</span>
+                    </div>
+                    <div id="receipt-discount-row" class="total-row" style="display: none; color: #16a34a; font-weight: 600;">
+                        <span id="receipt-discount-label">Partnership Discount</span>
+                        <span id="receipt-discount-amount">-₱0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Delivery Fee</span>
+                        <span id="receipt-delivery">₱0.00</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span id="receipt-total-label">Amount Paid</span>
+                        <strong id="receipt-total">₱0.00</strong>
+                    </div>
+                </div>
+
+                <div class="receipt-footer">
+                    <div class="payment-tag">
+                        <span class="tag-icon">💳</span>
+                        <span id="receipt-payment-method">-</span>
+                    </div>
+                    <p>Thank you for choosing IceQube!</p>
+                    <div class="barcode">|||||||||||||||||||||||||||||</div>
+                </div>
+            </div>
+
+            <div class="receipt-actions hide-on-print">
+                <button class="btn-primary" onclick="admin.printReceipt()" style="width: 100%; justify-content: center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print / Save
+                </button>
+                <button class="btn-report-issue" onclick="alert('Issue reporting is managed by the Customer App.')">Report an Issue</button>
+                <button onclick="admin.toggleReceipt(false)" style="width: 100%; border: none; background: transparent; color: #94a3b8; font-size: 0.85rem; margin-top: 10px; cursor: pointer;">Close Receipt</button>
+            </div>
+        </div>
+    </div>
     <!-- Global Confirmation Modal (Top level for maximum visibility) -->
     <div id="global-confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100000; justify-content: center; align-items: center; padding: 20px;">
         <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 400px; padding: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); text-align: center;">
@@ -1533,6 +1811,7 @@
             <div class="cc-tab" onclick="admin.switchView('assets')">Assets & Utilities<div class="tab-notif" id="dot-assets"></div></div>
             <div class="cc-tab" onclick="admin.switchView('consumables')">Consumables<div class="tab-notif" id="dot-consumables"></div></div>
             <div class="cc-tab" onclick="admin.switchView('finance')">Finance & P&L<div class="tab-notif" id="dot-finance"></div></div>
+            <div class="cc-tab" onclick="admin.switchView('matrix')">Pricing & Matrix</div>
         </div>
 
         <div class="cc-grid" id="ops-view">
@@ -1740,18 +2019,6 @@
                                 <span class="value" id="drawer-phone">+63 917 123 4567</span>
                             </div>
                         </div>
-                        
-                        <!-- ELITE TIER TOGGLE -->
-                        <div class="tier-toggle-box">
-                            <div class="tier-info">
-                                <span class="tier-label">Elite Tier Status</span>
-                                <span class="tier-desc">Purchase Order & Credit Line Privileges</span>
-                            </div>
-                            <label class="switch">
-                                <input type="checkbox" id="elite-toggle" onchange="toggleEliteStatus()">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
                     </div>
                     
                     <!-- SECTION: Custom Pricing & Discounts -->
@@ -1763,7 +2030,18 @@
                             </button>
                         </div>
 
-                        <div id="pricing-display-mode" class="contact-grid">
+                        <div id="pricing-display-mode" class="pricing-grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <!-- ROW 1: Tier & Credit -->
+                            <div id="tier-card" class="locked-price-card tier-card-standard">
+                                <span id="tier-label" class="label tier-text-standard">Customer Tier</span>
+                                <div class="locked-value tier-text-standard" style="font-size: 0.95rem; white-space: nowrap;" id="display-customer-tier">Standard</div>
+                            </div>
+                            <div class="locked-price-card" style="border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05);">
+                                <span class="label" style="color: #60a5fa;">Credit Limit</span>
+                                <div class="locked-value" style="color: #60a5fa;">₱<span id="display-credit-limit">0</span></div>
+                            </div>
+                            
+                            <!-- ROW 2: Discounts -->
                             <div class="locked-price-card">
                                 <span class="label">Special Discount</span>
                                 <div class="locked-value"><span id="display-discount-percent">0</span>%</div>
@@ -1774,14 +2052,32 @@
                             </div>
                         </div>
 
-                        <div id="pricing-edit-mode" class="contact-grid" style="display: none;">
+                        <div id="pricing-edit-mode" class="pricing-grid" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <!-- ROW 1: Tier & Credit -->
                             <div>
-                                <span class="label">Special Discount (%)</span>
+                                <span class="label" style="color: #60a5fa;">Customer Tier</span>
+                                <select id="elite-tier-select" onchange="handleTierChange()" 
+                                        style="width: 100%; background: #1e293b; border: 1px solid rgba(59, 130, 246, 0.3); color: white; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; outline: none; margin-top: 5px;">
+                                    <option value="Standard">Standard</option>
+                                    <option value="Elite Gold">Elite Gold</option>
+                                    <option value="Elite Platinum">Elite Platinum</option>
+                                    <option value="Elite Diamond">Elite Diamond</option>
+                                </select>
+                            </div>
+                            <div>
+                                <span class="label" style="color: #60a5fa;">Credit (₱)</span>
+                                <input type="number" id="drawer-credit-limit" value="0" step="100" min="0"
+                                       style="width: 100%; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; color: #60a5fa; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+
+                            <!-- ROW 2: Discounts -->
+                            <div>
+                                <span class="label">Disc. (%)</span>
                                 <input type="number" id="drawer-discount-percent" value="0" step="0.1" min="0" max="100" 
                                        style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
                             </div>
                             <div>
-                                <span class="label">Fixed Discount (₱)</span>
+                                <span class="label">Fixed (₱)</span>
                                 <input type="number" id="drawer-discount-fixed" value="0.00" step="1" min="0"
                                        style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
                             </div>
@@ -2223,6 +2519,112 @@
                             <div style="color: #22c55e; font-weight: bold; font-size: 0.8rem;">OK</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Pricing & Matrix View -->
+        <div class="cc-grid" id="matrix-view" style="display: none;">
+            <!-- Column 1: Ice Products -->
+            <div class="cc-card" id="matrix-card-pricing">
+                <div class="metric-label" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    Ice Product Pricing
+                </div>
+                
+                <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- 3kg Bag -->
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #0ea5e9;">3kg Alkaline Ice (Full/Half)</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Standard Price (₱)</label>
+                                <input type="number" id="m-3kg-std" class="matrix-input" value="40" readonly>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Bulk Rate (₱)</label>
+                                <input type="number" id="m-3kg-bulk" class="matrix-input" value="35" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1kg Bag -->
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #0ea5e9;">1kg Alkaline Ice (Full/Half)</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Standard Price (₱)</label>
+                                <input type="number" id="m-1kg-std" class="matrix-input" value="15" readonly>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Bulk Rate (₱)</label>
+                                <input type="number" id="m-1kg-bulk" class="matrix-input" value="14" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-matrix-lock" onclick="admin.toggleMatrixLock('matrix-card-pricing', this)" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 800; margin-top: 0.5rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        EDIT PRICING
+                    </button>
+                </div>
+            </div>
+
+            <!-- Column 2: Thresholds -->
+            <div class="cc-card" id="matrix-card-thresholds">
+                <div class="metric-label" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>
+                    Wholesale Thresholds
+                </div>
+                
+                <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 2rem;">
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #eab308;">3kg Wholesale Rule</h4>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Min. Bags for Bulk Rate</label>
+                        <input type="number" id="m-3kg-threshold" class="matrix-input" value="14" readonly>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Currently 14 bags triggers ₱35 rate.</small>
+                    </div>
+
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #eab308;">1kg Wholesale Rule</h4>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Min. Bags for Bulk Rate</label>
+                        <input type="number" id="m-1kg-threshold" class="matrix-input" value="40" readonly>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Currently 40 bags triggers ₱14 rate.</small>
+                    </div>
+
+                    <button class="btn-matrix-lock" onclick="admin.toggleMatrixLock('matrix-card-thresholds', this)" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 800; margin-top: 0.5rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        EDIT THRESHOLDS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Column 3: Logistics -->
+            <div class="cc-card" id="matrix-card-logistics">
+                <div class="metric-label" style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    Delivery Logistics Matrix
+                </div>
+                
+                <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 2rem;">
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #22c55e;">Base Routing Fare</h4>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Standard Base (₱)</label>
+                        <input type="number" id="m-del-base" class="matrix-input" value="30" readonly>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Minimum charge for the first 1km.</small>
+                    </div>
+
+                    <div>
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #22c55e;">Distance Premium</h4>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Rate per KM (₱)</label>
+                        <input type="number" id="m-del-km" class="matrix-input" value="10" readonly>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Added for every km beyond the first.</small>
+                    </div>
+
+                    <button class="btn-matrix-lock" onclick="admin.toggleMatrixLock('matrix-card-logistics', this)" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 800; margin-top: 0.5rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        EDIT LOGISTICS
+                    </button>
                 </div>
             </div>
         </div>
@@ -2672,7 +3074,7 @@
 
     <script src="js/app_header.js?v=10.0.2"></script>
     <script src="js/sync.js?v=1.0.1"></script>
-    <script src="js/admin.js?v=1.1.10"></script>
+    <script src="js/admin.js?v=1.1.12"></script>
 
 
     <!-- PWA Install Prompt -->

@@ -106,6 +106,16 @@ window.IceQubeSync = {
         });
     },
 
+    // Called by Admin app when global pricing/matrix is updated
+    publishPricingUpdate: function(matrix) {
+        console.log("📡 [Sync] Publishing Pricing Matrix Update");
+        localStorage.setItem('iceqube_global_pricing', JSON.stringify(matrix));
+        ordersChannel.postMessage({
+            type: 'PRICING_UPDATED',
+            payload: matrix
+        });
+    },
+
     // Called by Admin app when purging test data
     publishPurge: function() {
         console.log("📡 [Sync] Publishing System Purge");
