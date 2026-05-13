@@ -6234,7 +6234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mocking initial state for demonstration
         app.updateBillingStatus('unpaid', '₱2,550.00');
         console.log("✅ IceQube Initialized Successfully");
-        setTimeout(() => app.showToast("🚀 System Ready", "success"), 500);
+
     } else {
         console.error("❌ CRITICAL ERROR: App object or init function not found!");
     }
