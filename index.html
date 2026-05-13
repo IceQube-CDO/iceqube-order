@@ -300,56 +300,60 @@
             width: 100%;
         }
         .payment-steps-guide {
-            background: #f1f5f9; /* Soft desk-like background */
-            display: block; /* Remove flex centering */
-            padding: 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 0;
+            background: var(--surface-tertiary);
+            border-radius: 10px;
             position: relative;
-            cursor: grab;
         }
         .payment-steps-guide::after {
             content: '';
             position: absolute;
-            top: 15px;
-            left: 10%;
-            right: 10%;
-            height: 2px;
+            top: 50%;
+            left: 15%;
+            right: 15%;
+            height: 1px;
             background: var(--border-color);
             z-index: 1;
+            transform: translateY(-50%);
         }
         .guide-step {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             position: relative;
             z-index: 2;
-            width: 33%;
+            flex: 1;
         }
         .step-number {
-            width: 32px;
-            height: 32px;
-            background: white;
-            border: 2px solid var(--border-color);
+            width: 22px;
+            height: 22px;
+            background: var(--surface-primary);
+            border: 1.5px solid var(--border-color);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 0.875rem;
+            font-weight: 800;
+            font-size: 0.7rem;
             color: var(--text-secondary);
         }
         .guide-step.active .step-number {
             background: var(--primary-color);
             border-color: var(--primary-color);
             color: white;
-            box-shadow: 0 0 10px rgba(0, 125, 254, 0.3);
+            box-shadow: 0 0 8px rgba(0, 125, 254, 0.4);
         }
         .step-label {
-            font-size: 0.65rem;
-            font-weight: 600;
+            font-size: 0.55rem;
+            font-weight: 700;
             color: var(--text-secondary);
             text-align: center;
             text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
         .guide-step.active .step-label {
             color: var(--primary-color);
@@ -991,6 +995,10 @@
                         <span style="opacity: 0.8;">Subtotal:</span>
                         <span id="payment-subtotal" style="font-weight: 600;">₱0</span>
                     </div>
+                    <div id="payment-discount-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #16a34a;">
+                        <span id="payment-discount-label" style="opacity: 0.8;">Discount:</span>
+                        <span id="payment-discount" style="font-weight: 600;">-₱0</span>
+                    </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
                         <span style="opacity: 0.8;">Delivery Fee:</span>
                         <span id="payment-delivery-fee" style="font-weight: 600;">₱0</span>
@@ -1017,28 +1025,28 @@
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     </button>
                     <div id="payment-combined-step">
-                        <h2 id="modal-title" class="modal-title" style="font-size: 1.35rem; margin-bottom: 0.25rem;">GCash Payment</h2>
-                        <p id="verification-text-top" class="modal-subtitle" style="font-size: 0.85rem; margin-bottom: 0.75rem;">Please upload your GCash screenshot.</p>
+                        <h2 id="modal-title" class="modal-title" style="font-size: 1.25rem; margin-bottom: 0.15rem;">GCash Payment</h2>
+                        <p id="verification-text-top" class="modal-subtitle" style="font-size: 0.8rem; margin-bottom: 0.5rem;">Please upload your GCash screenshot.</p>
                         
                         <!-- NEW: Amount to Pay Display -->
-                        <div id="modal-amount-display" class="modal-amount-card" style="margin: 0.5rem 0; padding: 0.75rem; background: var(--surface-secondary); border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
-                            <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Total Amount to Pay</span>
-                            <div id="modal-total-amount" style="font-size: 1.75rem; font-weight: 800; color: var(--text-primary); margin-top: 0.15rem; letter-spacing: -0.02em;">₱0.00</div>
+                        <div id="modal-amount-display" class="modal-amount-card" style="margin: 0.25rem 0 0.5rem; padding: 0.5rem; background: var(--surface-secondary); border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Total Amount to Pay</span>
+                            <div id="modal-total-amount" style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin-top: 0.1rem; letter-spacing: -0.02em;">₱0.00</div>
                         </div>
 
                         <!-- NEW: 3-Step Payment Guide -->
-                        <div class="payment-steps-guide" style="margin: 0.75rem 0;">
+                        <div class="payment-steps-guide" style="margin-bottom: 0.75rem;">
                             <div class="guide-step active">
-                                <div class="step-number" style="width: 28px; height: 28px; font-size: 0.8rem;">1</div>
-                                <div class="step-label" style="font-size: 0.6rem;">Copy Number</div>
+                                <div class="step-number">1</div>
+                                <div class="step-label">Copy Number</div>
                             </div>
                             <div class="guide-step">
-                                <div class="step-number" style="width: 28px; height: 28px; font-size: 0.8rem;">2</div>
-                                <div id="step-2-label" class="step-label" style="font-size: 0.6rem;">Open GCash</div>
+                                <div class="step-number">2</div>
+                                <div id="step-2-label" class="step-label">Open GCash</div>
                             </div>
                             <div class="guide-step">
-                                <div class="step-number" style="width: 28px; height: 28px; font-size: 0.8rem;">3</div>
-                                <div class="step-label" style="font-size: 0.6rem;">Paste & Pay</div>
+                                <div class="step-number">3</div>
+                                <div class="step-label">Paste & Pay</div>
                             </div>
                         </div>
 
@@ -1342,7 +1350,7 @@
                 <div class="dispatch-body">
                     <div class="dispatch-main">
                         <h2 id="dispatch-time">Tomorrow, 9:00 AM</h2>
-                        <p id="dispatch-details">14 Bags • Half-Dice</p>
+                        <p id="dispatch-details">Loading schedule...</p>
                     </div>
                     <button id="dispatch-manage-btn" class="manage-btn" onclick="app.openDeliveriesPanel()" aria-label="Manage Scheduled Deliveries">Manage Order ›</button>
                 </div>
@@ -1374,7 +1382,7 @@
                             </div>
 
                             <div class="battery-data">
-                                <h2 id="available-power-text" style="margin-bottom: 0;">₱125</h2>
+                                <h2 id="available-power-text" style="margin-bottom: 0;">₱0.00</h2>
                             </div>
 
                             <div class="card-bottom" id="power-card-bottom">
@@ -1950,10 +1958,10 @@
     <div id="reorderModal" class="modal-overlay" onclick="if(event.target === this) closeReorderModal()">
         <div class="modal-card">
             <h3>Confirm Your Order</h3>
-            <p>Current Default: <strong id="reorder-modal-default">14 Bags (Half-Dice)</strong></p>
+            <p>Recent Order: <strong id="reorder-modal-default">...</strong></p>
             
             <div class="modal-actions">
-                <button id="reorder-modal-btn" class="modal-btn primary" onclick="processOrder(14)">Continue with 14 Bags</button>
+                <button id="reorder-modal-btn" class="modal-btn primary">Continue</button>
                 <button class="modal-btn secondary" onclick="goToEditQty()">Edit Quantity</button>
                 <button class="modal-btn cancel" onclick="closeReorderModal()">Cancel</button>
             </div>
@@ -2221,14 +2229,14 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </button>
                 <h3 id="wallet-sheet-title">Wallet Top Up</h3>
-                <h1 id="topup-display-amount">₱500.00</h1>
+                <h1 id="topup-display-amount">₱0.00</h1>
             </div>
 
             <div id="wallet-step-select" style="padding: 0 20px 20px;">
                 <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem; text-align: center;">Choose an amount to add to your wallet.</p>
                 
                 <div class="topup-presets" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1.5rem;">
-                    <button class="preset-btn active" onclick="app.setTopUpAmount(500, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱500</button>
+                    <button class="preset-btn" onclick="app.setTopUpAmount(500, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱500</button>
                     <button class="preset-btn" onclick="app.setTopUpAmount(1000, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱1,000</button>
                     <button class="preset-btn" onclick="app.setTopUpAmount(2000, this)" style="padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-weight: 700;">₱2,000</button>
                 </div>

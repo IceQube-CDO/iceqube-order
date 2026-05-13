@@ -344,6 +344,7 @@ var admin = {
             console.log("📦 [Admin] Processing supplies for order:", order.order_id);
             
             if (existingIdx === -1) {
+                order.is_real = true; // Ensure visibility in filters
                 orders.unshift(order);
             }
             
@@ -648,10 +649,29 @@ var admin = {
                 badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> CLOUD LIVE';
             }
 
-            // Sync cloud data to local storage so purged/deleted items stay gone
-            localStorage.setItem('ice_orders', JSON.stringify(orders));
+            // Merge cloud data with local data
+            const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const cloudOrders = orders || []; 
             
-            this.updateDashboardUI(orders);
+            let merged = [...cloudOrders];
+            localOrders.forEach(lo => {
+                const alreadyInCloud = cloudOrders.some(co => co.order_id === lo.order_id);
+                // Criteria: Not in cloud AND (is_real OR has valid price/items)
+                if (!alreadyInCloud && (lo.is_real || lo.total_price > 0 || lo.items)) {
+                    merged.push(lo);
+                }
+            });
+            
+            // Sort by newest first
+            merged.sort((a, b) => {
+                const dateA = new Date(a.created_at || 0);
+                const dateB = new Date(b.created_at || 0);
+                return dateB - dateA;
+            });
+            
+            localStorage.setItem('ice_orders', JSON.stringify(merged.slice(0, 200)));
+            this.allOrders = merged; // Update internal state
+            this.updateDashboardUI(merged);
         } catch (err) {
             console.warn('Live fetch failed, falling back to mock:', err);
             if (badge) {
@@ -925,19 +945,34 @@ var admin = {
             // Map structured items using Snapshot (if available) or Global Matrix
             const itemEntries = [];
             const matrix = parsedItems._matrix || this.pricingMatrix;
-            const m3kg = matrix.products.bag3kg;
-            const m1kg = matrix.products.bag1kg;
-
-            const total3kgQty = (parseFloat(fd['3kg']) || 0) + (parseFloat(hd['3kg']) || 0);
-            const total1kgQty = (parseFloat(fd['1kg']) || 0) + (parseFloat(hd['1kg']) || 0);
-
-            const price3kg = (total3kgQty >= m3kg.threshold) ? m3kg.bulk : m3kg.standard;
-            const price1kg = (total1kgQty >= m1kg.threshold) ? m1kg.bulk : m1kg.standard;
-
-            if (fd['3kg']) itemEntries.push({ name: '3kg Ice Cube (Full Dice)', qty: fd['3kg'], price: price3kg });
-            if (hd['3kg']) itemEntries.push({ name: '3kg Ice Cube (Half Dice)', qty: hd['3kg'], price: price3kg });
-            if (fd['1kg']) itemEntries.push({ name: '1kg Ice Cube (Full Dice)', qty: fd['1kg'], price: price1kg });
-            if (hd['1kg']) itemEntries.push({ name: '1kg Ice Cube (Half Dice)', qty: hd['1kg'], price: price1kg });
+            
+            if (matrix && matrix.products) {
+                const productList = Array.isArray(matrix.products) ? matrix.products : Object.values(matrix.products);
+                
+                productList.forEach(p => {
+                    const fQty = parseFloat(fd[p.id]) || 0;
+                    const hQty = parseFloat(hd[p.id]) || 0;
+                    
+                    // Determine which price was used (Bulk or Standard)
+                    const totalQtyForThisProduct = fQty + hQty;
+                    const usedPrice = (totalQtyForThisProduct >= p.threshold) ? p.bulk : p.standard;
+                    
+                    if (fQty > 0) {
+                        itemEntries.push({ 
+                            name: `${p.name.replace('(Full/Half)', '').trim()} (Full Dice)`, 
+                            qty: fQty, 
+                            price: usedPrice 
+                        });
+                    }
+                    if (hQty > 0) {
+                        itemEntries.push({ 
+                            name: `${p.name.replace('(Full/Half)', '').trim()} (Half-Dice)`, 
+                            qty: hQty, 
+                            price: usedPrice 
+                        });
+                    }
+                });
+            }
             
             if (parsedItems.raw && itemEntries.length === 0) {
                 itemEntries.push({ name: parsedItems.raw, qty: 1, price: parseFloat(order.subtotal || order.total_price) || 0 });
@@ -1712,29 +1747,36 @@ var admin = {
     formatOrderItems(o) {
         if (!o.items) {
             console.log(`⚠️ Missing items for order ${o.order_id}`);
-            return '1 Bag';
+            return 'No items';
         }
-        console.log(`🔍 Formatting items for ${o.order_id}:`, o.items);
+        
         const items = this.parseItems(o.items);
         
-        // If we have a raw string from fallback
-        if (items.raw) {
-            if (items.raw.includes(',')) {
-                return items.raw.split(',').map(s => s.trim()).join('<br>');
-            }
-            return items.raw.includes('Bag') ? items.raw : `${items.raw} Bags`;
-        }
+        // Use the matrix snapshot from the order, or fallback to global
+        const matrix = items._matrix || this.pricingMatrix;
+        if (!matrix || !matrix.products) return '1 Bag';
 
         const fd = items.fullDice || {};
         const hd = items.halfDice || {};
         const parts = [];
         
-        if (fd['3kg']) parts.push(`${fd['3kg']} bags - 3kg (Full Dice)`);
-        if (fd['1kg']) parts.push(`${fd['1kg']} bags - 1kg (Full Dice)`);
-        if (hd['3kg']) parts.push(`${hd['3kg']} bags - 3kg (Half Dice)`);
-        if (hd['1kg']) parts.push(`${hd['1kg']} bags - 1kg (Half Dice)`);
+        matrix.products.forEach(p => {
+            const fQty = parseInt(fd[p.id]) || 0;
+            const hQty = parseInt(hd[p.id]) || 0;
+            
+            // Clean up product name: "3kg Ice Cube (Full/Half)" -> "3kg"
+            const shortName = p.name.replace('(Full/Half)', '').replace('Ice Cube', '').trim();
+            
+            if (fQty > 0) parts.push(`${fQty} bags - ${shortName} (Full Dice)`);
+            if (hQty > 0) parts.push(`${hQty} bags - ${shortName} (Half-Dice)`);
+        });
         
-        return parts.length > 0 ? parts.join('<br>') : (typeof o.items === 'object' ? '1 Bag' : o.items);
+        // Handle raw fallback if still empty
+        if (parts.length === 0 && items.raw) {
+            return items.raw;
+        }
+
+        return parts.length > 0 ? parts.join('<br>') : '1 Bag';
     },
 
     updateDates() {

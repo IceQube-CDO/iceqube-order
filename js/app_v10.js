@@ -66,41 +66,6 @@ const app = {
         this.renderProducts();
     },
 
-    renderProducts() {
-        const fullDiceContainer = document.getElementById('fullDice-products-container');
-        const halfDiceContainer = document.getElementById('halfDice-products-container');
-        if (!fullDiceContainer || !halfDiceContainer) return;
-
-        const renderType = (type) => {
-            return this.pricingMatrix.products.map(p => {
-                const q = this.orderData.qty[type][p.id] || 0;
-                return `
-                    <div class="counter-row" style="${p === this.pricingMatrix.products[this.pricingMatrix.products.length - 1] ? 'margin-bottom: 0;' : ''}">
-                        <div class="product-info">
-                            <h3>${p.name}</h3>
-                            <p id="label-price-${p.id}-${type}">₱${p.standard} / bag</p>
-                        </div>
-                        <div class="counter-controls">
-                            <button class="counter-btn-small" onclick="app.updateQty('${type}', '${p.id}', -1)">−</button>
-                            <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-${type}-${p.id}" class="counter-input-small" value="${q}" min="0" oninput="app.handleQtyInput('${type}', '${p.id}', this.value)">
-                            <button class="counter-btn-small" onclick="app.updateQty('${type}', '${p.id}', 1)">+</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        };
-
-        fullDiceContainer.innerHTML = renderType('fullDice');
-        halfDiceContainer.innerHTML = renderType('halfDice');
-
-        // Update promo text
-        const promoFull = document.getElementById('fullDice-promo-text');
-        const promoHalf = document.getElementById('halfDice-promo-text');
-        const promoText = this.pricingMatrix.products.map(p => `${p.threshold}+ ${p.name.split(' ')[0]} (₱${p.bulk})`).join(' or ');
-        if (promoFull) promoFull.innerText = `Wholesale: ${promoText}`;
-        if (promoHalf) promoHalf.innerText = `Wholesale: ${promoText}`;
-    },
-
     showToast(message, type = 'info') {
         let container = document.querySelector('.toast-container');
         if (!container) {
@@ -407,9 +372,16 @@ const app = {
                 const summaries = [];
                 ['fullDice', 'halfDice'].forEach(type => {
                     if (items[type]) {
-                        const total = (items[type]['3kg'] || 0) + (items[type]['1kg'] || 0);
+                        // Support both 'bag3kg' and '3kg' keys
+                        const qty3kg = (items[type]['bag3kg'] || items[type]['3kg'] || 0);
+                        const qty1kg = (items[type]['bag1kg'] || items[type]['1kg'] || 0);
+                        const total = qty3kg + qty1kg;
+                        
                         if (total > 0) {
-                            summaries.push(`${total} Bags • ${type === 'fullDice' ? 'Full Dice' : 'Half-Dice'} (3kg)`);
+                            const details = [];
+                            if (qty3kg > 0) details.push(`${qty3kg} (3kg)`);
+                            if (qty1kg > 0) details.push(`${qty1kg} (1kg)`);
+                            summaries.push(`${total} Bags • ${type === 'fullDice' ? 'Full Dice' : 'Half-Dice'} (${details.join(' + ')})`);
                         }
                     }
                 });
@@ -481,7 +453,7 @@ const app = {
         messengerEnabled: true,
         role: 'Owner', 
         balance: 0.00,
-        walletBalance: 500.00,
+        walletBalance: 0.00,
         creditLimit: 50000.00
     },
     invoices: [],
@@ -634,7 +606,7 @@ const app = {
         this.openDebtSheet();
     },
     
-    topUpAmount: 500,
+    topUpAmount: 0,
     setTopUpAmount(amt, el) {
         this.topUpAmount = parseFloat(amt) || 0;
         const display = document.getElementById('topup-display-amount');
@@ -781,8 +753,20 @@ const app = {
 
         let orders = [];
         try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
+        
+        const currentName = (this.user.companyName || "").trim().toLowerCase();
+
+        // Filter orders for THIS user (Robust Matching)
+        const myOrders = orders.filter(o => {
+            if (currentName && currentName !== 'guest customer') {
+                const orderName = (o.customer_name || "").trim().toLowerCase();
+                return orderName === currentName || orderName.includes(currentName) || currentName.includes(orderName);
+            }
+            return true; // Fallback for guests
+        });
+
         // Only consider orders that haven't been completed or cancelled
-        const activeOrders = orders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
+        const activeOrders = myOrders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
         const hasActiveOrders = activeOrders.length > 0;
 
         console.log('📦 Dispatch Logic Check:', { hasActiveOrders, count: activeOrders.length });
@@ -814,14 +798,21 @@ const app = {
             if (dispatchDetails) {
                 let totalBags = 0;
                 let types = [];
-                const items = currentOrder.items;
+                
+                let items = currentOrder.items;
+                if (typeof items === 'string') {
+                    try { items = JSON.parse(items); } catch(e) {}
+                }
+
                 if (items) {
                     ['fullDice', 'halfDice'].forEach(iceType => {
                         if (items[iceType]) {
-                            const count = (items[iceType]['3kg'] || 0) + (items[iceType]['1kg'] || 0);
+                            // Support both 'bag3kg' and '3kg' keys
+                            const count = (items[iceType]['bag3kg'] || items[iceType]['3kg'] || 0) + (items[iceType]['bag1kg'] || items[iceType]['1kg'] || 0);
                             if (count > 0) {
                                 totalBags += count;
-                                types.push(iceType === 'fullDice' ? 'Full Dice' : 'Half-Dice');
+                                const typeName = iceType === 'fullDice' ? 'Full Dice' : 'Half-Dice';
+                                if (!types.includes(typeName)) types.push(typeName);
                             }
                         }
                     });
@@ -829,9 +820,9 @@ const app = {
                 
                 if (totalBags > 0) {
                     const typeStr = types.join(' & ');
-                    dispatchDetails.innerText = `${totalBags} Bags • ${typeStr}`;
+                    dispatchDetails.innerText = `${totalBags} ${totalBags === 1 ? 'Bag' : 'Bags'} • ${typeStr}`;
                 } else {
-                    dispatchDetails.innerText = '14 Bags • Half-Dice'; // Default fallback
+                    dispatchDetails.innerText = 'No items found'; 
                 }
             }
 
@@ -1392,6 +1383,7 @@ const app = {
     applyQuickReorderDefaults() {
         this.isQuickReorder = true;
         this.orderData.logistics = 'Doorstep Delivery';
+        this.logisticsState = 'delivery';
 
         // Use Profile Defaults if available, fallback to mock for demo
         const defaultName = (this.user.companyName && this.user.companyName !== 'Guest Customer') ? this.user.companyName : 'Loft Living CDO';
@@ -1432,28 +1424,49 @@ const app = {
         }
     },
 
-    processOrder(reorderQty = null) {
-        // Use provided qty or default to 14 (Wholesale Threshold)
-        const qty = reorderQty || 14;
-
-        this.pricingMatrix.products.forEach(p => {
-            this.orderData.qty.fullDice[p.id] = 0;
-            this.orderData.qty.halfDice[p.id] = 0;
-        });
-
-        // Default to halfDice for the first product (usually 3kg)
-        const defaultId = this.pricingMatrix.products[0]?.id || 'bag3kg';
-        this.orderData.qty.halfDice[defaultId] = qty;
+    setOrderItems(items = null) {
+        if (items && typeof items === 'object') {
+            // Reorder using a full items object (previous order)
+            this.pricingMatrix.products.forEach(p => {
+                // Robust lookup: check for 'bag3kg' OR '3kg'
+                const sizeKey = p.id.replace('bag', ''); // '3kg' or '1kg'
+                this.orderData.qty.fullDice[p.id] = items.fullDice ? (items.fullDice[p.id] || items.fullDice[sizeKey] || 0) : 0;
+                this.orderData.qty.halfDice[p.id] = items.halfDice ? (items.halfDice[p.id] || items.halfDice[sizeKey] || 0) : 0;
+            });
+        } else {
+            // Fallback to default quantity
+            const defaultProduct = this.pricingMatrix.products[0] || { id: 'bag3kg', threshold: 14 };
+            const qty = items || defaultProduct.threshold || 14;
+            this.pricingMatrix.products.forEach(p => {
+                this.orderData.qty.fullDice[p.id] = 0;
+                this.orderData.qty.halfDice[p.id] = 0;
+            });
+            this.orderData.qty.halfDice[defaultProduct.id] = qty;
+        }
         
-        // Update the inputs in Step 2 to reflect this
+        // Sync UI inputs in Step 2 (Quantity)
         this.pricingMatrix.products.forEach(p => {
             const fInput = document.getElementById(`qty-fullDice-${p.id}`);
             const hInput = document.getElementById(`qty-halfDice-${p.id}`);
-            if (fInput) fInput.value = 0;
-            if (hInput) hInput.value = (p.id === defaultId) ? qty : 0;
+            if (fInput) fInput.value = this.orderData.qty.fullDice[p.id] || 0;
+            if (hInput) hInput.value = this.orderData.qty.halfDice[p.id] || 0;
         });
 
+        // Calculate total quantity for reporting
+        let totalQty = 0;
+        this.pricingMatrix.products.forEach(p => {
+            totalQty += (Number(this.orderData.qty.fullDice[p.id]) || 0);
+            totalQty += (Number(this.orderData.qty.halfDice[p.id]) || 0);
+        });
+        this._lastReorderQty = totalQty;
+
         this.updateTotal();
+    },
+
+    processOrder(reorderPayload = null) {
+        // Use provided payload (items object or qty) to set up orderData
+        this.setOrderItems(reorderPayload);
+
         this.togglePanel('account', false);
         
         // Apply defaults and flag
@@ -1633,22 +1646,22 @@ const app = {
             
             // Skip Logistics (Step 3) and possibly Payment (Step 4) if it's a Quick Reorder
             if (this.isQuickReorder && this.currentStep === 2) {
+                // Ensure fees are computed before skipping logistics for ANYONE
+                if (this.orderData.logistics === 'Doorstep Delivery') {
+                    if (this.orderData.deliveryDetails && (this.orderData.deliveryDetails.lat || this.orderData.deliveryDetails.maps)) {
+                        await this.calculateDeliveryFee();
+                    }
+                }
+                this.calculatePriorityFee();
+
                 const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
 
                 if (isElite) {
                     this.orderData.payment = 'Purchase Order';
-                    // Ensure fees are computed before final processing
-                    this.calculatePriorityFee();
-                    if (this.orderData.logistics === 'Doorstep Delivery') {
-                        // For Quick Reorder, we might need a quick fee refresh if distance is known
-                        if (this.orderData.deliveryDetails && (this.orderData.deliveryDetails.lat || this.orderData.deliveryDetails.maps)) {
-                            // V11.1: Crucial - We MUST await this so delivery fee isn't 0
-                            await this.calculateDeliveryFee();
-                        }
-                    }
                     await this.processFinalOrder(); 
                     return; 
                 } else {
+                    this.updatePaymentSummary();
                     this.currentStep = 4; // Jump to Payment for Standard users
                 }
             } else {
@@ -3017,6 +3030,40 @@ const app = {
         }
     },
 
+    renderProducts() {
+        const fullDiceContainer = document.getElementById('fullDice-products-container');
+        const halfDiceContainer = document.getElementById('halfDice-products-container');
+
+        if (!fullDiceContainer || !halfDiceContainer) return;
+
+        const renderType = (type) => {
+            return this.pricingMatrix.products.map(p => {
+                // Clean up name for display: "3kg Ice Cube (Full/Half)" -> "3kg Full Dice"
+                const cleanName = p.name.replace('(Full/Half)', '').replace('Ice Cube', '').trim();
+                const typeLabel = type === 'fullDice' ? 'Full Dice' : 'Half-Dice';
+                const displayName = `${cleanName} ${typeLabel}`;
+                const q = this.orderData.qty[type][p.id] || 0;
+
+                return `
+                    <div class="counter-row" style="${p === this.pricingMatrix.products[this.pricingMatrix.products.length - 1] ? 'margin-bottom: 0;' : ''}">
+                        <div class="product-info">
+                            <h3>${displayName}</h3>
+                            <p id="label-price-${p.id}-${type === 'fullDice' ? 'full' : 'half'}">₱${p.standard} / bag</p>
+                        </div>
+                        <div class="counter-controls">
+                            <button class="counter-btn-small" onclick="app.updateQty('${type}', '${p.id}', -1)">−</button>
+                            <input type="number" id="qty-${type}-${p.id}" class="counter-input-small" value="${q}" readonly>
+                            <button class="counter-btn-small" onclick="app.updateQty('${type}', '${p.id}', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        fullDiceContainer.innerHTML = renderType('fullDice');
+        halfDiceContainer.innerHTML = renderType('halfDice');
+    },
+
     updateQty(iceType, product, delta) {
         this.orderData.qty[iceType][product] = Math.max(0, this.orderData.qty[iceType][product] + delta);
         document.getElementById(`qty-${iceType}-${product}`).value = this.orderData.qty[iceType][product];
@@ -3037,33 +3084,40 @@ const app = {
         let anyBulk = false;
 
         this.pricingMatrix.products.forEach(p => {
-            const qtyFull = this.orderData.qty.fullDice[p.id] || 0;
-            const qtyHalf = this.orderData.qty.halfDice[p.id] || 0;
+            const qtyFull = parseFloat(this.orderData.qty.fullDice[p.id]) || 0;
+            const qtyHalf = parseFloat(this.orderData.qty.halfDice[p.id]) || 0;
             const qTotal = qtyFull + qtyHalf;
             
-            let pTotal = qTotal * p.standard;
+            const standard = parseFloat(p.standard) || 0;
+            const bulk = parseFloat(p.bulk) || 0;
+            const threshold = parseInt(p.threshold) || 14;
+
+            let pTotal = qTotal * standard;
             let isBulk = false;
             
             // Paradox state tracking
             if (!this.orderData.bonusStates) this.orderData.bonusStates = {};
             this.orderData.bonusStates[p.id] = false;
 
-            if (qTotal >= p.threshold) {
-                pTotal = qTotal * p.bulk;
+            if (qTotal >= threshold) {
+                pTotal = qTotal * bulk;
                 isBulk = true;
                 anyBulk = true;
-                bulkNotices.push(`${p.name.split(' ')[0]} (₱${p.bulk})`);
-            } else if (qTotal === p.threshold - 1 && p.threshold > 1) {
-                pTotal = p.threshold * p.bulk;
+                bulkNotices.push(`${p.name.split(' ')[0]} (₱${bulk})`);
+            } else if (qTotal === threshold - 1 && threshold > 1) {
+                pTotal = threshold * bulk;
                 this.orderData.bonusStates[p.id] = true;
             }
+
+            if (!this.orderData.bulkStates) this.orderData.bulkStates = {};
+            this.orderData.bulkStates[p.id] = isBulk;
 
             itemsTotal += pTotal;
 
             // Update Labels
             const labelFull = document.getElementById(`label-price-${p.id}-full`);
             const labelHalf = document.getElementById(`label-price-${p.id}-half`);
-            const priceLabel = isBulk ? `🔥 ₱${p.bulk} / bag` : `₱${p.standard} / bag`;
+            const priceLabel = isBulk ? `🔥 ₱${bulk} / bag` : `₱${standard} / bag`;
             if (labelFull) labelFull.innerText = priceLabel;
             if (labelHalf) labelHalf.innerText = priceLabel;
         });
@@ -3090,11 +3144,11 @@ const app = {
             }
         }
 
-        this.orderData.subtotal = itemsTotal;
+        const subtotal = parseFloat(itemsTotal) || 0;
+        this.orderData.subtotal = subtotal;
         
         // Apply Partnership Discount
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-        // Robust case-insensitive and trimmed lookup
         const company = (this.user.companyName || '').trim().toUpperCase();
         const dKey = Object.keys(discounts).find(k => k.trim().toUpperCase() === company);
         const d = dKey ? discounts[dKey] : null;
@@ -3102,28 +3156,35 @@ const app = {
         this.orderData.discountAmount = 0;
         this.orderData.discountLabel = '';
 
-        if (d) {
-            if (d.percent > 0) {
-                this.orderData.discountAmount = (this.orderData.subtotal * d.percent) / 100;
-                this.orderData.discountLabel = `${d.percent}% Partnership Discount`;
-            } else if (d.fixed > 0) {
-                this.orderData.discountAmount = d.fixed;
-                this.orderData.discountLabel = `₱${d.fixed} Fixed Discount`;
+        if (d && subtotal > 0) { // Only apply discount if items are selected
+            const dPercent = parseFloat(d.percent) || 0;
+            const dFixed = parseFloat(d.fixed) || 0;
+            
+            if (dPercent > 0) {
+                this.orderData.discountAmount = (subtotal * dPercent) / 100;
+                this.orderData.discountLabel = `${dPercent}% Partnership Discount`;
+            } else if (dFixed > 0) {
+                this.orderData.discountAmount = Math.min(dFixed, subtotal); // Cap fixed discount to subtotal
+                this.orderData.discountLabel = `₱${dFixed} Fixed Discount`;
             }
         }
-        this.orderData.total = this.orderData.subtotal - this.orderData.discountAmount;
-        this.calculatePriorityFee();
+        
+        const fee = parseFloat(this.calculatePriorityFee()) || 0;
+        const discountAmount = parseFloat(this.orderData.discountAmount) || 0;
+        this.orderData.total = Math.max(0, (subtotal - discountAmount) + fee);
 
         const nextBtn = document.getElementById('qty-next');
-        nextBtn.innerText = `Confirm Order (₱${this.orderData.total})`;
-        nextBtn.disabled = this.orderData.total === 0;
+        if (nextBtn) {
+            nextBtn.innerText = `Confirm Order (₱${this.orderData.total})`;
+            nextBtn.disabled = itemsTotal === 0; // Disable if no items, even if fee makes it > 0
+        }
     },
 
     calculatePriorityFee() {
         let totalWeight = 0;
         this.pricingMatrix.products.forEach(p => {
-            const weight = parseInt(p.id.replace(/[^0-9]/g, '')) || (p.id === 'bag3kg' ? 3 : 1);
-            const q = (this.orderData.qty.fullDice[p.id] || 0) + (this.orderData.qty.halfDice[p.id] || 0);
+            const weight = parseInt(p.id.toString().replace(/[^0-9]/g, '')) || (p.id === 'bag3kg' ? 3 : 1);
+            const q = (parseFloat(this.orderData.qty.fullDice[p.id]) || 0) + (parseFloat(this.orderData.qty.halfDice[p.id]) || 0);
             totalWeight += q * weight;
         });
         
@@ -3520,6 +3581,86 @@ const app = {
 
         return { distanceKm, routeTimeMins };
     },
+    
+    updatePaymentSummary() {
+        const summaryList = document.getElementById('payment-items-list');
+        if (summaryList) {
+            let html = '';
+            this.pricingMatrix.products.forEach(p => {
+                const qtyFull = this.orderData.qty.fullDice[p.id] || 0;
+                const qtyHalf = this.orderData.qty.halfDice[p.id] || 0;
+                const isBulk = this.orderData.bulkStates && this.orderData.bulkStates[p.id];
+                const price = isBulk ? p.bulk : p.standard;
+                
+                if (qtyFull > 0) {
+                    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span>${qtyFull}x Full-Dice (${p.name.includes('3kg') ? '3kg' : '1kg'})</span>
+                        <span>₱${qtyFull * price}</span>
+                    </div>`;
+                }
+                if (qtyHalf > 0) {
+                    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span>${qtyHalf}x Half-Dice (${p.name.includes('3kg') ? '3kg' : '1kg'})</span>
+                        <span>₱${qtyHalf * price}</span>
+                    </div>`;
+                }
+            });
+            
+            summaryList.innerHTML = html || '<p style="opacity:0.6;font-size:0.8rem;">No items selected</p>';
+        }
+
+        const subtotalEl = document.getElementById('payment-subtotal');
+        if (subtotalEl) subtotalEl.innerText = `₱${this.orderData.subtotal || 0}`;
+
+        const discountRow = document.getElementById('payment-discount-row');
+        const discountEl = document.getElementById('payment-discount');
+        const discountLabel = document.getElementById('payment-discount-label');
+        if (discountRow && discountEl) {
+            if (this.orderData.discountAmount > 0) {
+                discountRow.style.display = 'flex';
+                discountEl.innerText = `-₱${this.orderData.discountAmount}`;
+                if (discountLabel && this.orderData.discountLabel) {
+                    discountLabel.innerText = this.orderData.discountLabel;
+                }
+            } else {
+                discountRow.style.display = 'none';
+            }
+        }
+
+        const deliveryEl = document.getElementById('payment-delivery-fee');
+        const priorityEl = document.getElementById('payment-priority-fee');
+        const priorityRow = document.getElementById('payment-priority-fee-row');
+
+        if (deliveryEl) {
+            deliveryEl.innerText = this.orderData.logistics === 'Doorstep Delivery' ? 
+                (this.orderData.isManualReview ? 'TBD' : `₱${(this.orderData.deliveryFee || 0)}`) : '₱0';
+        }
+
+        if (priorityEl && priorityRow) {
+            // Internal only: Hidden from customer summary but DOM updated for potential internal use
+            priorityRow.style.display = 'none';
+        }
+
+        const totalEl = document.getElementById('payment-total');
+        const subtotal = parseFloat(this.orderData.subtotal) || 0;
+        const totalBase = parseFloat(this.orderData.total) || 0;
+        const deliveryFee = parseFloat(this.orderData.deliveryFee) || 0;
+        
+        let totalVal = totalBase;
+        if (this.orderData.logistics === 'Doorstep Delivery' && !this.orderData.isManualReview) {
+            totalVal += deliveryFee;
+        }
+        
+        const formattedTotal = totalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (totalEl) totalEl.innerText = `₱${formattedTotal}${this.orderData.isManualReview ? ' + TBD' : ''}`;
+
+        let displayTotalStr = `₱${formattedTotal}`;
+        if (this.orderData.isManualReview) {
+            displayTotalStr = `₱${totalBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + TBD`;
+        }
+        
+        document.getElementById('btn-finish-order').innerText = `Place Order & Pay ${displayTotalStr}`;
+    },
 
     goToPayment() {
         if (this.logisticsState === 'delivery') {
@@ -3547,56 +3688,7 @@ const app = {
         }
         
         // Populate the Payment Summary container added in index.html
-        const summaryList = document.getElementById('payment-items-list');
-        if (summaryList) {
-            let html = '';
-            const fd = this.orderData.qty.fullDice;
-            const hd = this.orderData.qty.halfDice;
-            
-            const m3kg = this.pricingMatrix.products.bag3kg;
-            const m1kg = this.pricingMatrix.products.bag1kg;
-            if (fd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['3kg']}x Full-Dice (3kg)</span><span>₱${fd['3kg'] * (this.orderData.bulkState3kg ? m3kg.bulk : m3kg.standard)}</span></div>`;
-            if (fd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${fd['1kg']}x Full-Dice (1kg)</span><span>₱${fd['1kg'] * (this.orderData.bulkState1kg ? m1kg.bulk : m1kg.standard)}</span></div>`;
-            if (hd['3kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['3kg']}x Half-Dice (3kg)</span><span>₱${hd['3kg'] * (this.orderData.bulkState3kg ? m3kg.bulk : m3kg.standard)}</span></div>`;
-            if (hd['1kg'] > 0) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>${hd['1kg']}x Half-Dice (1kg)</span><span>₱${hd['1kg'] * (this.orderData.bulkState1kg ? m1kg.bulk : m1kg.standard)}</span></div>`;
-            
-            summaryList.innerHTML = html || '<p style="opacity:0.6;font-size:0.8rem;">No items selected</p>';
-        }
-
-        const subtotalEl = document.getElementById('payment-subtotal');
-        if (subtotalEl) subtotalEl.innerText = `₱${this.orderData.total}`;
-
-        const deliveryEl = document.getElementById('payment-delivery-fee');
-        const priorityEl = document.getElementById('payment-priority-fee');
-        const priorityRow = document.getElementById('payment-priority-fee-row');
-
-        if (deliveryEl) {
-            deliveryEl.innerText = this.orderData.logistics === 'Doorstep Delivery' ? 
-                (this.orderData.isManualReview ? 'TBD' : `₱${(this.orderData.deliveryFee || 0)}`) : '₱0';
-        }
-
-        if (priorityEl && priorityRow) {
-            // Internal only: Hidden from customer summary but DOM updated for potential internal use
-            priorityRow.style.display = 'none';
-        }
-
-        const totalEl = document.getElementById('payment-total');
-        let totalVal = this.orderData.total;
-        if (this.orderData.logistics === 'Doorstep Delivery' && !this.orderData.isManualReview) {
-            totalVal += (this.orderData.deliveryFee || 0);
-        }
-        if (totalEl) totalEl.innerText = `₱${totalVal}${this.orderData.isManualReview ? ' + TBD' : ''}`;
-
-        let displayTotalStr = `₱${this.orderData.total}`;
-        if (this.orderData.logistics === 'Doorstep Delivery') {
-            if (this.orderData.isManualReview) {
-                displayTotalStr = `₱${this.orderData.total} + TBD`;
-            } else {
-                displayTotalStr = `₱${this.orderData.total + (this.orderData.deliveryFee || 0)}`;
-            }
-        }
-        document.getElementById('btn-finish-order').innerText = `Place Order & Pay ${displayTotalStr}`;
-        
+        this.updatePaymentSummary();
         this.nextStep();
     },
 
@@ -4154,6 +4246,8 @@ const app = {
                 }
             }
             
+            if (isNaN(this.orderData.deliveryFee)) this.orderData.deliveryFee = 0;
+            
             if (this.orderData.payment === 'IceQube Wallet') {
                 const totalCost = this.orderData.total + (this.orderData.deliveryFee || 0);
                 if (this.user.walletBalance >= totalCost) {
@@ -4220,10 +4314,11 @@ const app = {
             if (elPayment) elPayment.innerText = this.orderData.payment || 'Cash on Delivery';
 
             // 3. HARD-STOP CREDIT CHECK
+            const isImmediatePayment = ['Cash on Delivery', 'GCash', 'Bank Transfer', 'IceQube Wallet'].includes(this.orderData.payment);
             const newOrderCost = this.orderData.total + (this.orderData.deliveryFee || 0);
             const projectedBalance = this.user.balance + newOrderCost;
             
-            if (projectedBalance > this.user.creditLimit) {
+            if (!isImmediatePayment && projectedBalance > this.user.creditLimit) {
                 console.warn('CREDIT LIMIT EXCEEDED - INTERVENING');
                 
                 // Update Limit Panel with dynamic data
@@ -4393,8 +4488,6 @@ const app = {
             contact_number: contactNumber,
             delivery_notes: (this.isQuickReorder ? '[⚡ QUICK REORDER] ' : '') + ((this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.'),
             items: { ...this.orderData.qty, _matrix: this.pricingMatrix },
-            subtotal: this.orderData.subtotal || 0,
-            discount_total: this.orderData.discountAmount || 0,
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
             delivery_status: 'Pending',
@@ -4412,6 +4505,19 @@ const app = {
         // Local Sync (BroadcastChannel)
         if (window.IceQubeSync) {
             window.IceQubeSync.publishNewOrder(payload);
+        }
+
+        // Persist locally as primary storage (crucial for Admin Control Room visibility)
+        try {
+            const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            // Check for duplicates
+            if (!localOrders.find(o => o.order_id === orderId)) {
+                localOrders.unshift(payload);
+                localStorage.setItem('ice_orders', JSON.stringify(localOrders.slice(0, 100)));
+                console.log("💾 Order persisted to local storage.");
+            }
+        } catch (e) {
+            console.error("Failed to save order to local storage:", e);
         }
 
         if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
@@ -5869,7 +5975,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                     console.log(`✅ [Sync] Match found! Tier: ${this.user.tier}, Type: ${this.user.accountType}`);
                 } else {
                     // Fallback for legacy sync
-                    const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+                    const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
                     const isLegacyElite = eliteList.some(name => (name || "").trim().toLowerCase() === companyName);
                     
                     if (isLegacyElite) {
@@ -6268,40 +6374,126 @@ function openReorderModal() {
     let orders = [];
     try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
     
-    let qty = 14; // Default to the 14-bag wholesale threshold
+    const currentName = (app.user.companyName || "").trim().toLowerCase();
+    
+    // Find the most recent order for THIS user
+    let myOrders = orders.filter(o => {
+        if (currentName && currentName !== 'guest customer') {
+            const orderName = (o.customer_name || "").trim().toLowerCase();
+            return orderName === currentName || orderName.includes(currentName) || currentName.includes(orderName);
+        }
+        return false; 
+    });
+
+    if (myOrders.length === 0 && orders.length > 0) {
+        myOrders = [orders[0]];
+    }
+
+    const defaultProduct = (app && app.pricingMatrix && app.pricingMatrix.products[0]) || { id: 'bag3kg', threshold: 14 };
+    let qty = defaultProduct.threshold || 14;
     let type = 'Half-Dice';
+    let reorderPayload = null;
 
-    // If there's an active or recent order, use its data
-    const activeOrders = orders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
-    const referenceOrder = activeOrders.length > 0 ? activeOrders[0] : (orders.length > 0 ? orders[0] : null);
-
-    if (referenceOrder && referenceOrder.items) {
+    const referenceOrder = myOrders.length > 0 ? myOrders[0] : null;
+    
+    if (referenceOrder) {
         let total = 0;
         let types = [];
-        ['fullDice', 'halfDice'].forEach(t => {
-            if (referenceOrder.items[t]) {
-                const count = (referenceOrder.items[t]['3kg'] || 0) + (referenceOrder.items[t]['1kg'] || 0);
-                if (count > 0) {
-                    total += count;
-                    types.push(t === 'fullDice' ? 'Full Dice' : 'Half-Dice');
+        let breakdown = [];
+        
+        // Robust Item Parsing
+        let items = referenceOrder.items || {};
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch(e) {}
+        }
+        
+        // Strategy A: Check for Grouped Items (Modern Format)
+        ['fullDice', 'halfDice'].forEach(iceType => {
+            if (items[iceType]) {
+                if (app && app.pricingMatrix && app.pricingMatrix.products) {
+                    app.pricingMatrix.products.forEach(p => {
+                        const sizeKey = p.id.replace('bag', '');
+                        const count = Number(items[iceType][p.id] || items[iceType][sizeKey] || 0);
+                        if (count > 0) {
+                            total += count;
+                            const shortName = p.name.split(' ')[0];
+                            breakdown.push(`${count} ${count === 1 ? 'Bag' : 'Bags'} (${shortName})`);
+                            const typeLabel = iceType === 'fullDice' ? 'Full Dice' : 'Half-Dice';
+                            if (!types.includes(typeLabel)) types.push(typeLabel);
+                        }
+                    });
+                }
+                
+                if (total === 0) {
+                    Object.keys(items[iceType]).forEach(k => {
+                        if (k === '_matrix') return;
+                        const count = Number(items[iceType][k]);
+                        if (!isNaN(count) && count > 0) {
+                            total += count;
+                            const typeLabel = iceType === 'fullDice' ? 'Full Dice' : 'Half-Dice';
+                            if (!types.includes(typeLabel)) types.push(typeLabel);
+                        }
+                    });
+                    if (total > 0) breakdown.push(`${total} Bags`);
                 }
             }
         });
+
+        // Strategy B: Check for Flat Items
+        if (total === 0) {
+            const possibleSizes = ['3kg', '1kg', 'bag3kg', 'bag1kg'];
+            possibleSizes.forEach(key => {
+                const count = Number(items[key]);
+                if (!isNaN(count) && count > 0) {
+                    total += count;
+                    breakdown.push(`${count} Bags (${key.replace('bag','')})`);
+                }
+            });
+        }
+
+        // Strategy C: Exhaustive Top-Level Search
+        if (total === 0) {
+            const possibleQtyKeys = ['quantity', 'qty', 'total_bags', 'totalBags', 'bag_quantity', 'amount'];
+            for (const key of possibleQtyKeys) {
+                if (referenceOrder[key]) {
+                    total = Number(referenceOrder[key]);
+                    if (total > 0) {
+                        breakdown.push(`${total} Bags`);
+                        break;
+                    }
+                }
+            }
+        }
+
         if (total > 0) {
             qty = total;
-            type = types.join(' & ');
+            const productType = types.length > 1 ? 'Mixed' : (types[0] || referenceOrder.type || referenceOrder.product_type || 'Ice');
+            type = breakdown.length > 0 ? `${breakdown.join(' + ')} • ${productType}` : `${qty} Bags • ${productType}`;
+            reorderPayload = items;
+            
+            if (Object.keys(items).length === 0 || total !== qty) {
+                 reorderPayload = qty; 
+            }
         }
+
+        app.setOrderItems(reorderPayload || qty);
+    } else {
+        app.setOrderItems(qty);
     }
 
-    // Update Modal UI
-    const defaultText = modal.querySelector('p strong');
-    if (defaultText) defaultText.innerText = `${qty} Bags (${type})`;
+    const containerLabel = modal.querySelector('p');
+    if (containerLabel) {
+        if (referenceOrder) {
+            containerLabel.innerHTML = `Recent Order: <strong id="reorder-modal-default">${type}</strong>`;
+        } else {
+            containerLabel.innerHTML = `Current Default: <strong id="reorder-modal-default">${qty} Bags (${type})</strong>`;
+        }
+    }
     
     const primaryBtn = modal.querySelector('.modal-btn.primary');
     if (primaryBtn) {
         primaryBtn.innerText = `Continue with ${qty} Bags`;
-        // Pass the determined qty to processOrder
-        primaryBtn.onclick = () => processOrder(qty);
+        primaryBtn.onclick = () => processOrder(reorderPayload || qty);
     }
 
     modal.style.display = 'flex';
@@ -6318,9 +6510,11 @@ function closeReorderModal() {
     }
 }
 
-function processOrder(reorderQty) {
-    app.processOrder(reorderQty);
-    app.showToast(`Order Confirmed! ${reorderQty} bags are scheduled.`, 'success');
+function processOrder(reorderPayload) {
+    app.processOrder(reorderPayload);
+    const defaultThreshold = (app && app.pricingMatrix && app.pricingMatrix.products[0]?.threshold) || 14;
+    const qtyToDisplay = app._lastReorderQty || (typeof reorderPayload === 'number' ? reorderPayload : defaultThreshold);
+    app.showToast(`Order Confirmed! ${qtyToDisplay} bags are scheduled.`, 'success');
     closeReorderModal();
 }
 
