@@ -311,16 +311,61 @@ const app = {
                         .payment-tag { background: #f1f5f9; padding: 6px 12px; border-radius: 6px; display: inline-block; margin-top: 20px; font-size: 0.8rem; font-weight: 700; }
                         .receipt-footer { margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; }
                         .barcode { font-family: monospace; opacity: 0.3; margin-top: 15px; }
+                        
+                        /* Navigation Button Styles */
+                        .no-print {
+                            position: fixed;
+                            bottom: 30px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            z-index: 10000;
+                        }
+                        .back-app-btn {
+                            background: #0f172a;
+                            color: white;
+                            border: none;
+                            padding: 14px 28px;
+                            border-radius: 50px;
+                            font-family: 'Outfit', sans-serif;
+                            font-size: 1rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            transition: all 0.2s ease;
+                            text-decoration: none;
+                        }
+                        .back-app-btn:hover {
+                            transform: scale(1.05);
+                            background: #1e293b;
+                        }
+                        .back-app-btn:active {
+                            transform: scale(0.95);
+                        }
+                        @media print {
+                            .no-print { display: none !important; }
+                        }
                     </style>
                 </head>
                 <body>
+                    <div class="no-print">
+                        <button onclick="window.close()" class="back-app-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            Back to My Account
+                        </button>
+                    </div>
                     <div class="receipt-paper">
                         ${receiptContent}
                     </div>
                     <script>
                         window.onload = function() {
-                            window.print();
-                            window.onafterprint = function() { window.close(); };
+                            // Only trigger print if not already printing
+                            if (!window.matchMedia('print').matches) {
+                                window.print();
+                                window.onafterprint = function() { window.close(); };
+                            }
                         };
                     </script>
                 </body>
@@ -5370,12 +5415,14 @@ const app = {
             if (data) this._currentReportOrderId = data;
             sheet.classList.add('active');
             overlay.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Lock background scroll
             
             // Reset state if opening
             if (id === 'report') this.resetReportSheet();
         } else {
             sheet.classList.remove('active');
             overlay.classList.remove('active');
+            document.body.style.overflow = ''; // Unlock background scroll
         }
     },
 
@@ -5600,7 +5647,6 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     togglePanel(panelId, show) {
         const overlay = document.getElementById(`${panelId}-overlay`);
         const panel = document.getElementById(`${panelId}-panel`);
-        const appEl = document.getElementById('app');
         
         if (show) {
             // Antigravity: Close bottom sheets when opening a panel
@@ -5611,7 +5657,6 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
             if (overlay) overlay.classList.add('active');
             if (panel) panel.classList.add('active');
-            // if (appEl) appEl.classList.add('panel-push');
             document.body.style.overflow = 'hidden'; // Prevent background scroll
 
             // Hide PWA banner when any panel is open
@@ -5628,16 +5673,29 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 }
             }
         } else {
-            document.querySelectorAll('.panel-overlay, .global-dimmer').forEach(o => o.classList.remove('active'));
-            document.querySelectorAll('.bottom-sheet, .sheet-overlay').forEach(s => s.classList.remove('active')); // Antigravity: Clean up sheets too
-            document.querySelectorAll('.bottom-panel, .side-panel').forEach(p => p.classList.remove('active'));
-            // if (appEl) appEl.classList.remove('panel-push');
-            document.body.style.overflow = '';
+            if (panelId && panelId !== 'all') {
+                // Selectively close only the requested panel
+                const targetOverlay = document.getElementById(`${panelId}-overlay`);
+                const targetPanel = document.getElementById(`${panelId}-panel`);
+                if (targetOverlay) targetOverlay.classList.remove('active');
+                if (targetPanel) targetPanel.classList.remove('active');
+            } else {
+                // Global close
+                document.querySelectorAll('.panel-overlay, .global-dimmer').forEach(o => o.classList.remove('active'));
+                document.querySelectorAll('.bottom-sheet, .sheet-overlay').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.bottom-panel, .side-panel').forEach(p => p.classList.remove('active'));
+            }
 
-            // Restore PWA banner only if back on landing page (step 0)
-            const pwaBanner = document.getElementById('pwa-install-banner');
-            if (pwaBanner && this.currentStep === 0 && !sessionStorage.getItem('pwa-banner-closed')) {
-                pwaBanner.style.display = '';
+            // Only restore scroll if NO other panels are active
+            const activePanels = document.querySelectorAll('.bottom-panel.active, .side-panel.active, .bottom-sheet.active');
+            if (activePanels.length === 0) {
+                document.body.style.overflow = '';
+                
+                // Restore PWA banner only if back on landing page (step 0)
+                const pwaBanner = document.getElementById('pwa-install-banner');
+                if (pwaBanner && this.currentStep === 0 && !sessionStorage.getItem('pwa-banner-closed')) {
+                    pwaBanner.style.display = '';
+                }
             }
         }
     },

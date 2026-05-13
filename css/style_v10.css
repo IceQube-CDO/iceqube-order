@@ -6107,31 +6107,25 @@ input:checked + .slider:before {
     transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
     padding-bottom: env(safe-area-inset-bottom, 20px);
+    
+    /* SCROLL FIX: Allow content to scroll if it exceeds screen height */
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent container overflow, rely on inner scroll */
 }
 
-.bottom-sheet-content {
-    /* This keeps the dark background full width if you want, 
-       but constrains the actual content inside */
-    max-width: var(--app-max-width); 
-    margin: 0 auto;
+.sheet-content, .bottom-sheet-content, .debt-breakdown-inner {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 24px 40px;
     width: 100%;
-    position: relative;
-    
-    /* Ensure the buttons and list items have some breathing room */
-    padding-left: 20px;
-    padding-right: 20px;
-    
-    /* If this is a fixed bottom sheet, ensure it's centered */
-    left: 50%;
-    transform: translateX(-50%);
+    max-width: var(--app-max-width);
+    margin: 0 auto;
 }
 
-.debt-breakdown-inner {
-    max-width: var(--app-max-width); /* Limits the width to a mobile size */
-    margin: 0 auto;   /* This is the missing piece: it centers the block */
-    width: 100%;      /* Ensures it can still shrink on very small screens */
-    padding: 20px;    /* Adds breathing room so text doesn't touch the edges */
-}
 
 .bottom-sheet.active {
     bottom: 0;

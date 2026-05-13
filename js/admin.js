@@ -1225,16 +1225,60 @@ var admin = {
                         .payment-tag { background: #f1f5f9; padding: 6px 12px; border-radius: 6px; display: inline-block; margin-top: 20px; font-size: 0.8rem; font-weight: 700; }
                         .receipt-footer { margin-top: 50px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; }
                         .barcode { font-family: monospace; opacity: 0.3; margin-top: 15px; }
+                        
+                        /* Navigation Button Styles */
+                        .no-print {
+                            position: fixed;
+                            bottom: 30px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            z-index: 10000;
+                        }
+                        .back-app-btn {
+                            background: #0f172a;
+                            color: white;
+                            border: none;
+                            padding: 14px 28px;
+                            border-radius: 50px;
+                            font-family: 'Outfit', sans-serif;
+                            font-size: 1rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            transition: all 0.2s ease;
+                            text-decoration: none;
+                        }
+                        .back-app-btn:hover {
+                            transform: scale(1.05);
+                            background: #1e293b;
+                        }
+                        .back-app-btn:active {
+                            transform: scale(0.95);
+                        }
+                        @media print {
+                            .no-print { display: none !important; }
+                        }
                     </style>
                 </head>
                 <body>
+                    <div class="no-print">
+                        <button onclick="window.close()" class="back-app-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            Back to Dashboard
+                        </button>
+                    </div>
                     <div class="receipt-paper">
                         ${receiptContent}
                     </div>
                     <script>
                         window.onload = function() {
-                            window.print();
-                            window.onafterprint = function() { window.close(); };
+                            if (!window.matchMedia('print').matches) {
+                                window.print();
+                                window.onafterprint = function() { window.close(); };
+                            }
                         };
                     </script>
                 </body>
