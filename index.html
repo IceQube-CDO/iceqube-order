@@ -528,8 +528,6 @@
                 <div style="text-align: center; color: #94a3b8; font-size: 10px; padding: 20px; opacity: 0.5;">Version 10.5.6 | Ultimate Fluid Final</div>
             </section>
 
-
-
             <!-- Step 2: QTY (Mixed Orders) -->
             <section id="step-qty" class="step-content">
                 <div class="qty-sticky-header-group">
@@ -549,110 +547,67 @@
                 </div>
 
                 <div class="step-body">
-                
-                
-                
-                <div class="qty-carousel-container">
-                    <div id="qty-carousel-track" class="qty-carousel-track">
-                        <!-- Slide: Full Dice -->
-                        <div class="qty-slide" id="slide-full-dice">
-                            <div class="ice-product-card">
-                                <div class="ice-product-layout">
-                                    <div class="ice-product-content">
-                                        <div class="ice-product-subtitle">The Artisan’s Choice (23x23x23mm)</div>
-                                        <p>Slow-melting, high-density cubes. Best for premium coffee and cocktails to prevent dilution.</p>
-                                    </div>
-                                    <div class="ice-product-image-container">
-                                        <img src="./assets/full_dice.png" alt="Full Dice Ice Cube" class="ice-product-image">
-                                        <div class="ice-dimension">23x23x23mm</div>
-                                    </div>
-                                </div>
-                            
-                                <div class="counter-row">
-                                    <div class="product-info">
-                                        <h3>3kg Bag</h3>
-                                        <p id="label-price-3kg-full">₱40 / bag</p>
-                                    </div>
-                                    <div class="counter-controls">
-                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', -1)">−</button>
-                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-fullDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '3kg', this.value)">
-                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '3kg', 1)">+</button>
-                                    </div>
-                                </div>
-
-                                <div class="bulk-promo-box promo-info">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                                    <span class="bulk-promo-text">Wholesale: 14+ 3kg (₱35) or 40+ 1kg (₱14)</span>
-                                </div>
-
-                                <div class="counter-row" style="margin-bottom: 0;">
-                                    <div class="product-info">
-                                        <h3>1kg Bag</h3>
-                                        <p id="label-price-1kg-full">₱15 / bag</p>
-                                    </div>
-                                    <div class="counter-controls">
-                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', -1)">−</button>
-                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-fullDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('fullDice', '1kg', this.value)">
-                                        <button class="counter-btn-small" onclick="app.updateQty('fullDice', '1kg', 1)">+</button>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        <!-- Slide: Half-Dice -->
-                        <div class="qty-slide" id="slide-half-dice">
-                            <div class="ice-product-card">
-                                <div class="ice-product-layout">
-                                    <div class="ice-product-content">
-                                        <div class="ice-product-title-row">
-                                            <div style="text-align: left;">
-                                        <div class="ice-product-subtitle" style="margin-bottom: 0;">The Premium Rectangular (10x29x22mm)</div>
-                                            </div>
+                    <div class="qty-carousel-container">
+                        <div id="qty-carousel-track" class="qty-carousel-track">
+                            <!-- Slide: Full Dice -->
+                            <div class="qty-slide" id="slide-full-dice">
+                                <div class="ice-product-card">
+                                    <div class="ice-product-layout">
+                                        <div class="ice-product-content">
+                                            <div class="ice-product-subtitle">The Artisan’s Choice (23x23x23mm)</div>
+                                            <p>Slow-melting, high-density cubes. Best for premium coffee and cocktails to prevent dilution.</p>
                                         </div>
-                                        <p>Rapid-cooling slender cubes. Perfect for frappes, smoothies, and carbonated drinks.</p>
+                                        <div class="ice-product-image-container">
+                                            <img src="./assets/full_dice.png" alt="Full Dice Ice Cube" class="ice-product-image">
+                                            <div class="ice-dimension">23x23x23mm</div>
+                                        </div>
                                     </div>
-                                    <div class="ice-product-image-container">
-                                        <img src="./assets/half_dice.png" alt="Half-Dice Ice Cube" class="ice-product-image">
-                                        <div class="ice-dimension">10x29x22mm</div>
+                                
+                                    <div id="fullDice-products-container">
+                                        <!-- Dynamic Products Generated Here -->
                                     </div>
-                                </div>
-                            
-                                <div class="counter-row">
-                                    <div class="product-info">
-                                        <h3>3kg Bag</h3>
-                                        <p id="label-price-3kg-half">₱40 / bag</p>
-                                    </div>
-                                    <div class="counter-controls">
-                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', -1)">−</button>
-                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-halfDice-3kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '3kg', this.value)">
-                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '3kg', 1)">+</button>
-                                    </div>
-                                </div>
 
-                                <div class="bulk-promo-box promo-info">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                                    <span class="bulk-promo-text">Wholesale: 14+ 3kg (₱35) or 40+ 1kg (₱14)</span>
-                                </div>
-
-                                <div class="counter-row" style="margin-bottom: 0;">
-                                    <div class="product-info">
-                                        <h3>1kg Bag</h3>
-                                        <p id="label-price-1kg-half">₱15 / bag</p>
+                                    <div class="bulk-promo-box promo-info" id="fullDice-promo-box">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                        <span class="bulk-promo-text" id="fullDice-promo-text">Wholesale rates apply for bulk orders</span>
                                     </div>
-                                    <div class="counter-controls">
-                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', -1)">−</button>
-                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-halfDice-1kg" class="counter-input-small" value="0" min="0" oninput="app.handleQtyInput('halfDice', '1kg', this.value)">
-                                        <button class="counter-btn-small" onclick="app.updateQty('halfDice', '1kg', 1)">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Slide: Half-Dice -->
+                            <div class="qty-slide" id="slide-half-dice">
+                                 <div class="ice-product-card">
+                                    <div class="ice-product-layout">
+                                        <div class="ice-product-content">
+                                            <div class="ice-product-title-row">
+                                                <div style="text-align: left;">
+                                            <div class="ice-product-subtitle" style="margin-bottom: 0;">The Premium Rectangular (10x29x22mm)</div>
+                                                </div>
+                                            </div>
+                                            <p>Rapid-cooling slender cubes. Perfect for frappes, smoothies, and carbonated drinks.</p>
+                                        </div>
+                                        <div class="ice-product-image-container">
+                                            <img src="./assets/half_dice.png" alt="Half-Dice Ice Cube" class="ice-product-image">
+                                            <div class="ice-dimension">10x29x22mm</div>
+                                        </div>
+                                    </div>
+                                
+                                    <div id="halfDice-products-container">
+                                        <!-- Dynamic Products Generated Here -->
+                                    </div>
+
+                                    <div class="bulk-promo-box promo-info" id="halfDice-promo-box">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                        <span class="bulk-promo-text" id="halfDice-promo-text">Wholesale rates apply for bulk orders</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="qty-sticky-footer">
-                        <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled>Confirm Order (₱0)</button>
-                    </div>
+                <div class="qty-sticky-footer">
+                    <button id="qty-next" class="btn-primary" onclick="app.confirmQuantity()" disabled>Confirm Order (₱0)</button>
                 </div>
             </section>
 

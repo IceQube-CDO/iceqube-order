@@ -20,10 +20,10 @@ window.initIceQubeMap = function() {
 
 const app = {
     pricingMatrix: {
-        products: {
-            bag3kg: { standard: 40, bulk: 35, threshold: 14 },
-            bag1kg: { standard: 15, bulk: 14, threshold: 40 }
-        },
+        products: [
+            { id: 'bag3kg', name: '3kg Ice Cube (Full/Half)', standard: 40, bulk: 35, threshold: 14 },
+            { id: 'bag1kg', name: '1kg Ice Cube (Full/Half)', standard: 15, bulk: 14, threshold: 40 }
+        ],
         delivery: {
             baseFare: 30,
             perKmRate: 10,
@@ -35,12 +35,70 @@ const app = {
         const saved = localStorage.getItem('iceqube_global_pricing');
         if (saved) {
             try {
-                this.pricingMatrix = JSON.parse(saved);
+                const matrix = JSON.parse(saved);
+                if (matrix && matrix.products && Array.isArray(matrix.products)) {
+                    this.pricingMatrix = matrix;
+                } else if (matrix && matrix.products) {
+                    // Migration for app_v10
+                    console.log("Migrating app_v10 pricing matrix...");
+                    const oldProducts = matrix.products;
+                    this.pricingMatrix = {
+                        products: [
+                            { id: 'bag3kg', name: '3kg Ice Cube (Full/Half)', standard: oldProducts.bag3kg?.standard || 40, bulk: oldProducts.bag3kg?.bulk || 35, threshold: oldProducts.bag3kg?.threshold || 14 },
+                            { id: 'bag1kg', name: '1kg Ice Cube (Full/Half)', standard: oldProducts.bag1kg?.standard || 15, bulk: oldProducts.bag1kg?.bulk || 14, threshold: oldProducts.bag1kg?.threshold || 40 }
+                        ],
+                        delivery: matrix.delivery || { baseFare: 30, perKmRate: 10, freeThreshold: 0 }
+                    };
+                    localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                }
                 console.log("✅ Pricing Matrix Loaded:", this.pricingMatrix);
             } catch (e) {
                 console.warn("Failed to parse saved pricing matrix, using defaults.");
             }
         }
+
+        // Initialize orderData.qty for all products
+        this.pricingMatrix.products.forEach(p => {
+            if (this.orderData.qty.fullDice[p.id] === undefined) this.orderData.qty.fullDice[p.id] = 0;
+            if (this.orderData.qty.halfDice[p.id] === undefined) this.orderData.qty.halfDice[p.id] = 0;
+        });
+
+        this.renderProducts();
+    },
+
+    renderProducts() {
+        const fullDiceContainer = document.getElementById('fullDice-products-container');
+        const halfDiceContainer = document.getElementById('halfDice-products-container');
+        if (!fullDiceContainer || !halfDiceContainer) return;
+
+        const renderType = (type) => {
+            return this.pricingMatrix.products.map(p => {
+                const q = this.orderData.qty[type][p.id] || 0;
+                return `
+                    <div class="counter-row" style="${p === this.pricingMatrix.products[this.pricingMatrix.products.length - 1] ? 'margin-bottom: 0;' : ''}">
+                        <div class="product-info">
+                            <h3>${p.name}</h3>
+                            <p id="label-price-${p.id}-${type}">₱${p.standard} / bag</p>
+                        </div>
+                        <div class="counter-controls">
+                            <button class="counter-btn-small" onclick="app.updateQty('${type}', '${p.id}', -1)">−</button>
+                            <input type="text" inputmode="numeric" pattern="[0-9]*" id="qty-${type}-${p.id}" class="counter-input-small" value="${q}" min="0" oninput="app.handleQtyInput('${type}', '${p.id}', this.value)">
+                            <button class="counter-btn-small" onclick="app.updateQty('${type}', '${p.id}', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        fullDiceContainer.innerHTML = renderType('fullDice');
+        halfDiceContainer.innerHTML = renderType('halfDice');
+
+        // Update promo text
+        const promoFull = document.getElementById('fullDice-promo-text');
+        const promoHalf = document.getElementById('halfDice-promo-text');
+        const promoText = this.pricingMatrix.products.map(p => `${p.threshold}+ ${p.name.split(' ')[0]} (₱${p.bulk})`).join(' or ');
+        if (promoFull) promoFull.innerText = `Wholesale: ${promoText}`;
+        if (promoHalf) promoHalf.innerText = `Wholesale: ${promoText}`;
     },
 
     showToast(message, type = 'info') {
@@ -110,8 +168,7 @@ const app = {
             window.IceQubeSync.onOrderEvent((event) => {
                 if (event.type === 'PRICING_UPDATED') {
                     console.log("🔄 [App] Pricing matrix updated via Sync");
-                    this.pricingMatrix = event.payload;
-                    this.updateTotal();
+                    this.loadPricingMatrix();
                 }
             });
         }
@@ -1379,18 +1436,22 @@ const app = {
         // Use provided qty or default to 14 (Wholesale Threshold)
         const qty = reorderQty || 14;
 
-        this.orderData.qty.fullDice['3kg'] = 0;
-        this.orderData.qty.fullDice['1kg'] = 0;
-        this.orderData.qty.halfDice['3kg'] = qty;
-        this.orderData.qty.halfDice['1kg'] = 0;
+        this.pricingMatrix.products.forEach(p => {
+            this.orderData.qty.fullDice[p.id] = 0;
+            this.orderData.qty.halfDice[p.id] = 0;
+        });
+
+        // Default to halfDice for the first product (usually 3kg)
+        const defaultId = this.pricingMatrix.products[0]?.id || 'bag3kg';
+        this.orderData.qty.halfDice[defaultId] = qty;
         
         // Update the inputs in Step 2 to reflect this
-        if (document.getElementById('qty-halfDice-3kg')) {
-            document.getElementById('qty-halfDice-3kg').value = qty;
-            document.getElementById('qty-fullDice-3kg').value = 0;
-            document.getElementById('qty-fullDice-1kg').value = 0;
-            document.getElementById('qty-halfDice-1kg').value = 0;
-        }
+        this.pricingMatrix.products.forEach(p => {
+            const fInput = document.getElementById(`qty-fullDice-${p.id}`);
+            const hInput = document.getElementById(`qty-halfDice-${p.id}`);
+            if (fInput) fInput.value = 0;
+            if (hInput) hInput.value = (p.id === defaultId) ? qty : 0;
+        });
 
         this.updateTotal();
         this.togglePanel('account', false);
@@ -2971,91 +3032,65 @@ const app = {
     },
 
     updateTotal() {
-        const fd3 = this.orderData.qty.fullDice['3kg'];
-        const fd1 = this.orderData.qty.fullDice['1kg'];
-        const hd3 = this.orderData.qty.halfDice['3kg'];
-        const hd1 = this.orderData.qty.halfDice['1kg'];
-        
-        const m3kg = this.pricingMatrix.products.bag3kg;
-        const m1kg = this.pricingMatrix.products.bag1kg;
+        let itemsTotal = 0;
+        let bulkNotices = [];
+        let anyBulk = false;
 
-        // Update Labels
-        const labels3kg = ['label-price-3kg-full', 'label-price-3kg-half'];
-        const labels1kg = ['label-price-1kg-full', 'label-price-1kg-half'];
-        labels3kg.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = `₱${m3kg.standard} / bag`;
-        });
-        labels1kg.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = `₱${m1kg.standard} / bag`;
-        });
-
-        const q3kg = fd3 + hd3;
-        let total3kg = q3kg * m3kg.standard;
-        this.orderData.bonusState3kg = false;
-        this.orderData.bulkState3kg = false;
-
-        if (q3kg >= m3kg.threshold) {
-            total3kg = q3kg * m3kg.bulk;
-            this.orderData.bulkState3kg = true;
-        } else if (q3kg === m3kg.threshold - 1 && m3kg.threshold > 1) {
-            // Paradox Protection: Force total to bulk price if 1 bag away
-            total3kg = (m3kg.threshold * m3kg.bulk); 
-            this.orderData.bonusState3kg = true;
-        }
-
-        const q1kg = fd1 + hd1;
-        let total1kg = q1kg * m1kg.standard;
-        this.orderData.bonusState1kg = false;
-        this.orderData.bulkState1kg = false;
-
-        if (q1kg >= m1kg.threshold) {
-            total1kg = q1kg * m1kg.bulk;
-            this.orderData.bulkState1kg = true;
-        } else if (q1kg >= m1kg.threshold - 2 && m1kg.threshold > 2) {
-            // Paradox Protection: Force total to bulk price if 1-2 bags away
-            total1kg = (m1kg.threshold * m1kg.bulk);
-            this.orderData.bonusState1kg = true;
-        }
-
-        const promoBoxes = document.querySelectorAll('.bulk-promo-box');
-        if (promoBoxes.length > 0) {
-            let notice = `Wholesale: ${m3kg.threshold}+ 3kg (₱${m3kg.bulk}) or ${m1kg.threshold}+ 1kg (₱${m1kg.bulk})`;
-            let reached = false;
+        this.pricingMatrix.products.forEach(p => {
+            const qtyFull = this.orderData.qty.fullDice[p.id] || 0;
+            const qtyHalf = this.orderData.qty.halfDice[p.id] || 0;
+            const qTotal = qtyFull + qtyHalf;
             
-            if (this.orderData.bulkState3kg && this.orderData.bulkState1kg) {
-                notice = `🔥 Bulk Applied: 3kg (₱${m3kg.bulk}) & 1kg (₱${m1kg.bulk})`;
-                reached = true;
-            } else if (this.orderData.bulkState3kg) {
-                notice = `🔥 Bulk Applied: 3kg bags now ₱${m3kg.bulk}`;
-                reached = true;
-            } else if (this.orderData.bulkState1kg) {
-                notice = `🔥 Bulk Applied: 1kg bags now ₱${m1kg.bulk}`;
-                reached = true;
-            } else if (this.orderData.bonusState3kg) {
-                notice = `🎁 ${m3kg.threshold}th bag of 3kg is FREE!`;
-                reached = true;
-            } else if (this.orderData.bonusState1kg) {
-                notice = `🎁 ${m1kg.threshold}+ bags of 1kg unlocks ₱${m1kg.bulk} rate!`;
-                reached = true;
+            let pTotal = qTotal * p.standard;
+            let isBulk = false;
+            
+            // Paradox state tracking
+            if (!this.orderData.bonusStates) this.orderData.bonusStates = {};
+            this.orderData.bonusStates[p.id] = false;
+
+            if (qTotal >= p.threshold) {
+                pTotal = qTotal * p.bulk;
+                isBulk = true;
+                anyBulk = true;
+                bulkNotices.push(`${p.name.split(' ')[0]} (₱${p.bulk})`);
+            } else if (qTotal === p.threshold - 1 && p.threshold > 1) {
+                pTotal = p.threshold * p.bulk;
+                this.orderData.bonusStates[p.id] = true;
             }
-            
-            promoBoxes.forEach(box => {
-                const textElem = box.querySelector('.bulk-promo-text');
-                if (textElem) textElem.innerHTML = notice;
-                
-                if (reached) {
-                    box.classList.remove('promo-info');
-                    box.classList.add('promo-reached');
-                } else {
-                    box.classList.add('promo-info');
-                    box.classList.remove('promo-reached');
-                }
-            });
+
+            itemsTotal += pTotal;
+
+            // Update Labels
+            const labelFull = document.getElementById(`label-price-${p.id}-full`);
+            const labelHalf = document.getElementById(`label-price-${p.id}-half`);
+            const priceLabel = isBulk ? `🔥 ₱${p.bulk} / bag` : `₱${p.standard} / bag`;
+            if (labelFull) labelFull.innerText = priceLabel;
+            if (labelHalf) labelHalf.innerText = priceLabel;
+        });
+
+        // Update Promo Boxes
+        const fullPromo = document.getElementById('fullDice-promo-text');
+        const halfPromo = document.getElementById('halfDice-promo-text');
+        const fullBox = document.getElementById('fullDice-promo-box');
+        const halfBox = document.getElementById('halfDice-promo-box');
+
+        if (fullPromo && halfPromo) {
+            if (anyBulk) {
+                const notice = `🔥 Bulk Applied: ${bulkNotices.join(' & ')}`;
+                fullPromo.innerText = notice;
+                halfPromo.innerText = notice;
+                if (fullBox) { fullBox.classList.remove('promo-info'); fullBox.classList.add('promo-reached'); }
+                if (halfBox) { halfBox.classList.remove('promo-info'); halfBox.classList.add('promo-reached'); }
+            } else {
+                const promoText = this.pricingMatrix.products.map(p => `${p.threshold}+ ${p.name.split(' ')[0]} (₱${p.bulk})`).join(' or ');
+                fullPromo.innerText = `Wholesale: ${promoText}`;
+                halfPromo.innerText = `Wholesale: ${promoText}`;
+                if (fullBox) { fullBox.classList.add('promo-info'); fullBox.classList.remove('promo-reached'); }
+                if (halfBox) { halfBox.classList.add('promo-info'); halfBox.classList.remove('promo-reached'); }
+            }
         }
 
-        this.orderData.subtotal = total3kg + total1kg;
+        this.orderData.subtotal = itemsTotal;
         
         // Apply Partnership Discount
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
@@ -3085,12 +3120,12 @@ const app = {
     },
 
     calculatePriorityFee() {
-        const fd3 = this.orderData.qty.fullDice['3kg'] || 0;
-        const fd1 = this.orderData.qty.fullDice['1kg'] || 0;
-        const hd3 = this.orderData.qty.halfDice['3kg'] || 0;
-        const hd1 = this.orderData.qty.halfDice['1kg'] || 0;
-        
-        const totalWeight = (fd3 + hd3) * 3 + (fd1 + hd1) * 1;
+        let totalWeight = 0;
+        this.pricingMatrix.products.forEach(p => {
+            const weight = parseInt(p.id.replace(/[^0-9]/g, '')) || (p.id === 'bag3kg' ? 3 : 1);
+            const q = (this.orderData.qty.fullDice[p.id] || 0) + (this.orderData.qty.halfDice[p.id] || 0);
+            totalWeight += q * weight;
+        });
         
         let fee = 0;
         if (totalWeight >= 31) {
@@ -3106,38 +3141,27 @@ const app = {
     },
 
     confirmQuantity() {
-        if (this.orderData.bonusState3kg || this.orderData.bonusState1kg) {
-            if (this.orderData.bonusState3kg) {
-                const fd3 = this.orderData.qty.fullDice['3kg'];
-                const hd3 = this.orderData.qty.halfDice['3kg'];
-                const m3kg = this.pricingMatrix.products.bag3kg;
-                // Adjust to exactly threshold
-                const diff = m3kg.threshold - (fd3 + hd3);
-                if (fd3 > 0) {
-                    this.orderData.qty.fullDice['3kg'] += diff;
-                    document.getElementById('qty-fullDice-3kg').value = this.orderData.qty.fullDice['3kg'];
+        let hasBonus = false;
+        this.pricingMatrix.products.forEach(p => {
+            if (this.orderData.bonusStates && this.orderData.bonusStates[p.id]) {
+                const fd = this.orderData.qty.fullDice[p.id] || 0;
+                const hd = this.orderData.qty.halfDice[p.id] || 0;
+                const diff = p.threshold - (fd + hd);
+                
+                if (fd > 0) {
+                    this.orderData.qty.fullDice[p.id] += diff;
+                    document.getElementById(`qty-fullDice-${p.id}`).value = this.orderData.qty.fullDice[p.id];
                 } else {
-                    this.orderData.qty.halfDice['3kg'] += diff;
-                    document.getElementById('qty-halfDice-3kg').value = this.orderData.qty.halfDice['3kg'];
+                    this.orderData.qty.halfDice[p.id] += diff;
+                    document.getElementById(`qty-halfDice-${p.id}`).value = this.orderData.qty.halfDice[p.id];
                 }
-                this.orderData.wasAutoAdjusted3kg = true;
+                hasBonus = true;
             }
-            if (this.orderData.bonusState1kg) {
-                const fd1 = this.orderData.qty.fullDice['1kg'];
-                const hd1 = this.orderData.qty.halfDice['1kg'];
-                const m1kg = this.pricingMatrix.products.bag1kg;
-                // Adjust to exactly threshold
-                const diff = m1kg.threshold - (fd1 + hd1);
-                if (fd1 > 0) {
-                    this.orderData.qty.fullDice['1kg'] += diff;
-                    document.getElementById('qty-fullDice-1kg').value = this.orderData.qty.fullDice['1kg'];
-                } else {
-                    this.orderData.qty.halfDice['1kg'] += diff;
-                    document.getElementById('qty-halfDice-1kg').value = this.orderData.qty.halfDice['1kg'];
-                }
-                this.orderData.wasAutoAdjusted1kg = true;
-            }
-            this.updateTotal(); 
+        });
+
+        if (hasBonus) {
+            this.updateTotal();
+            this.showToast('Special Pricing: Bulk rate applied!', 'success');
         }
         this.nextStep();
     },
@@ -4165,20 +4189,24 @@ const app = {
             if (elTime) elTime.innerText = `Today, ${timeStr}`;
             
             let typesText = [];
-            const fd3 = this.orderData.qty.fullDice['3kg'];
-            const fd1 = this.orderData.qty.fullDice['1kg'];
-            const hd3 = this.orderData.qty.halfDice['3kg'];
-            const hd1 = this.orderData.qty.halfDice['1kg'];
-            if (fd3 > 0 || fd1 > 0) typesText.push('Full Dice');
-            if (hd3 > 0 || hd1 > 0) typesText.push('Half-Dice');
-
-            const total3kg = fd3 + hd3;
-            const total1kg = fd1 + hd1;
             let qtySummary = [];
-            if (total3kg > 0) qtySummary.push(`${total3kg} Bags (3kg)`);
-            if (total1kg > 0) qtySummary.push(`${total1kg} Bags (1kg)`);
+            let totalBagsForGeneration = 0;
+
+            this.pricingMatrix.products.forEach(p => {
+                const fd = this.orderData.qty.fullDice[p.id] || 0;
+                const hd = this.orderData.qty.halfDice[p.id] || 0;
+                if (fd > 0) { if (!typesText.includes('Full Dice')) typesText.push('Full Dice'); }
+                if (hd > 0) { if (!typesText.includes('Half-Dice')) typesText.push('Half-Dice'); }
+                
+                const qTotal = fd + hd;
+                if (qTotal > 0) {
+                    const shortName = p.name.split(' ')[0];
+                    qtySummary.push(`${qTotal} Bags (${shortName})`);
+                    if (p.id.includes('3kg')) totalBagsForGeneration += qTotal;
+                }
+            });
+
             let productType = typesText.length > 1 ? 'Mixed' : (typesText[0] || 'Ice');
-            
             if (elQty) elQty.innerText = `${qtySummary.join(' + ')} • ${productType}`;
             
             if (elTiming) {
@@ -4290,10 +4318,9 @@ const app = {
             this.sendConfirmation().catch(err => console.warn('Notification skipped or failed:', err));
             
             // Antigravity: Automated Order Generation with Overdraft Logic
-            const totalBags = (this.orderData.qty.fullDice['3kg'] || 0) + (this.orderData.qty.halfDice['3kg'] || 0);
             generateOrder(
                 this.user.companyName || 'LOFT_LIVING_CDO', 
-                totalBags, 
+                totalBagsForGeneration, 
                 this.isOverdraftActive || false, 
                 this.totalDebtToCollect || 0
             ).catch(err => console.error('Order generation failed:', err));
@@ -4856,26 +4883,18 @@ const app = {
         }
 
         const matrix = items._matrix || this.pricingMatrix;
-        const m3kg = matrix.products.bag3kg;
-        const m1kg = matrix.products.bag1kg;
         
         ['fullDice', 'halfDice'].forEach(type => {
             if (items[type]) {
-                ['3kg', '1kg'].forEach(size => {
-                    const qty = items[type][size] || 0;
+                matrix.products.forEach(p => {
+                    const qty = items[type][p.id] || 0;
                     if (qty > 0) {
-                        const totalSizeQty = (items.fullDice ? (items.fullDice[size] || 0) : 0) + (items.halfDice ? (items.halfDice[size] || 0) : 0);
-                        
-                        let price = 0;
-                        if (size === '3kg') {
-                            price = (totalSizeQty >= m3kg.threshold) ? m3kg.bulk : m3kg.standard;
-                        } else {
-                            price = (totalSizeQty >= m1kg.threshold) ? m1kg.bulk : m1kg.standard;
-                        }
+                        const totalSizeQty = (items.fullDice ? (items.fullDice[p.id] || 0) : 0) + (items.halfDice ? (items.halfDice[p.id] || 0) : 0);
+                        const price = (totalSizeQty >= p.threshold) ? p.bulk : p.standard;
 
                         mappedItems.push({
-                            baseName: `${size} Ice Cube`,
-                            typeLabel: type === 'fullDice' ? 'Full Dice' : 'Half Dice',
+                            baseName: p.name.split(' (')[0],
+                            typeLabel: type === 'fullDice' ? 'Full Dice' : 'Half-Dice',
                             qty: qty,
                             unit: 'Bag',
                             price: price

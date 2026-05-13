@@ -43,10 +43,10 @@ var admin = {
     utilityPaidDates: JSON.parse(localStorage.getItem('iceqube_utility_paid_dates') || '{}'),
     rental: JSON.parse(localStorage.getItem('iceqube_rental') || '15000'),
     pricingMatrix: JSON.parse(localStorage.getItem('iceqube_global_pricing') || JSON.stringify({
-        products: {
-            bag3kg: { standard: 40, bulk: 35, threshold: 14 },
-            bag1kg: { standard: 15, bulk: 14, threshold: 40 }
-        },
+        products: [
+            { id: 'bag3kg', name: '3kg Ice Cube (Full/Half)', standard: 40, bulk: 35, threshold: 14 },
+            { id: 'bag1kg', name: '1kg Ice Cube (Full/Half)', standard: 15, bulk: 14, threshold: 40 }
+        ],
         delivery: {
             baseFare: 30,
             perKmRate: 10,
@@ -220,14 +220,27 @@ var admin = {
         // Purge button listener moved to onclick in HTML for robustness
 
         // Data Migration/Validation for Pricing Matrix
-        if (!this.pricingMatrix || !this.pricingMatrix.products || !this.pricingMatrix.delivery) {
+        if (!this.pricingMatrix || !this.pricingMatrix.products || !this.pricingMatrix.delivery || !Array.isArray(this.pricingMatrix.products)) {
             console.log('Migrating old pricing matrix structure...');
+            const oldProducts = (this.pricingMatrix && this.pricingMatrix.products) ? this.pricingMatrix.products : {};
             this.pricingMatrix = {
-                products: {
-                    bag3kg: { standard: 40, bulk: 35, threshold: 14 },
-                    bag1kg: { standard: 15, bulk: 14, threshold: 40 }
-                },
-                delivery: {
+                products: [
+                    { 
+                        id: 'bag3kg', 
+                        name: '3kg Ice Cube (Full/Half)', 
+                        standard: (oldProducts.bag3kg && oldProducts.bag3kg.standard) || 40, 
+                        bulk: (oldProducts.bag3kg && oldProducts.bag3kg.bulk) || 35, 
+                        threshold: (oldProducts.bag3kg && oldProducts.bag3kg.threshold) || 14 
+                    },
+                    { 
+                        id: 'bag1kg', 
+                        name: '1kg Ice Cube (Full/Half)', 
+                        standard: (oldProducts.bag1kg && oldProducts.bag1kg.standard) || 15, 
+                        bulk: (oldProducts.bag1kg && oldProducts.bag1kg.bulk) || 14, 
+                        threshold: (oldProducts.bag1kg && oldProducts.bag1kg.threshold) || 40 
+                    }
+                ],
+                delivery: (this.pricingMatrix && this.pricingMatrix.delivery) || {
                     baseFare: 30,
                     perKmRate: 10,
                     freeThreshold: 0
@@ -2576,23 +2589,80 @@ var admin = {
         }
     },
 
-    updatePricingUI() {
-        // Sync inputs with current matrix state
-        const fields = {
-            'm-3kg-std': this.pricingMatrix.products.bag3kg.standard,
-            'm-3kg-bulk': this.pricingMatrix.products.bag3kg.bulk,
-            'm-3kg-threshold': this.pricingMatrix.products.bag3kg.threshold,
-            'm-1kg-std': this.pricingMatrix.products.bag1kg.standard,
-            'm-1kg-bulk': this.pricingMatrix.products.bag1kg.bulk,
-            'm-1kg-threshold': this.pricingMatrix.products.bag1kg.threshold,
-            'm-del-base': this.pricingMatrix.delivery.baseFare,
-            'm-del-km': this.pricingMatrix.delivery.perKmRate
-        };
-
-        for (const [id, val] of Object.entries(fields)) {
-            const el = document.getElementById(id);
-            if (el) el.value = val;
+    showToast(message, type = 'info') {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
         }
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✅';
+        if (type === 'error') icon = '⚠️';
+        
+        toast.innerHTML = `
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-message">${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                toast.remove();
+                if (container.children.length === 0) container.remove();
+            }, 400);
+        }, 4000);
+    },
+
+    updatePricingUI() {
+        const pricingContainer = document.getElementById('pricing-matrix-container');
+        const thresholdContainer = document.getElementById('threshold-matrix-container');
+        if (!pricingContainer || !thresholdContainer) return;
+
+        // Render Pricing Cards
+        pricingContainer.innerHTML = this.pricingMatrix.products.map(p => `
+            <div data-product-id="${p.id}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; font-size: 0.9rem; color: #0ea5e9;">${p.name}</h4>
+                    <button onclick="event.stopPropagation(); admin.deleteProduct('${p.id}')" class="delete-btn" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Standard Price (₱)</label>
+                        <input type="number" id="m-${p.id}-std" class="matrix-input" value="${p.standard}" readonly>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Bulk Rate (₱)</label>
+                        <input type="number" id="m-${p.id}-bulk" class="matrix-input" value="${p.bulk}" readonly>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Render Threshold Cards
+        thresholdContainer.innerHTML = this.pricingMatrix.products.map(p => `
+            <div>
+                <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #eab308;">${p.name}</h4>
+                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Min. Bags for Bulk Rate</label>
+                <input type="number" id="m-${p.id}-threshold" class="matrix-input" value="${p.threshold}" readonly>
+                <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Currently ${p.threshold} bags triggers ₱${p.bulk} rate.</small>
+            </div>
+        `).join('');
+
+        // Sync Delivery Inputs
+        const delBase = document.getElementById('m-del-base');
+        const delKm = document.getElementById('m-del-km');
+        if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare;
+        if (delKm) delKm.value = this.pricingMatrix.delivery.perKmRate;
     },
 
     toggleMatrixLock(cardId, btn) {
@@ -2600,17 +2670,20 @@ var admin = {
         if (!card) return;
         
         const inputs = card.querySelectorAll('.matrix-input');
-        const isLocked = inputs[0].hasAttribute('readonly');
+        const deleteBtns = card.querySelectorAll('.delete-btn');
+        const isLocked = inputs[0] ? inputs[0].hasAttribute('readonly') : true;
         
         if (isLocked) {
             // UNLOCK
             inputs.forEach(input => input.removeAttribute('readonly'));
+            deleteBtns.forEach(b => b.style.display = 'block');
             btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L22 2"/></svg> SYNCHRONIZE';
-            inputs[0].focus();
+            if (inputs[0]) inputs[0].focus();
         } else {
             // LOCK & SAVE
             this.savePricingMatrix(btn);
             inputs.forEach(input => input.setAttribute('readonly', true));
+            deleteBtns.forEach(b => b.style.display = 'none');
             
             const type = cardId.split('-').pop(); // pricing, thresholds, logistics
             btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> EDIT ${type.toUpperCase()}`;
@@ -2618,35 +2691,38 @@ var admin = {
     },
 
     savePricingMatrix(triggerBtn = null) {
+        const products = this.pricingMatrix.products.map(p => {
+            const std = document.getElementById(`m-${p.id}-std`);
+            const bulk = document.getElementById(`m-${p.id}-bulk`);
+            const threshold = document.getElementById(`m-${p.id}-threshold`);
+            return {
+                ...p,
+                standard: std ? parseFloat(std.value) || 0 : p.standard,
+                bulk: bulk ? parseFloat(bulk.value) || 0 : p.bulk,
+                threshold: threshold ? parseInt(threshold.value) || 0 : p.threshold
+            };
+        });
+
         const newMatrix = {
-            products: {
-                bag3kg: {
-                    standard: parseFloat(document.getElementById('m-3kg-std').value) || 0,
-                    bulk: parseFloat(document.getElementById('m-3kg-bulk').value) || 0,
-                    threshold: parseInt(document.getElementById('m-3kg-threshold').value) || 0
-                },
-                bag1kg: {
-                    standard: parseFloat(document.getElementById('m-1kg-std').value) || 0,
-                    bulk: parseFloat(document.getElementById('m-1kg-bulk').value) || 0,
-                    threshold: parseInt(document.getElementById('m-1kg-threshold').value) || 0
-                }
-            },
+            products: products,
             delivery: {
                 baseFare: parseFloat(document.getElementById('m-del-base').value) || 0,
                 perKmRate: parseFloat(document.getElementById('m-del-km').value) || 0,
-                freeThreshold: 0
+                freeThreshold: this.pricingMatrix.delivery.freeThreshold || 0
             }
         };
 
         this.pricingMatrix = newMatrix;
-        localStorage.setItem('iceqube_global_pricing', JSON.stringify(newMatrix));
-        
+        localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+
         if (window.IceQubeSync) {
-            window.IceQubeSync.publishPricingUpdate(newMatrix);
+            window.IceQubeSync.publishPricingUpdate(this.pricingMatrix);
         }
 
-        this.showNotification("Matrix Updated", "Global pricing has been synchronized.");
-        
+        if (typeof this.showToast === 'function') {
+            this.showToast('Pricing Matrix Synchronized!', 'success');
+        }
+
         // Visual feedback
         const btn = triggerBtn || document.querySelector('#matrix-view .btn-primary');
         if (btn) {
@@ -2656,6 +2732,79 @@ var admin = {
                 btn.innerHTML = original;
             }, 2000);
         }
+    },
+
+    showAddPackagingModal() {
+        const modal = document.getElementById('modal-add-packaging');
+        if (modal) modal.classList.add('active');
+    },
+
+    closeAddPackagingModal() {
+        const modal = document.getElementById('modal-add-packaging');
+        if (modal) modal.classList.remove('active');
+    },
+
+    addProduct() {
+        const id = document.getElementById('new-p-id').value.trim();
+        const name = document.getElementById('new-p-name').value.trim();
+        const std = parseFloat(document.getElementById('new-p-std').value) || 0;
+        const bulk = parseFloat(document.getElementById('new-p-bulk').value) || 0;
+        const threshold = parseInt(document.getElementById('new-p-threshold').value) || 0;
+
+        if (!id || !name) {
+            this.showToast('ID and Name are required.', 'error');
+            return;
+        }
+
+        if (this.pricingMatrix.products.find(p => p.id === id)) {
+            this.showToast('Product ID already exists.', 'error');
+            return;
+        }
+
+        this.pricingMatrix.products.push({ id, name, standard: std, bulk, threshold });
+        localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+        
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishPricingUpdate(this.pricingMatrix);
+        }
+
+        this.updatePricingUI();
+        this.closeAddPackagingModal();
+        this.showToast('New packaging added!', 'success');
+        
+        // Reset inputs
+        document.getElementById('new-p-id').value = '';
+        document.getElementById('new-p-name').value = '';
+    },
+
+    deleteProduct(id) {
+        console.log(`[Admin] Attempting to delete product with ID: ${id}`);
+        
+        this.showConfirmModal(
+            "Delete Packaging",
+            "Are you sure you want to remove this ice packaging type? This will also remove it from the Customer App selection.",
+            () => {
+                const initialCount = this.pricingMatrix.products.length;
+                this.pricingMatrix.products = this.pricingMatrix.products.filter(p => p.id !== id);
+                const finalCount = this.pricingMatrix.products.length;
+
+                if (initialCount === finalCount) {
+                    console.warn(`[Admin] Delete failed: Product with ID "${id}" not found in matrix.`);
+                    this.showToast('Product not found. Try refreshing.', 'error');
+                    return;
+                }
+
+                localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                
+                if (window.IceQubeSync) {
+                    window.IceQubeSync.publishPricingUpdate(this.pricingMatrix);
+                }
+
+                this.updatePricingUI();
+                this.showToast('Packaging removed.', 'success');
+                console.log(`[Admin] Successfully deleted product: ${id}`);
+            }
+        );
     },
 
     updateRentDisplay() {
