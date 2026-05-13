@@ -2236,7 +2236,12 @@
 
             <!-- Team Status Card -->
             <div class="cc-card full-width">
-                <div class="metric-label">Active Team Directory</div>
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Active Team Directory
+                    <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showRiderAppQR()">
+                        <span style="font-size: 1rem;">📲</span> Rider App Access
+                    </button>
+                </div>
                 <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
                     <div class="rider-card">
                         <div class="rider-avatar">JB</div>
@@ -3068,6 +3073,36 @@
             
             <button class="btn-unlock" style="width: 100%; margin-top: 2rem;" onclick="document.getElementById('payout-modal').style.display='none'">
                 Done
+            </button>
+        </div>
+    </div>
+    
+    <!-- Rider App Access QR Modal -->
+    <div id="rider-app-modal" class="qr-payout-modal" onclick="this.style.display='none'">
+        <div class="qr-card" onclick="event.stopPropagation()">
+            <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
+                <div style="background: rgba(56, 189, 248, 0.1); width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; border: 1px solid rgba(56, 189, 248, 0.2);">
+                    <span style="font-size: 2rem;">🚚</span>
+                </div>
+                <h2 style="margin: 0; font-size: 1.4rem;">Rider Portal Access</h2>
+                <p style="color: #64748b; margin: 8px 0 0 0; text-align: center; font-size: 0.9rem;">Scan to open the logistics app on your phone.</p>
+            </div>
+            
+            <div class="qr-image" style="background: white; padding: 15px; border-radius: 12px; margin: 0 auto; width: 220px; height: 220px;">
+                <img id="rider-app-qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://iceqube-cdo.github.io/iceqube-order/rider.html" alt="Rider App QR" style="width: 100%; height: 100%; display: block;">
+            </div>
+            
+            <div style="margin-top: 1.5rem; background: rgba(15, 23, 42, 0.4); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0;">
+                    <strong>Instructions:</strong><br>
+                    1. Scan with Phone Camera or GCash.<br>
+                    2. Login with Rider ID.<br>
+                    3. Use 'Add to Home Screen' for the best experience.
+                </p>
+            </div>
+            
+            <button class="btn-unlock" style="width: 100%; margin-top: 1.5rem; background: #0284c7;" onclick="document.getElementById('rider-app-modal').style.display='none'">
+                Dismiss
             </button>
         </div>
     </div>

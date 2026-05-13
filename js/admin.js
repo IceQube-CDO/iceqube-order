@@ -1220,6 +1220,16 @@ var admin = {
         console.log(`🏦 Preparing Payout for ${name}...`);
     },
 
+    showRiderAppQR() {
+        const modal = document.getElementById('rider-app-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('📲 Showing Rider App Access QR Code');
+        } else {
+            console.error('❌ Rider App Modal not found!');
+        }
+    },
+
     updateCustomerDirectory(orders) {
         const listContainer = document.getElementById('customer-directory-list');
         if (!listContainer) return;
