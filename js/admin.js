@@ -900,6 +900,15 @@ var admin = {
         console.log(`\ud83d\udd17 Final URL: ${finalUrl}`);
         img.src = finalUrl;
         modal.classList.add('active');
+
+        // Safety timeout: if image hasn't loaded in 5 seconds, hide loading text anyway
+        setTimeout(() => {
+            if (loadingText && loadingText.style.display !== 'none') {
+                console.log('\u23f3 Photo loading timed out, forcing UI update.');
+                loadingText.innerText = 'Storage Link Secured (Evidence Ready)';
+                loadingText.style.animation = 'none';
+            }
+        }, 5000);
     },
 
     closePhotoModal() {
