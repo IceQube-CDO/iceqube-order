@@ -5507,7 +5507,7 @@ const app = {
         const context = document.getElementById('report-context') ? document.getElementById('report-context').value : 'order_issue';
         
         const isOther = this._selectedIssue === 'other' || this._selectedIssue === 'staff' || this._selectedIssue === 'billing_app';
-        const hasOtherText = document.getElementById('other-issue-text').value.trim().length > 5;
+        const hasOtherText = document.getElementById('other-issue-text').value.trim().length >= 1;
         
         const orderIdVal = document.getElementById('report-order-id') ? document.getElementById('report-order-id').value : '';
         const orderValid = context !== 'order_issue' || (context === 'order_issue' && orderIdVal);
@@ -5552,12 +5552,28 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         const userNote = document.getElementById('other-issue-text').value.trim();
         
         // Mock a photo URL (In a real app, this would be the URL from your storage bucket)
-        const photoUrl = this._reportPhoto ? `iceqube-storage.app/reports/${this._reportPhoto.name}` : ((context === 'staff' || context === 'billing_app') ? 'Not Required' : null);
+        const photoUrl = this._reportPhoto ? `https://images.unsplash.com/photo-1551717727-463e260907a7?q=80&w=800&auto=format&fit=crop` : ((context === 'staff' || context === 'billing_app') ? 'Not Required' : null);
         
         // Generate the formatted message for Messenger/Slack/Support Channel
         const payload = this.generateSupportMessage(orderId, issueType, userNote, photoUrl);
         console.log("--- Support Payload Generated ---");
         console.log(payload);
+
+        // SYNC COMPLAINT TO ADMIN
+        const complaintData = {
+            id: `QC-${Math.floor(1000 + Math.random() * 9000)}`,
+            orderId: orderId,
+            customerName: this.user.companyName || 'Guest Customer',
+            issueType: issueType,
+            userNote: userNote,
+            photoUrl: photoUrl,
+            status: 'active',
+            timestamp: new Date().toISOString()
+        };
+
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishComplaint(complaintData);
+        }
 
         // Show premium success feedback
         const btn = document.getElementById('btn-submit-report');
@@ -5568,7 +5584,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             this.toggleBottomSheet('report', false);
             
             if (isCritical) {
-                this.showToast(`🚨 EMERGENCY ESCALATION SUCCESSFUL. Case ID: QC-${Math.floor(1000 + Math.random() * 9000)}`, 'success');
+                this.showToast(`🚨 EMERGENCY ESCALATION SUCCESSFUL. Case ID: ${complaintData.id}`, 'success');
             } else {
                 this.showToast(`✅ Report Submitted. Issue: ${issueType.toUpperCase()}`, 'success');
             }
@@ -5576,6 +5592,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             // Reset button for next time
             btn.innerText = 'Send to IceQube Support';
             btn.style.background = '#1e293b';
+            btn.disabled = false;
         }, 1500);
     },
 

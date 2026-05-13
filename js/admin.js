@@ -56,6 +56,7 @@ var admin = {
     cashflowFilter: 'daily', 
     vacationMode: JSON.parse(localStorage.getItem('iceqube_vacation_mode') || 'false'),
     autoDispatchType: 'broadcast',
+    complaints: JSON.parse(localStorage.getItem('ice_complaints') || '[]'),
     _autoRefreshIntervalId: null,
 
     purgeTestData() {
@@ -310,6 +311,13 @@ var admin = {
                 } else if (event.type === 'PROFILE_UPDATED') {
                     console.log("👤 [Admin] Profile update detected via Sync:", event.payload.establishment);
                     this.fetchRealStats(); // Refresh everything to reflect new profile data
+                }
+            });
+
+            window.IceQubeSync.onComplaintEvent((event) => {
+                if (event.type === 'NEW_COMPLAINT') {
+                    console.log("🚨 [Admin] New complaint detected via Sync:", event.payload.id);
+                    this.handleIncomingComplaint(event.payload);
                 }
             });
 
@@ -733,6 +741,7 @@ var admin = {
         this.updateCashflowView(orders);
         this.updateCustomerDirectory(orders);
         this.updateAlertCenter(orders);
+        this.updateComplaintsUI();
 
         // 6. Vacation Mode Auto-Dispatch (On-Load Check)
         if (this.vacationMode) {
@@ -796,7 +805,106 @@ var admin = {
         // Populate the whole UI with combined data
         this.updateDashboardUI(combinedOrders);
         this.updateAlertCenter(combinedOrders);
+        this.updateComplaintsUI();
         console.log(`🎨 Dashboard rendered with ${combinedOrders.length} orders (Purged Mode: ${isPurged}).`);
+    },
+
+    handleIncomingComplaint(complaint) {
+        if (!complaint || !complaint.id) return;
+        
+        const complaints = JSON.parse(localStorage.getItem('ice_complaints') || '[]');
+        if (!complaints.find(c => c.id === complaint.id)) {
+            complaints.unshift(complaint);
+            localStorage.setItem('ice_complaints', JSON.stringify(complaints));
+            this.complaints = complaints;
+            
+            this.showNotification(`New Complaint: ${complaint.customerName}`, complaint.issueType);
+            this.startBuzzer();
+            this.updateComplaintsUI();
+        }
+    },
+
+    updateComplaintsUI() {
+        const complaintsList = document.getElementById('complaints-list');
+        const badge = document.getElementById('active-complaints-badge');
+        
+        if (!complaintsList) return;
+
+        const activeComplaints = this.complaints.filter(c => c.status === 'active');
+        
+        if (badge) {
+            badge.innerText = `● ${activeComplaints.length} Active Issues`;
+            badge.style.display = activeComplaints.length > 0 ? 'inline' : 'none';
+        }
+
+        if (activeComplaints.length === 0) {
+            complaintsList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">No active complaints</div>';
+            return;
+        }
+
+        complaintsList.innerHTML = activeComplaints.map(c => `
+            <div class="rider-card" style="flex-direction: column; align-items: flex-start; padding: 12px; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;">
+                    <div>
+                        <h4 style="margin: 0; font-size: 0.85rem;">${c.customerName}</h4>
+                        <small style="color: #94a3b8; font-size: 0.7rem;">Order: ${c.orderId} • ${new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
+                    </div>
+                    <span style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase;">${c.issueType}</span>
+                </div>
+                <p style="margin: 0; font-size: 0.75rem; color: #cbd5e1; line-height: 1.4;">"${c.userNote || 'No details provided.'}"</p>
+                <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
+                    <button onclick="admin.resolveComplaint('${c.id}')" style="flex: 1; background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); padding: 6px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; cursor: pointer;">Resolve Issue</button>
+                    ${c.photoUrl && c.photoUrl !== 'Not Required' ? `<button onclick="admin.viewPhoto('${c.id}', '${c.photoUrl}')" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); padding: 6px; border-radius: 6px; font-size: 0.65rem; cursor: pointer;">View Photo</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    },
+
+    resolveComplaint(id) {
+        console.log(`✅ Resolving Complaint: ${id}`);
+        const complaints = JSON.parse(localStorage.getItem('ice_complaints') || '[]');
+        const idx = complaints.findIndex(c => c.id === id);
+        if (idx > -1) {
+            complaints[idx].status = 'resolved';
+            complaints[idx].resolvedAt = new Date().toISOString();
+            localStorage.setItem('ice_complaints', JSON.stringify(complaints));
+            this.complaints = complaints;
+            this.updateComplaintsUI();
+            this.showNotification("Issue Resolved", `Case ${id} has been closed.`);
+        }
+    },
+
+    viewPhoto(caseId, photoUrl) {
+        console.log(`\ud83d\uddbc\ufe0f Viewing Photo for Case: ${caseId}`);
+        const modal = document.getElementById('modal-photo-preview');
+        const img = document.getElementById('preview-img');
+        const caseIdEl = document.getElementById('photo-preview-id');
+        const loadingText = document.getElementById('photo-loading-text');
+        
+        if (!modal || !img) return;
+
+        caseIdEl.innerText = `Case ID: ${caseId}`;
+        if (loadingText) loadingText.style.display = 'block';
+        img.style.opacity = '0';
+        img.src = ''; // Clear previous
+        
+        // Handle mock vs real URLs
+        let finalUrl = photoUrl;
+        if (photoUrl.startsWith('iceqube-storage.app')) {
+            // For demo, fallback to a high-quality ice related image if it's the mock storage URL
+            finalUrl = 'https://images.unsplash.com/photo-1551717727-463e260907a7?q=80&w=1200&auto=format&fit=crop';
+        } else if (!photoUrl.startsWith('http') && !photoUrl.startsWith('data:')) {
+            finalUrl = `https://${photoUrl}`;
+        }
+
+        console.log(`\ud83d\udd17 Final URL: ${finalUrl}`);
+        img.src = finalUrl;
+        modal.classList.add('active');
+    },
+
+    closePhotoModal() {
+        const modal = document.getElementById('modal-photo-preview');
+        if (modal) modal.classList.remove('active');
     },
 
     animateCards() {

@@ -3,6 +3,7 @@
 
 const ORDERS_CHANNEL_NAME = 'iceqube_orders_sync';
 const DELIVERIES_CHANNEL_NAME = 'iceqube_deliveries_sync';
+const COMPLAINTS_CHANNEL_NAME = 'iceqube_complaints_sync';
 
 // Initialize Channels
 if (!window.BroadcastChannel) {
@@ -11,8 +12,9 @@ if (!window.BroadcastChannel) {
 
 const ordersChannel = new BroadcastChannel(ORDERS_CHANNEL_NAME);
 const deliveriesChannel = new BroadcastChannel(DELIVERIES_CHANNEL_NAME);
+const complaintsChannel = new BroadcastChannel(COMPLAINTS_CHANNEL_NAME);
 
-console.log("🌐 [IceQube Sync] Channels Initialized:", ORDERS_CHANNEL_NAME, DELIVERIES_CHANNEL_NAME);
+console.log("🌐 [IceQube Sync] Channels Initialized:", ORDERS_CHANNEL_NAME, DELIVERIES_CHANNEL_NAME, COMPLAINTS_CHANNEL_NAME);
 
 window.IceQubeSync = {
     // --- STATE & CALLBACKS ---
@@ -86,6 +88,16 @@ window.IceQubeSync = {
         ordersChannel.postMessage({ type: 'SYSTEM_PURGE' });
     },
 
+    publishComplaint: function(complaintData) {
+        console.log("📡 [Sync] Publishing New Complaint:", complaintData.id);
+        const complaints = JSON.parse(localStorage.getItem('ice_complaints') || '[]');
+        if (!complaints.find(c => c.id === complaintData.id)) {
+            complaints.unshift(complaintData);
+            localStorage.setItem('ice_complaints', JSON.stringify(complaints));
+        }
+        complaintsChannel.postMessage({ type: 'NEW_COMPLAINT', payload: complaintData });
+    },
+
     // --- SUBSCRIBERS ---
 
     onOrderEvent: function(callback) {
@@ -116,6 +128,13 @@ window.IceQubeSync = {
                 }
             }
             callback(data);
+        };
+    },
+
+    onComplaintEvent: function(callback) {
+        complaintsChannel.onmessage = (event) => {
+            console.log("📥 [Sync] Received Complaint Event:", event.data.type);
+            callback(event.data);
         };
     }
 };
