@@ -113,12 +113,23 @@ const app = {
             this.user.messengerEnabled = true; // Auto-enable if coming from Messenger
             localStorage.setItem('ice_messenger_psid', psid);
         } else {
-            // Fallback to last known PSID
+            // Fallback 1: Last known technical PSID
             const storedPsid = localStorage.getItem('ice_messenger_psid');
-            if (storedPsid) {
-                MESSENGER_CONFIG.RECIPIENT_ID = storedPsid;
-                this.user.messengerId = storedPsid;
-                // If we have a stored PSID but haven't explicitly disabled it, enable it
+            // Fallback 2: Stored in user profile
+            const profileStr = localStorage.getItem('iceqube_user_profile');
+            let profileId = null;
+            if (profileStr) {
+                try {
+                    const p = JSON.parse(profileStr);
+                    profileId = p.messengerId;
+                } catch(e) {}
+            }
+
+            const finalPsid = storedPsid || profileId;
+            if (finalPsid) {
+                MESSENGER_CONFIG.RECIPIENT_ID = finalPsid;
+                this.user.messengerId = finalPsid;
+                // If we have a stored ID but haven't explicitly disabled it, enable it
                 if (this.user.messengerEnabled === undefined) this.user.messengerEnabled = true;
             }
         }
@@ -4681,8 +4692,15 @@ const app = {
     },
 
     async sendConfirmation() {
-        if (!MESSENGER_CONFIG.RECIPIENT_ID) {
-            console.log('No Messenger PSID detected. Skipping external notification.');
+        const targetId = MESSENGER_CONFIG.RECIPIENT_ID || this.user.messengerId;
+        
+        if (!targetId) {
+            console.log('No Messenger ID detected (PSID or Profile ID). Skipping external notification.');
+            return;
+        }
+
+        if (this.user.messengerEnabled === false) {
+            console.log('Messenger notifications are disabled by user preference. Skipping.');
             return;
         }
 
@@ -4720,7 +4738,7 @@ const app = {
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                 },
                 body: JSON.stringify({
-                    recipientId: MESSENGER_CONFIG.RECIPIENT_ID,
+                    recipientId: targetId,
                     message: summaryText
                 })
             });
@@ -6163,6 +6181,12 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         };
 
         localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+        
+        // Sync with technical Messenger key to ensure detection on refresh
+        if (messengerId) {
+            localStorage.setItem('ice_messenger_psid', messengerId);
+            MESSENGER_CONFIG.RECIPIENT_ID = messengerId;
+        }
         
         // Broadcast profile update for Admin visibility
         if (window.IceQubeSync) {
