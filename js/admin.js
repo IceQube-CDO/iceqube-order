@@ -237,8 +237,8 @@ var admin = {
         // Purge button listener moved to onclick in HTML for robustness
 
         // Data Migration/Validation for Pricing Matrix
-        if (!this.pricingMatrix || !this.pricingMatrix.products || !this.pricingMatrix.delivery || !Array.isArray(this.pricingMatrix.products)) {
-            console.log('Migrating old pricing matrix structure...');
+        if (!this.pricingMatrix || !this.pricingMatrix.products || !Array.isArray(this.pricingMatrix.products)) {
+            console.log('Migrating/Initializing pricing matrix structure...');
             const oldProducts = (this.pricingMatrix && this.pricingMatrix.products) ? this.pricingMatrix.products : {};
             this.pricingMatrix = {
                 products: [
