@@ -757,12 +757,13 @@ var admin = {
         });
     },
 
-    async startDataSync() {
-        // Initial fetch
-        await this.fetchRealStats();
-        
-        // Auto-refresh every 10 seconds for "real-time" feel without page reload
+    startDataSync() {
         if (this._syncIntervalId) clearInterval(this._syncIntervalId);
+        
+        // Initial fetch
+        this.fetchRealStats();
+        
+        // Auto-refresh every 10 seconds
         this._syncIntervalId = setInterval(async () => {
             this.fetchRealStats();
             
@@ -832,26 +833,25 @@ var admin = {
             const cloudOrders = (orders || []).filter(o => o.order_id && o.order_id !== 'CONFIG_PRICING_MATRIX');
             
             // --- ROBUST CLOUD DETECTION ---
-            // If we are unlocked, detect orders that exist in the cloud but NOT in our local database
-            if (sessionStorage.getItem('iceqube_admin_unlocked') === 'true') {
-                cloudOrders.forEach(co => {
-                    const orderId = co.order_id;
-                    const alreadyLocal = localOrders.some(lo => lo.order_id === orderId);
-                    const alreadyAlarmed = this.alarmedOrders.has(orderId);
+            // Detect orders that exist in the cloud but NOT in our local database
+            cloudOrders.forEach(co => {
+                const orderId = co.order_id;
+                const alreadyLocal = localOrders.some(lo => lo.order_id === orderId);
+                const alreadyAlarmed = this.alarmedOrders.has(orderId);
 
-                    if (!alreadyLocal && !alreadyAlarmed) {
-                        console.log("🚀 [Sync] NEW EXTERNAL ORDER DETECTED:", orderId);
-                        this.alarmedOrders.add(orderId);
-                        
-                        // EMERGENCY DEBUG ALERT - This will confirm if the code even reaches here
-                        // alert("DEBUG: New Phone Order Detected! " + orderId);
-                        
-                        this.showNotification(`EXTERNAL: New Order from ${co.customer_name}`, orderId);
-                        this.startBuzzer(); // Direct start attempt
-                        this.handleIncomingOrder(co, true); // true = skipSync
-                    }
-                });
-            }
+                if (!alreadyLocal && !alreadyAlarmed) {
+                    console.log("🚀 [Sync] NEW EXTERNAL ORDER DETECTED:", orderId);
+                    this.alarmedOrders.add(orderId);
+                    
+                    // Force alarm even if browser is restricted (it will try to play)
+                    this.startBuzzer();
+                    
+                    // Show a very obvious notification
+                    this.showNotification(`⚠️ NEW PHONE ORDER: ${co.customer_name}`, orderId);
+                    
+                    this.handleIncomingOrder(co, true); // true = skipSync
+                }
+            });
 
             let merged = [...cloudOrders];
             localOrders.forEach(lo => {
