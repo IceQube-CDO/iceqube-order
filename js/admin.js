@@ -203,7 +203,7 @@ var admin = {
             // 0. Cloud Pricing Fetch
             if (window.IceQubeSync) {
                 const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
-                if (cloudMatrix) {
+                if (cloudMatrix && !cloudMatrix._error) {
                     if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
                     if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
                     
@@ -213,9 +213,12 @@ var admin = {
                         const cloudTime = cloudMatrix._cloudCreatedAt ? new Date(cloudMatrix._cloudCreatedAt).toLocaleTimeString() : new Date().toLocaleTimeString();
                         syncText.innerText = `☁️ Updated: ${cloudTime}`;
                     }
+                    console.log("✅ [Admin] Pricing Matrix merged from Cloud (V2)");
                 } else {
+                    const errMsg = (cloudMatrix && cloudMatrix._error) ? cloudMatrix._error : 'Offline';
                     const syncText = document.getElementById('cloud-sync-status-text');
-                    if (syncText) syncText.innerText = `☁️ Using Local Cache`;
+                    if (syncText) syncText.innerText = `☁️ Local Cache (${errMsg})`;
+                    console.warn(`ℹ️ [Admin] Cloud sync unavailable (${errMsg}). Using local defaults.`);
                 }
             }
         
@@ -638,8 +641,8 @@ var admin = {
             // Also poll for pricing updates in the background (SKIP if currently editing to avoid overwriting inputs)
             if (window.IceQubeSync && !this.isEditingMatrix) {
                 const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
-                if (cloudMatrix && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
-                    console.log("☁️ [Admin] Pricing updated from Cloud (Background Sync)");
+                if (cloudMatrix && !cloudMatrix._error && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
+                    console.log("☁️ [Admin] Pricing updated from Cloud (V2 Background Sync)");
                     
                     if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
                     if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;

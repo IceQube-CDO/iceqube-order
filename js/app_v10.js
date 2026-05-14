@@ -58,14 +58,14 @@ const app = {
         // 2. Try Cloud Merge
         if (window.IceQubeSync) {
             const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
-            if (cloudMatrix) {
+            if (cloudMatrix && !cloudMatrix._error) {
                 // DEEP MERGE: Ensure we don't lose products if only delivery was synced (or vice versa)
                 if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
                 if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
                 
                 localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
                 this._lastSyncTime = new Date().toLocaleTimeString();
-                console.log("✅ [App] Pricing matrix merged from Cloud at", this._lastSyncTime);
+                console.log("✅ [App] Pricing matrix merged from Cloud (V2) at", this._lastSyncTime);
                 
                 // Force Update Badge to LIVE
                 const cloudBadge = document.getElementById('cloud-sync-badge');
@@ -74,7 +74,7 @@ const app = {
                     cloudBadge.style.background = 'rgba(34, 197, 94, 0.1)';
                     cloudBadge.style.color = '#22c55e';
                     cloudBadge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
-                    cloudDot.style.background = '#22c55e';
+                    if (cloudDot) cloudDot.style.background = '#22c55e';
                     cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 5px; height: 5px; background: #22c55e; border-radius: 50%;"></span> CLOUD LIVE';
                 }
 
@@ -87,14 +87,22 @@ const app = {
                 // CRITICAL: Re-calculate all fees with the new cloud rates immediately
                 this.updateTotal();
                 
-                // Show subtle feedback if this was a background update
                 if (this.currentStep > 0) {
                     this.showToast('☁️ Pricing Matrix Synchronized', 'success');
                 }
             } else {
-                console.log("ℹ️ [App] Using Local Pricing (Cloud unavailable or no record found)");
+                const errMsg = (cloudMatrix && cloudMatrix._error) ? cloudMatrix._error : 'Cloud Offline';
+                console.log(`ℹ️ [App] Cloud Sync Unavailable (${errMsg}). Using Local Cache.`);
                 const syncText = document.getElementById('cloud-sync-status-text');
-                if (syncText) syncText.innerText = `☁️ Using Local Cache`;
+                if (syncText) syncText.innerText = `☁️ Local Cache (${errMsg})`;
+                
+                // Update badge to show error
+                const cloudBadge = document.getElementById('cloud-sync-badge');
+                if (cloudBadge) {
+                    cloudBadge.style.background = 'rgba(239, 68, 68, 0.1)';
+                    cloudBadge.style.color = '#ef4444';
+                    cloudBadge.innerHTML = `<span style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span> ${errMsg.toUpperCase()}`;
+                }
             }
         }
 

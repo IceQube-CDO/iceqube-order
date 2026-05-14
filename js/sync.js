@@ -100,7 +100,7 @@ window.IceQubeSync = {
                     body: JSON.stringify({
                         order_id: 'CONFIG_PRICING_MATRIX',
                         customer_name: 'SYSTEM_CONFIG',
-                        po_number: 'GLOBAL_CONFIG_V1', // Protected from purge logic
+                        po_number: 'GLOBAL_CONFIG_V2', // Protected from purge logic
                         is_real: true, // Mark as real so it's not purged
                         items: matrix
                     })
@@ -129,16 +129,14 @@ window.IceQubeSync = {
             // 5 second timeout to prevent app hang
             const timeout = setTimeout(() => {
                 console.warn("⚠️ [Sync] Cloud Fetch timed out after 5s");
-                resolve(null);
+                resolve({ _error: 'Timeout' });
             }, 5000);
 
             try {
-                console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V1) from Cloud...");
+                console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V2) from Cloud...");
                 
                 // standard fetch but with strict no-cache headers. 
-                // We remove the id=gt.0 as it fails on UUID columns. 
-                // Instead, we use a different valid filter if needed, but headers should suffice.
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&order=created_at.desc&limit=1&select=items,created_at`, {
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=items,created_at`, {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -155,26 +153,25 @@ window.IceQubeSync = {
                     const data = await response.json();
                     if (data && data.length > 0) {
                         console.log("✅ [Sync] Pricing Matrix retrieved from Cloud:", data[0].items);
-                        // Attach the cloud timestamp for debugging
                         if (data[0].items) {
                             data[0].items._cloudCreatedAt = data[0].created_at;
                             resolve(data[0].items);
                         } else {
-                            resolve(null);
+                            resolve({ _error: 'Empty items in record' });
                         }
                     } else {
-                        console.log("ℹ️ [Sync] No cloud pricing record found.");
-                        resolve(null);
+                        console.log("ℹ️ [Sync] No cloud pricing record found (V2).");
+                        resolve({ _error: 'No Record Found' });
                     }
                 } else {
                     const errorText = await response.text();
                     console.warn("⚠️ [Sync] Cloud Fetch failed with status:", response.status, errorText);
-                    resolve(null);
+                    resolve({ _error: `HTTP ${response.status}: ${errorText.substring(0, 50)}` });
                 }
             } catch (err) {
                 clearTimeout(timeout);
-                console.warn("⚠️ [Sync] Cloud Fetch Network Error:", err);
-                resolve(null);
+                console.error("❌ [Sync] Network Error:", err);
+                resolve({ _error: 'Network Error' });
             }
         });
     },
