@@ -667,21 +667,31 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // CORRECTED ENDPOINT: The function is named messenger-webhook in Supabase
-            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-            const payload = JSON.stringify({
-                recipientId: targetId,
-                message: msg
+            // Reverting to standard fetch with the CORRECTED name
+            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    recipientId: targetId,
+                    message: msg
+                })
             });
 
-            const blob = new Blob([payload], { type: 'text/plain' });
-            navigator.sendBeacon(url, blob);
-
-            console.log('🚀 [Messenger] Bare-bones signal emitted.');
-            updateStatus(`Bridge Sent to ${targetId}`, '#22c55e');
+            if (response.ok) {
+                console.log('✅ [Messenger] Bridge sent signal successfully.');
+                updateStatus(`Sent to ${targetId}`, '#22c55e');
+            } else {
+                updateStatus(`Error: ${response.status}`, '#ef4444');
+            }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
-            updateStatus('Bridge Failed', '#ef4444');
+            updateStatus('Network Error', '#ef4444');
         } finally {
             // Reset to idle after 15 seconds
             setTimeout(() => updateStatus('Idle', '#94a3b8'), 15000);
