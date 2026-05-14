@@ -622,7 +622,20 @@ var admin = {
         
         // Auto-refresh every 10 seconds for "real-time" feel without page reload
         if (this._syncIntervalId) clearInterval(this._syncIntervalId);
-        this._syncIntervalId = setInterval(() => this.fetchRealStats(), 10000);
+        this._syncIntervalId = setInterval(async () => {
+            this.fetchRealStats();
+            
+            // Also poll for pricing updates in the background
+            if (window.IceQubeSync) {
+                const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
+                if (cloudMatrix && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
+                    console.log("☁️ [Admin] Pricing updated from Cloud (Background Sync)");
+                    this.pricingMatrix = cloudMatrix;
+                    localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                    this.updatePricingUI();
+                }
+            }
+        }, 10000);
         
         // Add entrance animation
         this.animateCards();

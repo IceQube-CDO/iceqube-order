@@ -159,6 +159,21 @@ const app = {
                 }
             });
         }
+
+        // --- Periodic Cloud Sync (Polling) ---
+        // Every 60 seconds, check for pricing updates from the cloud
+        if (this._pricingSyncInterval) clearInterval(this._pricingSyncInterval);
+        this._pricingSyncInterval = setInterval(async () => {
+            console.log("☁️ [App] Checking for background pricing updates...");
+            const oldMatrixStr = JSON.stringify(this.pricingMatrix);
+            await this.loadPricingMatrix();
+            const newMatrixStr = JSON.stringify(this.pricingMatrix);
+            
+            if (oldMatrixStr !== newMatrixStr) {
+                console.log("🔄 [App] Detected cloud pricing change, updating UI...");
+                this.updateTotal();
+            }
+        }, 60000);
         
         // --- Profile Management (Must run BEFORE UI rendering) ---
         try {
