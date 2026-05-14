@@ -4818,10 +4818,13 @@ const app = {
     },
 
     async sendConfirmation() {
-        const targetId = MESSENGER_CONFIG.RECIPIENT_ID || this.user.messengerId;
+        // Priority: Technical PSID (from URL) -> Saved Profile ID
+        let targetId = MESSENGER_CONFIG.RECIPIENT_ID || this.user.messengerId;
         
-        if (!targetId) {
-            console.log('No Messenger ID detected (PSID or Profile ID). Skipping external notification.');
+        // Clean targetId and ignore placeholders
+        if (targetId) targetId = targetId.trim();
+        if (targetId === 'YOUR_RECIPIENT_PSID_HERE' || !targetId) {
+            console.log('🚫 [Messenger] No valid Recipient ID found. Skipping notification.');
             return;
         }
 
