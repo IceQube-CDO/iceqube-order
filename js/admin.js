@@ -2917,7 +2917,7 @@ var admin = {
         }
     },
 
-    savePricingMatrix(triggerBtn = null) {
+    async savePricingMatrix(triggerBtn = null) {
         const products = this.pricingMatrix.products.map(p => {
             const std = document.getElementById(`m-${p.id}-std`);
             const bulk = document.getElementById(`m-${p.id}-bulk`);
@@ -2943,7 +2943,7 @@ var admin = {
         localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
 
         if (window.IceQubeSync) {
-            window.IceQubeSync.publishPricingUpdate(this.pricingMatrix);
+            await window.IceQubeSync.publishPricingUpdate(this.pricingMatrix);
         }
 
         if (typeof this.showToast === 'function') {

@@ -84,54 +84,28 @@ window.IceQubeSync = {
         localStorage.setItem('iceqube_global_pricing', JSON.stringify(matrix));
         ordersChannel.postMessage({ type: 'PRICING_UPDATED', payload: matrix });
 
-        // 2. Cloud Sync (Piggybacking on 'orders' table)
+        // 2. Cloud Sync (Append-only strategy for maximum reliability)
         if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             console.log("☁️ [Sync] Syncing Pricing Matrix to Cloud...");
             try {
-                // Step A: Check if the config record already exists
-                const checkRes = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&select=id`, {
+                // We create a NEW record every time. This avoids permission issues with PATCH/UPSERT.
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
+                    method: 'POST',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                    }
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        order_id: 'CONFIG_PRICING_MATRIX',
+                        customer_name: 'SYSTEM_CONFIG',
+                        po_number: 'SYSTEM-GENERATED',
+                        is_real: false,
+                        items: matrix,
+                        created_at: new Date().toISOString()
+                    })
                 });
-                const existing = await checkRes.json();
-                
-                const payload = {
-                    order_id: 'CONFIG_PRICING_MATRIX',
-                    customer_name: 'SYSTEM_CONFIG',
-                    po_number: 'SYSTEM-GENERATED',
-                    is_real: false,
-                    items: matrix,
-                    created_at: new Date().toISOString()
-                };
-
-                let response;
-                if (existing && existing.length > 0) {
-                    // Step B: Update existing record
-                    console.log("☁️ [Sync] Updating existing cloud config...");
-                    response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${existing[0].id}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'apikey': SUPABASE_CONFIG.ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    // Step C: Create new record
-                    console.log("☁️ [Sync] Creating new cloud config...");
-                    response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
-                        method: 'POST',
-                        headers: {
-                            'apikey': SUPABASE_CONFIG.ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                }
                 
                 if (response.ok) {
                     console.log("✅ [Sync] Pricing Matrix Synced to Cloud");
@@ -151,8 +125,9 @@ window.IceQubeSync = {
         }
 
         try {
-            console.log("☁️ [Sync] Fetching Pricing Matrix from Cloud...");
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&select=items`, {
+            console.log("☁️ [Sync] Fetching latest Pricing Matrix from Cloud...");
+            // Get the single NEWEST config record
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&order=created_at.desc&limit=1&select=items`, {
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
@@ -163,13 +138,14 @@ window.IceQubeSync = {
                 const data = await response.json();
                 if (data && data.length > 0) {
                     console.log("✅ [Sync] Pricing Matrix retrieved from Cloud");
-                    return data[0].items; // The matrix is stored in the 'items' column
+                    return data[0].items;
                 }
             }
         } catch (err) {
             console.warn("⚠️ [Sync] Failed to fetch cloud pricing:", err);
         }
         return null;
+    },
     },
 
     publishPurge: function() {
