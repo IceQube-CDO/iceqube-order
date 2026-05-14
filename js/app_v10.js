@@ -183,6 +183,11 @@ const app = {
             this.user.messengerId = psid;
             this.user.messengerEnabled = true; // Auto-enable if coming from Messenger
             localStorage.setItem('ice_messenger_psid', psid);
+            
+            // Sync to UI immediately
+            this.updateMessengerStatusUI();
+            const msgIdHidden = document.getElementById('profile-messenger-id');
+            if (msgIdHidden) msgIdHidden.value = psid;
         } else {
             // Fallback 1: Last known technical PSID
             const storedPsid = localStorage.getItem('ice_messenger_psid');
@@ -202,6 +207,11 @@ const app = {
                 this.user.messengerId = finalPsid;
                 // If we have a stored ID but haven't explicitly disabled it, enable it
                 if (this.user.messengerEnabled === undefined) this.user.messengerEnabled = true;
+                
+                // Sync to UI immediately
+                this.updateMessengerStatusUI();
+                const msgIdHidden = document.getElementById('profile-messenger-id');
+                if (msgIdHidden) msgIdHidden.value = finalPsid;
             }
         }
 
@@ -6417,7 +6427,8 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             establishment: details.establishment || '',
             contactPerson: details.person || '',
             contactNumber: details.contact || '',
-            messengerId: this.user.messengerId || '',
+            messengerId: MESSENGER_CONFIG.RECIPIENT_ID || this.user.messengerId || '',
+            messengerEnabled: true, // Default to true if auto-filling
             address: details.physical_address || details.maps || '',
             lat: details.lat || '',
             lng: details.lng || '',
