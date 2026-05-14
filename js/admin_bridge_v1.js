@@ -667,33 +667,30 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // THE ULTIMATE BYPASS #2: Hidden Form POST
-            // This bypasses CORS entirely by using a standard form submission to a hidden iframe
-            const bridge = document.getElementById('hidden-bridge');
-            if (bridge) {
-                const formId = `msg-form-${Date.now()}`;
-                const frameId = `msg-frame-${Date.now()}`;
-                
-                bridge.innerHTML = `
-                    <iframe name="${frameId}" id="${frameId}"></iframe>
-                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
-                        <input type="hidden" name="recipientId" value="${targetId}">
-                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
-                    </form>
-                `;
-                
-                const form = document.getElementById(formId);
-                if (form) form.submit();
-            }
+            // THE ULTIMATE BYPASS #3: Navigator Beacon
+            // This is the most modern and reliable way to send data without blocks
+            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const payload = JSON.stringify({
+                recipientId: targetId,
+                message: msg
+            });
 
-            console.log('📬 [Messenger] Dispatching via Hidden Bridge POST...');
-            updateStatus('Bridge Sent', '#22c55e');
+            // Use a plain text blob to avoid preflight while keeping JSON structure
+            const blob = new Blob([payload], { type: 'text/plain' });
+            const success = navigator.sendBeacon(url, blob);
+
+            if (success) {
+                console.log('🚀 [Messenger] Beacon signal emitted successfully.');
+                updateStatus(`Bridge Sent to ${targetId}`, '#22c55e');
+            } else {
+                updateStatus('Beacon Refused', '#ef4444');
+            }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
             updateStatus('Bridge Failed', '#ef4444');
         } finally {
-            // Reset to idle after 10 seconds
-            setTimeout(() => updateStatus('Idle', '#94a3b8'), 10000);
+            // Reset to idle after 15 seconds
+            setTimeout(() => updateStatus('Idle', '#94a3b8'), 15000);
         }
     },
 
