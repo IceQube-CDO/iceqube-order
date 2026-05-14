@@ -3146,7 +3146,63 @@
 
     <script src="js/app_header.js?v=2.0.0"></script>
     <script src="js/sync.js?v=2.0.0"></script>
-    <script src="js/admin_final_bridge.js?v=2.0.0&ts=123"></script>
+    
+    <script>
+        // NUCLEAR BRIDGE INTEGRATION: No more caching issues
+        window.admin = {
+            alarmedOrders: new Set(),
+            orderCache: [],
+            
+            updateStatus(text, color) {
+                const status = document.getElementById('messenger-status');
+                const dot = document.getElementById('messenger-dot');
+                if (status) {
+                    status.innerText = `Messenger Bridge: ${text}`;
+                    status.style.color = color;
+                }
+                if (dot) {
+                    dot.style.background = color;
+                    dot.style.boxShadow = `0 0 10px ${color}`;
+                }
+            },
+
+            sendMessengerNotification(order) {
+                const targetId = order.messenger_id || "61557321703652";
+                const msg = `Order #${order.order_id} Received! ❄️\nTotal: ₱${order.item_total}\nThank you!`;
+                
+                try {
+                    const bridge = document.getElementById('hidden-bridge');
+                    if (bridge) {
+                        const formId = `msg-form-${Date.now()}`;
+                        const frameId = `msg-frame-${Date.now()}`;
+                        
+                        bridge.innerHTML = `
+                            <iframe name="${frameId}" id="${frameId}"></iframe>
+                            <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
+                                <input type="hidden" name="recipientId" value="${targetId}">
+                                <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                            </form>
+                        `;
+                        
+                        document.getElementById(formId).submit();
+                        this.updateStatus(`Bridge Sent to ${targetId}`, '#22c55e');
+                    }
+                } catch (e) {
+                    this.updateStatus('Bridge Failed', '#ef4444');
+                }
+                
+                setTimeout(() => this.updateStatus('Idle', '#0ea5e9'), 10000);
+            },
+
+            testMessengerID() {
+                this.sendMessengerNotification({
+                    order_id: "TEST-200",
+                    item_total: "0.00",
+                    messenger_id: "61557321703652"
+                });
+            }
+        };
+    </script>
 
 
     <!-- PWA Install Prompt -->
