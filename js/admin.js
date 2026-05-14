@@ -635,8 +635,8 @@ var admin = {
         this._syncIntervalId = setInterval(async () => {
             this.fetchRealStats();
             
-            // Also poll for pricing updates in the background
-            if (window.IceQubeSync) {
+            // Also poll for pricing updates in the background (SKIP if currently editing to avoid overwriting inputs)
+            if (window.IceQubeSync && !this.isEditingMatrix) {
                 const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
                 if (cloudMatrix && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
                     console.log("☁️ [Admin] Pricing updated from Cloud (Background Sync)");
@@ -2919,12 +2919,14 @@ var admin = {
         
         if (isLocked) {
             // UNLOCK
+            this.isEditingMatrix = true; // PAUSE background sync
             inputs.forEach(input => input.removeAttribute('readonly'));
             deleteBtns.forEach(b => b.style.display = 'block');
             btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L22 2"/></svg> SYNCHRONIZE';
             if (inputs[0]) inputs[0].focus();
         } else {
             // LOCK & SAVE
+            this.isEditingMatrix = false; // RESUME background sync
             this.savePricingMatrix(btn);
             inputs.forEach(input => input.setAttribute('readonly', true));
             deleteBtns.forEach(b => b.style.display = 'none');
