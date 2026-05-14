@@ -565,20 +565,18 @@ var admin = {
             if (!this.buzzerActive) return;
 
             try {
-                // Play the Chime audio element
+                // Play the high-quality MAGIC DING
                 const audioEl = document.getElementById('buzzer-audio-element');
                 if (audioEl) {
                     audioEl.currentTime = 0;
-                    audioEl.play().catch(e => {
-                        this.logDebug("Audio play blocked. Click dashboard!");
-                    });
+                    audioEl.play().catch(e => console.warn("Sound blocked"));
                 }
             } catch (err) {
-                this.logDebug("Buzzer error: " + err.message);
+                console.warn("Buzzer error:", err);
             }
 
             if (this.buzzerActive) {
-                this.buzzerTimeout = setTimeout(playBeep, 2500); // Repeat every 2.5 seconds for a cleaner feel
+                this.buzzerTimeout = setTimeout(playBeep, 2500); 
             }
         };
         
