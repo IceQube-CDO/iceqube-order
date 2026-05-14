@@ -290,13 +290,16 @@ var admin = {
 
         // PROACTIVE AUDIO UNLOCK: Any click on the page resumes the audio system
         document.addEventListener('click', () => {
-            if (!this.audioCtx) {
-                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (this.audioCtx.state === 'suspended') {
-                this.audioCtx.resume().then(() => this.updateBuzzerUI());
-            }
+            this.primeAudioSystem();
         }, { once: false });
+
+        // Show blocker if audio is suspended on load
+        setTimeout(() => {
+            if (!this.audioCtx || this.audioCtx.state === 'suspended') {
+                const overlay = document.getElementById('audio-blocker-overlay');
+                if (overlay) overlay.style.display = 'flex';
+            }
+        }, 1000);
 
         // Restore active tab
         const lastTab = localStorage.getItem('iceqube_admin_tab');
@@ -520,6 +523,41 @@ var admin = {
             el.prepend(div);
         }
         console.log(`[DEBUG] ${msg}`);
+    },
+
+    primeAudioSystem() {
+        this.logDebug("Priming Audio System...");
+        try {
+            if (!this.audioCtx) {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume().then(() => {
+                    this.logDebug("Audio Context ACTIVE");
+                    this.updateBuzzerUI();
+                    
+                    // Hide overlay
+                    const overlay = document.getElementById('audio-blocker-overlay');
+                    if (overlay) overlay.style.display = 'none';
+
+                    // Play a silent "pop" to confirm it works
+                    const osc = this.audioCtx.createOscillator();
+                    const gain = this.audioCtx.createGain();
+                    gain.gain.value = 0.01; // Very quiet
+                    osc.connect(gain);
+                    gain.connect(this.audioCtx.destination);
+                    osc.start();
+                    osc.stop(this.audioCtx.currentTime + 0.1);
+                }).catch(e => {
+                    this.logDebug("Resume failed: " + e.message);
+                });
+            } else {
+                const overlay = document.getElementById('audio-blocker-overlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        } catch (e) {
+            this.logDebug("Prime error: " + e.message);
+        }
     },
 
     startBuzzer() {
