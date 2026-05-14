@@ -684,8 +684,8 @@ var admin = {
             });
 
             if (response.ok) {
-                console.log('✅ [Messenger] Bridge sent signal successfully.');
-                updateStatus(`Sent to ${targetId}`, '#22c55e');
+                console.log('✅ [Messenger] Bridge signal launched successfully.');
+                updateStatus(`🚀 SIGNAL LAUNCHED to ${targetId}`, '#22c55e');
             } else {
                 updateStatus(`Error: ${response.status}`, '#ef4444');
             }
