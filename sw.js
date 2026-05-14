@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-cache-v10.6.1';
+const CACHE_NAME = 'iceqube-cache-v10.7.1';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,10 @@ const ASSETS = [
   './manifest_admin.json',
   './assets/logo-192.png',
   './assets/logo-512.png',
-  './assets/logo2.png'
+  './assets/logo2.png',
+  './js/app_header.js',
+  './js/sync.js',
+  './js/app_v10.js'
 ];
 
 self.addEventListener('install', event => {
@@ -25,13 +28,23 @@ self.addEventListener('activate', event => {
       keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
     ))
   );
+  return self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-  // NETWORK-FIRST strategy for HTML, CSS, and JS to ensure latest updates
+  // STRICT NETWORK-ONLY for these critical files to prevent stale caching
+  if (event.request.url.includes('sync.js') || 
+      event.request.url.includes('app_v10.js') || 
+      event.request.url.includes('app_header.js')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // NETWORK-FIRST for others
   if (event.request.mode === 'navigate' || 
-      event.request.url.includes('.css') || 
-      event.request.url.includes('.js')) {
+      event.request.url.includes('.css')) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
