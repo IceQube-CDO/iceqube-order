@@ -366,7 +366,7 @@ var admin = {
     }
 },
 
-    handleIncomingOrder(order) {
+    handleIncomingOrder(order, skipSync = false) {
         if (!order || !order.order_id) return;
         
         const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
@@ -408,7 +408,7 @@ var admin = {
                 }, 2000);
             }
 
-            this.fetchRealStats();
+            if (!skipSync) this.fetchRealStats();
         } else {
             console.log("⏭️ [Admin] Order already processed for supplies:", order.order_id);
         }
@@ -560,6 +560,11 @@ var admin = {
     },
 
     toggleBuzzerMute() {
+        // Resume audio context on user interaction
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+
         if (this.buzzerActive) {
             this.stopBuzzer();
             return;
@@ -571,6 +576,11 @@ var admin = {
     },
 
     testBuzzer() {
+        // Resume audio context on user interaction
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+
         if (this.buzzerActive) {
             this.stopBuzzer();
         } else {
@@ -678,6 +688,14 @@ var admin = {
         // Persist session
         sessionStorage.setItem('iceqube_admin_unlocked', 'true');
 
+        // Resume Audio Context after user interaction (PIN entry)
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+
         this.startDataSync();
         
         // Close dropdown when clicking outside
@@ -764,6 +782,20 @@ var admin = {
             const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
             const cloudOrders = orders || []; 
             
+            // --- NEW: Detect Background Orders for Alarming ---
+            // If we are already unlocked, check if any cloud order is brand new to us
+            if (sessionStorage.getItem('iceqube_admin_unlocked') === 'true') {
+                cloudOrders.forEach(co => {
+                    const isNew = !localOrders.some(lo => lo.order_id === co.order_id);
+                    if (isNew) {
+                        console.log("🔔 [Admin] New Cloud Order Detected via Polling:", co.order_id);
+                        // Trigger the incoming flow (notification, buzzer, etc.)
+                        // true = skipSync to avoid recursive fetchRealStats calls
+                        this.handleIncomingOrder(co, true);
+                    }
+                });
+            }
+
             let merged = [...cloudOrders];
             localOrders.forEach(lo => {
                 const alreadyInCloud = cloudOrders.some(co => co.order_id === lo.order_id);
