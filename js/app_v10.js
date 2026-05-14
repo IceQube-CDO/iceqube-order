@@ -38,7 +38,15 @@ const app = {
             if (cloudMatrix) {
                 this.pricingMatrix = cloudMatrix;
                 localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
-                console.log("☁️ Pricing Matrix updated from Cloud");
+                this._lastSyncTime = new Date().toLocaleTimeString();
+                console.log("✅ [App] Pricing matrix updated from Cloud at", this._lastSyncTime);
+                
+                const syncText = document.getElementById('cloud-sync-status-text');
+                if (syncText) syncText.innerText = `☁️ Updated: ${this._lastSyncTime}`;
+            } else {
+                console.log("ℹ️ [App] Using Local Pricing (Cloud unavailable or no record found)");
+                const syncText = document.getElementById('cloud-sync-status-text');
+                if (syncText) syncText.innerText = `☁️ Using Local Cache`;
             }
         }
 
@@ -3543,8 +3551,9 @@ const app = {
 
         // Rate Card logic based on Distance
         const calculateMaximFee = (distanceInKm) => {
-            const baseFare = this.pricingMatrix.delivery.baseFare;
-            const perKmRate = this.pricingMatrix.delivery.perKmRate;
+            const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmRate: 10, freeThreshold: 0 };
+            const baseFare = delivery.baseFare || 30;
+            const perKmRate = delivery.perKmRate || 10;
             if (distanceInKm <= 1) return baseFare;
             return baseFare + (Math.ceil(distanceInKm - 1) * perKmRate);
         };
@@ -3557,7 +3566,8 @@ const app = {
             zone = `${distanceKm} km`;
             
             // Apply Free Delivery Threshold if met
-            const threshold = parseFloat(this.pricingMatrix.delivery.freeThreshold) || 0;
+            const delivery = this.pricingMatrix.delivery || { freeThreshold: 0 };
+            const threshold = parseFloat(delivery.freeThreshold) || 0;
             const currentSubtotal = this.orderData.subtotal || 0;
             
             if (threshold > 0 && currentSubtotal >= threshold) {
@@ -3679,6 +3689,30 @@ const app = {
         const summaryList = document.getElementById('payment-items-list');
         if (summaryList) {
             let html = '';
+            
+            // --- Summary Section ---
+            const summary = document.createElement('div');
+            summary.className = 'order-details-summary';
+            summary.style.marginTop = '2rem';
+            
+            let subtotal = this.orderData.total || 0;
+            let deliveryFee = this.orderData.deliveryFee || 0;
+            let total = subtotal + deliveryFee;
+
+            summary.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #64748b;">
+                    <span>Subtotal:</span>
+                    <strong style="color: #0f172a;">₱${subtotal.toLocaleString()}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #64748b;">
+                    <span>Delivery Fee (${this.orderData.distance ? this.orderData.distance.toFixed(1) : 0} km):</span>
+                    <strong style="color: #0f172a;">₱${deliveryFee.toLocaleString()}</strong>
+                </div>
+                <div id="sync-status-indicator" style="font-size: 0.6rem; color: #94a3b8; text-align: right; margin-bottom: 12px; font-style: italic;">
+                    ${this._lastSyncTime ? `☁️ Last Sync: ${this._lastSyncTime}` : '☁️ Fetching Cloud Pricing...'}
+                </div>
+            `;
+
             this.pricingMatrix.products.forEach(p => {
                 const qtyFull = this.orderData.qty.fullDice[p.id] || 0;
                 const qtyHalf = this.orderData.qty.halfDice[p.id] || 0;

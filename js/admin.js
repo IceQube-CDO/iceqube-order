@@ -206,6 +206,11 @@ var admin = {
                 if (cloudMatrix) {
                     this.pricingMatrix = cloudMatrix;
                     localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                    const syncText = document.getElementById('cloud-sync-status-text');
+                    if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
+                } else {
+                    const syncText = document.getElementById('cloud-sync-status-text');
+                    if (syncText) syncText.innerText = `☁️ Using Local Cache`;
                 }
             }
         
@@ -633,6 +638,8 @@ var admin = {
                     this.pricingMatrix = cloudMatrix;
                     localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
                     this.updatePricingUI();
+                    const syncText = document.getElementById('cloud-sync-status-text');
+                    if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
                 }
             }
         }, 10000);

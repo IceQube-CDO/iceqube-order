@@ -100,21 +100,23 @@ window.IceQubeSync = {
                     body: JSON.stringify({
                         order_id: 'CONFIG_PRICING_MATRIX',
                         customer_name: 'SYSTEM_CONFIG',
-                        po_number: 'SYSTEM-GENERATED',
-                        is_real: false,
+                        po_number: 'GLOBAL_CONFIG_V1', // Protected from purge logic
+                        is_real: true, // Mark as real so it's not purged
                         items: matrix,
                         created_at: new Date().toISOString()
                     })
                 });
                 
                 if (response.ok) {
-                    console.log("✅ [Sync] Pricing Matrix Synced to Cloud");
+                    console.log("✅ [Sync] Pricing Matrix Synced to Cloud Successfully");
                 } else {
                     const err = await response.json().catch(() => ({}));
-                    console.warn("⚠️ [Sync] Cloud Sync failed:", response.status, err);
+                    console.error("❌ [Sync] Cloud Sync failed with status:", response.status, err);
+                    alert("Cloud Sync Failed: " + (err.message || response.statusText || "Unknown error"));
                 }
             } catch (err) {
-                console.error("❌ [Sync] Cloud Sync Error:", err);
+                console.error("❌ [Sync] Cloud Sync Network Error:", err);
+                alert("Cloud Sync Network Error: " + err.message);
             }
         }
     },
@@ -124,28 +126,43 @@ window.IceQubeSync = {
             return null;
         }
 
-        try {
-            console.log("☁️ [Sync] Fetching latest Pricing Matrix from Cloud...");
-            // Get the single NEWEST config record
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&order=created_at.desc&limit=1&select=items`, {
-                headers: {
-                    'apikey': SUPABASE_CONFIG.ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                }
-            });
+        return new Promise(async (resolve) => {
+            // 5 second timeout to prevent app hang
+            const timeout = setTimeout(() => {
+                console.warn("⚠️ [Sync] Cloud Fetch timed out after 5s");
+                resolve(null);
+            }, 5000);
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    console.log("✅ [Sync] Pricing Matrix retrieved from Cloud");
-                    return data[0].items;
+            try {
+                console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V1) from Cloud...");
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&order=created_at.desc&limit=1&select=items`, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+
+                clearTimeout(timeout);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        console.log("✅ [Sync] Pricing Matrix retrieved from Cloud:", data[0].items);
+                        resolve(data[0].items);
+                    } else {
+                        console.log("ℹ️ [Sync] No cloud pricing record found.");
+                        resolve(null);
+                    }
+                } else {
+                    console.warn("⚠️ [Sync] Cloud Fetch failed with status:", response.status);
+                    resolve(null);
                 }
+            } catch (err) {
+                clearTimeout(timeout);
+                console.warn("⚠️ [Sync] Cloud Fetch Network Error:", err);
+                resolve(null);
             }
-        } catch (err) {
-            console.warn("⚠️ [Sync] Failed to fetch cloud pricing:", err);
-        }
-        return null;
-    },
+        });
     },
 
     publishPurge: function() {
