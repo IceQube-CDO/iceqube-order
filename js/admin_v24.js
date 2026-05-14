@@ -690,17 +690,31 @@ var admin = {
             itemsText = order.items_summary || 'Ice Products';
         }
         
-        const itemTotal = Number(order.item_total || order.items_total || 0);
+        // --- MATH RECONCILIATION (REFINED) ---
+        const totalGross = Number(order.total_price || order.total || 0);
         const deliveryFee = Number(order.delivery_fee || 0);
-        const customerTotal = itemTotal + deliveryFee;
+        const heavyLoad = Number(order.heavy_load_fee || 0);
+        const discount = Number(order.discount || 0);
         
-        const msg = `❄️ ICEQUBE RECEIVED & CONFIRMED!\n\n` +
-                    `Establishment: ${order.customer_name}\n` +
-                    `Items: ${itemsText}\n` +
-                    `Delivery: ₱${deliveryFee}\n` +
-                    `Total: ₱${customerTotal}\n` +
-                    `Payment: ${order.payment_method || 'Cash'}\n\n` +
-                    `Thank you!`;
+        // Calculate Subtotal (Items only)
+        const subtotal = totalGross - deliveryFee - heavyLoad;
+        // Customer Total (Items + Delivery - Discount)
+        const customerTotal = subtotal + deliveryFee - discount;
+        
+        let msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
+                    `Deliver to: ${order.customer_name}\n` +
+                    `Item: ${itemsText}\n` +
+                    `Subtotal: ₱${subtotal.toLocaleString()}\n`;
+        
+        // Only show discount if it exists
+        if (discount > 0) {
+            msg += `Discount: ₱${discount.toLocaleString()}\n`;
+        }
+
+        msg += `Delivery fee: ₱${deliveryFee.toLocaleString()}\n` +
+               `Total: ₱${customerTotal.toLocaleString()}\n` +
+               `Payment: ${order.payment_method || 'Cash'}\n\n` +
+               `Thank you for your order!`;
 
         try {
             // THE DEFINITIVE BYPASS: Hidden Form with Correct Endpoint
@@ -720,15 +734,16 @@ var admin = {
                 `;
                 bridgeContainer.appendChild(custDiv);
                 document.getElementById(custFormId).submit();
-                console.log('📡 [Messenger] Customer Receipt Sent.');
+                console.log('📡 [Messenger] Refined Receipt Sent.');
 
-                // --- 2. DISPATCH TO ADMIN (BUZZER ALERT) ---
+                // --- 2. DISPATCH TO ADMIN (REFINED ALERT) ---
                 const ADMIN_PSID = "26521276764196410";
-                if (targetId !== ADMIN_PSID) { // Don't double-send if Admin is the customer
+                if (targetId !== ADMIN_PSID) {
                     const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
-                                     `Customer: ${order.customer_name}\n` +
-                                     `Items: ${itemsText}\n` +
-                                     `Total: ₱${customerTotal}\n` +
+                                     `Deliver to: ${order.customer_name}\n` +
+                                     `Item: ${itemsText}\n` +
+                                     `Total: ₱${customerTotal.toLocaleString()}\n` +
+                                     `Payment: ${order.payment_method || 'Cash'}\n\n` +
                                      `Check the Control Room!`;
                     
                     const adminFormId = `msg-form-admin-${Date.now()}`;
@@ -744,10 +759,8 @@ var admin = {
                     `;
                     
                     bridgeContainer.appendChild(adminDiv);
-                    // Slight delay to avoid browser blocking multiple rapid submissions
                     setTimeout(() => {
                         document.getElementById(adminFormId).submit();
-                        console.log('📡 [Messenger] Admin Buzzer Sent.');
                     }, 500);
                 }
 
