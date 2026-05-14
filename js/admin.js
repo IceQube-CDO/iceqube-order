@@ -516,12 +516,6 @@ var admin = {
     },
 
     logDebug(msg) {
-        const el = document.getElementById('debug-log');
-        if (el) {
-            const div = document.createElement('div');
-            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            el.prepend(div);
-        }
         console.log(`[DEBUG] ${msg}`);
     },
 
@@ -562,60 +556,29 @@ var admin = {
 
     startBuzzer() {
         if (this.buzzerActive) return;
-        if (this.buzzerMuted) {
-            this.logDebug("Buzzer muted, skipping sound.");
-            return;
-        }
+        if (this.buzzerMuted) return;
         
-        this.logDebug("!!! STARTING BUZZER !!!");
         this.buzzerActive = true;
         this.updateBuzzerUI();
         
-        // Use a recursive timeout for better timing control and reliability
         const playBeep = () => {
             if (!this.buzzerActive) return;
 
             try {
-                if (!this.audioCtx) {
-                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-
-                if (this.audioCtx.state === 'suspended') {
-                    this.logDebug("Audio suspended. Resuming...");
-                    this.audioCtx.resume();
-                }
-
-                // Fallback: Also try the audio element
+                // Play the Chime audio element
                 const audioEl = document.getElementById('buzzer-audio-element');
                 if (audioEl) {
                     audioEl.currentTime = 0;
-                    audioEl.play().catch(e => this.logDebug("AudioEl play blocked"));
-                }
-
-                if (this.audioCtx.state === 'running') {
-                    const osc = this.audioCtx.createOscillator();
-                    const gain = this.audioCtx.createGain();
-                    osc.type = 'sine';
-                    const now = this.audioCtx.currentTime;
-                    osc.frequency.setValueAtTime(880, now);
-                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
-                    gain.gain.setValueAtTime(0, now);
-                    gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
-                    gain.gain.linearRampToValueAtTime(0, now + 0.4);
-                    osc.connect(gain);
-                    gain.connect(this.audioCtx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.4);
-                } else {
-                    this.logDebug("Audio still suspended. CLICK DASHBOARD!");
-                    this.updateBuzzerUI();
+                    audioEl.play().catch(e => {
+                        this.logDebug("Audio play blocked. Click dashboard!");
+                    });
                 }
             } catch (err) {
                 this.logDebug("Buzzer error: " + err.message);
             }
 
             if (this.buzzerActive) {
-                this.buzzerTimeout = setTimeout(playBeep, 800);
+                this.buzzerTimeout = setTimeout(playBeep, 2500); // Repeat every 2.5 seconds for a cleaner feel
             }
         };
         
