@@ -293,14 +293,6 @@ var admin = {
             this.primeAudioSystem();
         }, { once: false });
 
-        // Show blocker if audio is suspended on load
-        setTimeout(() => {
-            if (!this.audioCtx || this.audioCtx.state === 'suspended') {
-                const overlay = document.getElementById('audio-blocker-overlay');
-                if (overlay) overlay.style.display = 'flex';
-            }
-        }, 1000);
-
         // Restore active tab
         const lastTab = localStorage.getItem('iceqube_admin_tab');
         if (lastTab) {
@@ -530,27 +522,20 @@ var admin = {
                     this.logDebug("Audio Context ACTIVE");
                     this.updateBuzzerUI();
                     
-                    // Hide overlay
-                    const overlay = document.getElementById('audio-blocker-overlay');
-                    if (overlay) overlay.style.display = 'none';
-
                     // Play a silent "pop" to confirm it works
                     const osc = this.audioCtx.createOscillator();
                     const gain = this.audioCtx.createGain();
-                    gain.gain.value = 0.01; // Very quiet
+                    gain.gain.value = 0.001; 
                     osc.connect(gain);
                     gain.connect(this.audioCtx.destination);
                     osc.start();
                     osc.stop(this.audioCtx.currentTime + 0.1);
                 }).catch(e => {
-                    this.logDebug("Resume failed: " + e.message);
+                    console.warn("Audio resume failed");
                 });
-            } else {
-                const overlay = document.getElementById('audio-blocker-overlay');
-                if (overlay) overlay.style.display = 'none';
             }
         } catch (e) {
-            this.logDebug("Prime error: " + e.message);
+            console.warn("Prime error", e);
         }
     },
 
