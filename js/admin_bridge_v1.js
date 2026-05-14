@@ -694,6 +694,15 @@ var admin = {
         }
     },
 
+    testMessengerID() {
+        console.log("🧪 Running Bridge Diagnostic Test for ID: 8638787019574169");
+        this.sendMessengerNotification({
+            customer_name: "ADMIN TEST",
+            messenger_id: "8638787019574169",
+            order_id: "DIAGNOSTIC-TEST"
+        });
+    },
+
     toggleBuzzerMute() {
         // Resume audio context on user interaction
         if (this.audioCtx && this.audioCtx.state === 'suspended') {
