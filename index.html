@@ -2194,9 +2194,17 @@
                         <div style="width: 40px; height: 40px; border-radius: 12px; background: #0084ff; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3); flex-shrink: 0;">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.914 1.455 5.518 3.733 7.234V22l3.355-1.84a10.27 10.27 0 0 0 2.912.418c5.523 0 10-4.145 10-9.258C22 6.145 17.523 2 12 2zm1.255 12.35l-2.503-2.674-4.887 2.674 5.375-5.71 2.503 2.674 4.887-2.674-5.375 5.71z"/></svg>
                         </div>
-                        <div style="flex: 1;">
-                            <p style="font-size: 0.95rem; font-weight: 800; margin: 0; color: var(--text-primary);">Messenger Updates</p>
-                            <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="input-group">
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Messenger ID (for Receipts)</span>
+                                <button type="button" onclick="app.connectMessenger()" style="background: #0ea5e9; color: white; border: none; padding: 4px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.145 2 11.257c0 2.913 1.455 5.513 3.734 7.279.196.153.31.385.31.632l-.004 1.832c-.004.426.446.716.83.53l2.039-.988c.185-.09.398-.11.597-.058 1.15.302 2.366.467 3.626.467 5.523 0 10-4.145 10-9.257S17.523 2 12 2zm.77 12.306l-2.485-2.652-4.846 2.652 5.33-5.658 2.553 2.652 4.778-2.652-5.33 5.658z"/></svg>
+                                    LINK MESSENGER
+                                </button>
+                            </label>
+                            <input type="text" id="profile-messenger-id" placeholder="Paste your PSID here...">
+                            <p style="font-size: 0.65rem; color: #64748b; margin-top: 6px; line-height: 1.4;">Click <strong>LINK</strong> to get your ID from our page, then paste it here for automated receipts.</p>
+                        </div>       <div style="display: flex; align-items: center; gap: 8px;">
                                 <input type="text" id="profile-messenger-input" placeholder="Enter Messenger ID / Link" style="font-size: 0.75rem; color: var(--text-secondary); background: transparent; border: none; outline: none; width: 100%; margin: 2px 0 0; padding: 0;" oninput="app.handleMessengerInput(this.value)">
                                 <button onclick="app.testMessengerNotification()" style="font-size: 0.65rem; background: var(--bg-primary); color: var(--accent); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-weight: 700; cursor: pointer;">Test</button>
                             </div>

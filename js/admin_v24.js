@@ -690,11 +690,15 @@ var admin = {
             itemsText = order.items_summary || 'Ice Products';
         }
         
+        const itemTotal = Number(order.item_total || order.items_total || 0);
+        const deliveryFee = Number(order.delivery_fee || 0);
+        const customerTotal = itemTotal + deliveryFee;
+        
         const msg = `❄️ ICEQUBE RECEIVED & CONFIRMED!\n\n` +
                     `Establishment: ${order.customer_name}\n` +
                     `Items: ${itemsText}\n` +
-                    `Delivery Fee: ₱${order.delivery_fee || '0.00'}\n` +
-                    `Total: ₱${order.total_amount || order.total || order.total_price || '0.00'}\n` +
+                    `Delivery: ₱${deliveryFee}\n` +
+                    `Total: ₱${customerTotal}\n` +
                     `Payment: ${order.payment_method || 'Cash'}\n\n` +
                     `Thank you!`;
 

@@ -591,6 +591,18 @@ const app = {
         logo.addEventListener('mouseleave', endPress);
         logo.addEventListener('touchend', endPress);
     },
+    connectMessenger() {
+        // Link to the Facebook Page Messenger with a ref for easy discovery
+        const pageId = "IceQubeCDO"; // Your Page Username or ID
+        const url = `https://m.me/${pageId}`;
+        
+        this.showToast('Opening Messenger...', 'info');
+        
+        // Brief delay for the toast
+        setTimeout(() => {
+            window.open(url, '_blank');
+        }, 800);
+    },
     steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
     autoData: {
