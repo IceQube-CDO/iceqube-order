@@ -6552,11 +6552,14 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             if (response.ok) {
                 this.showToast("Test Sent! Check your Messenger.", "success");
             } else {
-                throw new Error("Proxy returned error");
+                const errorText = await response.text();
+                const status = response.status;
+                console.error(`Proxy error (${status}):`, errorText);
+                this.showToast(`Failed: ${status} - ${errorText.substring(0, 30)}...`, "error");
             }
         } catch (error) {
             console.error('Test failed:', error);
-            this.showToast("Test Failed. Check ID or connection.", "error");
+            this.showToast(`System Error: ${error.message}`, "error");
         }
     },
 
