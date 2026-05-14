@@ -667,12 +667,13 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
+            // Move apikey to query param to avoid CORS preflight issues
+            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'apikey': SUPABASE_CONFIG.ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    'Content-Type': 'text/plain' // Use text/plain to further avoid CORS preflight
                 },
                 body: JSON.stringify({
                     recipientId: targetId,
