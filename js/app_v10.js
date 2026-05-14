@@ -6739,7 +6739,7 @@ function processOrder(reorderPayload) {
     app.processOrder(reorderPayload);
     const defaultThreshold = (app && app.pricingMatrix && app.pricingMatrix.products[0]?.threshold) || 14;
     const qtyToDisplay = app._lastReorderQty || (typeof reorderPayload === 'number' ? reorderPayload : defaultThreshold);
-    app.showToast(`Order Confirmed! ${qtyToDisplay} bags are scheduled.`, 'success');
+    app.showToast(`Items Selected: ${qtyToDisplay} bags. Choose a delivery time.`, 'success');
     closeReorderModal();
 }
 
