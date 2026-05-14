@@ -2907,8 +2907,8 @@ var admin = {
         const delBase = document.getElementById('m-del-base');
         const delKm = document.getElementById('m-del-km');
         const delFree = document.getElementById('m-del-free');
-        if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare;
-        if (delKm) delKm.value = this.pricingMatrix.delivery.perKmRate;
+        if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare || 30;
+        if (delKm) delKm.value = this.pricingMatrix.delivery.perKmRate || 15;
         if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold || 0;
     },
 

@@ -47,7 +47,7 @@ const app = {
                             { id: 'bag3kg', name: '3kg Ice Cube (Full/Half)', standard: oldProducts.bag3kg?.standard || 40, bulk: oldProducts.bag3kg?.bulk || 35, threshold: oldProducts.bag3kg?.threshold || 14 },
                             { id: 'bag1kg', name: '1kg Ice Cube (Full/Half)', standard: oldProducts.bag1kg?.standard || 15, bulk: oldProducts.bag1kg?.bulk || 14, threshold: oldProducts.bag1kg?.threshold || 40 }
                         ],
-                        delivery: matrix.delivery || { baseFare: 30, perKmRate: 10, freeThreshold: 0 }
+                        delivery: matrix.delivery || { baseFare: 30, perKmRate: 15, freeThreshold: 0 }
                     };
                 }
             } catch (e) {
@@ -3582,9 +3582,9 @@ const app = {
 
         // Rate Card logic based on Distance
         const calculateMaximFee = (distanceInKm) => {
-            const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmRate: 10, freeThreshold: 0 };
+            const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmRate: 15, freeThreshold: 0 };
             const baseFare = delivery.baseFare || 30;
-            const perKmRate = delivery.perKmRate || 10;
+            const perKmRate = delivery.perKmRate || 15;
             if (distanceInKm <= 1) return baseFare;
             return baseFare + (Math.ceil(distanceInKm - 1) * perKmRate);
         };
