@@ -4828,65 +4828,10 @@ const app = {
     },
 
     async sendConfirmation() {
-        // Priority: Technical PSID (from URL) -> Saved Profile ID
-        let targetId = MESSENGER_CONFIG.RECIPIENT_ID || this.user.messengerId;
-        
-        // Clean targetId and ignore placeholders
-        if (targetId) targetId = targetId.trim();
-        if (targetId === 'YOUR_RECIPIENT_PSID_HERE' || !targetId) {
-            console.log('🚫 [Messenger] No valid Recipient ID found. Skipping notification.');
-            return;
-        }
-
-        if (this.user.messengerEnabled === false) {
-            console.log('Messenger notifications are disabled by user preference. Skipping.');
-            return;
-        }
-
-        const orderId = document.getElementById('finish-id-new').innerText.replace('Order ', '');
-        const timing = document.getElementById('finish-timing-new').innerText;
-        const qtyText = document.getElementById('finish-qty-new').innerText;
-        const total = this.orderData.total + (this.orderData.deliveryFee || 0);
-
-        let summaryText = `🛒 IceQube CDO Order Confirmed!\n\n`;
-        summaryText += `Order ID: ${orderId}\n`;
-        summaryText += `Items: ${qtyText}\n`;
-        summaryText += `Timing: ${timing}\n`;
-        summaryText += `Total: ₱${total}\n`;
-        summaryText += `Payment: ${this.orderData.payment}\n`;
-        summaryText += `Status: ${this.orderData.payment === 'Cash on Delivery' ? 'Processing (COD)' : 'Paid & Processing'}\n`;
-        
-        if (this.orderData.logistics === 'Self-Pickup') {
-            summaryText += `\n📍 Macabalan Hub Pickup Info:\n`;
-            summaryText += `Address: Near Piaping Itum Chapel, Macabalan\n`;
-            summaryText += `Maps: https://www.google.com/maps/place/IceQube/@8.5020476,124.660855,17z\n`;
-        } else {
-            summaryText += `\n🚚 Doorstep Delivery:\n`;
-            summaryText += `Rider is being assigned. Please keep your phone reachable.\n`;
-        }
-
-        summaryText += `\nThank you for choosing IceQube! Stay cool! 🧊`;
-
-        console.log('Dispatching Messenger notification via Supabase Proxy...');
-
-        try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'text/plain',
-                    'apikey': SUPABASE_CONFIG.ANON_KEY
-                },
-                body: JSON.stringify({
-                    recipientId: targetId,
-                    message: summaryText
-                })
-            });
-
-            const data = await response.json();
-            console.log('Messenger API Response:', data);
-        } catch (error) {
-            console.error('Failed to send Messenger notification:', error);
-        }
+        // HAND-OFF: Direct mobile dispatch disabled due to CORS/Webview blocks.
+        // The Admin Command Center now detects the order via Sync and sends the notification.
+        console.log('📡 [Messenger] Order confirmation handed off to Admin Sync.');
+        return true;
     },
 
     addToCalendar() {
@@ -6529,35 +6474,15 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             return;
         }
 
-        this.showToast("Sending test notification...", "info");
+        this.showToast("Requesting test via Admin Bridge...", "info");
         
-        const targetId = this.user.messengerId;
-        const testMsg = `🔔 IceQube CDO: This is a test notification for your account. If you received this, your Messenger ID is correctly configured! 🧊`;
-
-        try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'text/plain',
-                    'apikey': SUPABASE_CONFIG.ANON_KEY
-                },
-                body: JSON.stringify({
-                    recipientId: targetId,
-                    message: testMsg
-                })
+        if (window.IceQubeSync) {
+            window.IceQubeSync.publishMessengerTest({
+                recipientId: this.user.messengerId
             });
-
-            if (response.ok) {
-                this.showToast("Test Sent! Check your Messenger.", "success");
-            } else {
-                const errorText = await response.text();
-                const status = response.status;
-                console.error(`Proxy error (${status}):`, errorText);
-                this.showToast(`Failed: ${status} - ${errorText.substring(0, 30)}...`, "error");
-            }
-        } catch (error) {
-            console.error('Test failed:', error);
-            this.showToast(`System Error: ${error.message}`, "error");
+            this.showToast("Request Sent! Ensure Admin Panel is open.", "success");
+        } else {
+            this.showToast("Sync Bridge not available.", "error");
         }
     },
 

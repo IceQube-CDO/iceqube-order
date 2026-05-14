@@ -2415,9 +2415,9 @@
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC6JwFLApTP1XlzZVn_E7SAl2ezmrm2_zg&libraries=places"></script>
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
-    <script src="js/app_header.js?v=10.7.6"></script>
-    <script src="js/sync.js?v=1.1.26"></script>
-    <script src="js/app_v10.js?v=10.7.6"></script>
+    <script src="js/app_header.js?v=10.7.7"></script>
+    <script src="js/sync.js?v=1.1.27"></script>
+    <script src="js/app_v10.js?v=10.7.7"></script>
     <script>
         // Local Sync Status Update
         window.addEventListener('load', () => {
@@ -2803,8 +2803,8 @@
                         registration.unregister();
                     }
                     // Register the new worker with a cache-busting version parameter
-                    navigator.serviceWorker.register('./sw.js?v=10.7.2').then(reg => {
-                        console.log('Service Worker v10.7.2 registered successfully:', reg);
+                    navigator.serviceWorker.register('./sw.js?v=10.7.7').then(reg => {
+                        console.log('Service Worker v10.7.7 registered successfully:', reg);
                     }).catch(err => {
                         console.log('Service Worker registration failed:', err);
                     });

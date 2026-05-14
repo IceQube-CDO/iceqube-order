@@ -359,6 +359,20 @@ var admin = {
                     this.fetchRealStats(); // Refresh everything
                 }
             });
+
+            window.IceQubeSync.onMessengerEvent((event) => {
+                if (event.type === 'MESSENGER_TEST') {
+                    console.log("🔔 [Admin] Received Messenger Test request for:", event.payload.recipientId);
+                    this.sendMessengerNotification({
+                        customer_name: 'TEST USER',
+                        messengerId: event.payload.recipientId,
+                        order_id: 'TEST-123',
+                        total_bags: '1',
+                        total: '0.00',
+                        address: 'Admin Bridge Test'
+                    });
+                }
+            });
         }
 
         // Apply visual state if vacation mode is on
@@ -414,6 +428,9 @@ var admin = {
                     this.autoDispatch(order);
                 }, 2000);
             }
+
+            // --- NEW: AUTOMATIC MESSENGER NOTIFICATION ---
+            this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
@@ -606,6 +623,47 @@ var admin = {
             this.buzzerTimeout = null;
         }
         this.updateBuzzerUI();
+    },
+
+    async sendMessengerNotification(order) {
+        if (!order || !order.customer_name) return;
+        
+        // Get customer profile to find their Messenger ID
+        const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+        const profile = directory[order.customer_name];
+        
+        const targetId = (profile && profile.messengerId) || (order.messengerId);
+        
+        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') {
+            console.log('ℹ️ [Messenger] No ID found for this customer. Skipping notification.');
+            return;
+        }
+
+        console.log('🔔 [Messenger] Admin triggering notification for:', targetId);
+        
+        const msg = `🧊 *IceQube CDO: Order Confirmed!* \n\n` +
+                    `Hello ${order.customer_name}, your order #${order.order_id} for ${order.total_bags || 'items'} is being processed. \n\n` +
+                    `📍 Delivery to: ${order.address} \n` +
+                    `💰 Total: ₱${order.total_amount || order.total} \n\n` +
+                    `Thank you for choosing IceQube! ❄️`;
+
+        try {
+            await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    recipientId: targetId,
+                    message: msg
+                })
+            });
+            console.log('✅ [Messenger] Notification dispatched successfully from Admin.');
+        } catch (error) {
+            console.error('❌ [Messenger] Admin dispatch failed:', error);
+        }
     },
 
     toggleBuzzerMute() {

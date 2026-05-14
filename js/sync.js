@@ -213,6 +213,19 @@ window.IceQubeSync = {
         };
     },
 
+    publishMessengerTest: function(data) {
+        console.log("📡 [Sync] Requesting Messenger Test via Bridge:", data.recipientId);
+        ordersChannel.postMessage({ type: 'MESSENGER_TEST', payload: data });
+    },
+
+    onMessengerEvent: function(callback) {
+        ordersChannel.addEventListener('message', (event) => {
+            if (event.data.type === 'MESSENGER_TEST') {
+                callback(event.data);
+            }
+        });
+    },
+
     onDeliveryEvent: function(callback) {
         deliveriesChannel.onmessage = (event) => {
             console.log("📥 [Sync] Received Delivery Event:", event.data.type);
