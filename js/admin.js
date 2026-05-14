@@ -944,7 +944,17 @@ var admin = {
                 if (!alreadyAlarmed) {
                     this.alarmedOrders.add(orderId);
                     
-                    // Only alarm if this isn't the very first time we're loading the dashboard
+                    const orderDate = new Date(co.created_at || 0);
+                    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                    const isVeryRecent = orderDate > fiveMinutesAgo;
+
+                    // 1. Always trigger notification for very recent orders (even on initial load)
+                    if (isVeryRecent) {
+                        console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
+                        this.sendMessengerNotification(co);
+                    }
+
+                    // 2. Only alarm (buzzer) if this isn't the very first time we're loading the dashboard
                     if (this.isInitialLoadComplete) {
                         console.log("🚀 [Buzzer] Alarm Triggered for New Order:", orderId);
                         this.startBuzzer();
