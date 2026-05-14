@@ -667,26 +667,24 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // Use 'no-cors' to force the request through browser blocks
-            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-            
-            await fetch(url, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 
-                    'Content-Type': 'text/plain'
-                },
-                body: JSON.stringify({
-                    recipientId: targetId,
-                    message: msg
-                })
+            // THE ULTIMATE BYPASS: Disguise the message as an image request (GET)
+            // This bypasses CORS and standard network blocks entirely
+            const params = new URLSearchParams({
+                apikey: SUPABASE_CONFIG.ANON_KEY,
+                recipientId: targetId,
+                message: msg
             });
+            
+            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?${params.toString()}`;
+            
+            const ping = new Image();
+            ping.src = url;
 
-            console.log('📤 [Messenger] Blind dispatch sent from Admin.');
-            updateStatus('Dispatched', '#22c55e');
+            console.log('📡 [Messenger] Signal sent via Image-Ping Bypass.');
+            updateStatus('Signal Sent', '#22c55e');
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
-            updateStatus('Network Error', '#ef4444');
+            updateStatus('Bypass Failed', '#ef4444');
         } finally {
             // Reset to idle after 10 seconds
             setTimeout(() => updateStatus('Idle', '#94a3b8'), 10000);
