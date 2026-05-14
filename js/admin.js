@@ -628,6 +628,16 @@ var admin = {
     async sendMessengerNotification(order) {
         if (!order || !order.customer_name) return;
         
+        const statusText = document.getElementById('messenger-status');
+        const statusDot = document.getElementById('messenger-dot');
+        const updateStatus = (text, color, pulse = false) => {
+            if (statusText) statusText.innerText = `Messenger Bridge: ${text}`;
+            if (statusDot) {
+                statusDot.style.background = color;
+                statusDot.style.animation = pulse ? 'pulse 1s infinite' : 'none';
+            }
+        };
+
         // Get customer profile to find their Messenger ID
         const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const profile = directory[order.customer_name];
@@ -636,19 +646,21 @@ var admin = {
         
         if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') {
             console.log('ℹ️ [Messenger] No ID found for this customer. Skipping notification.');
+            updateStatus('Missing ID', '#f59e0b');
             return;
         }
 
         console.log('🔔 [Messenger] Admin triggering notification for:', targetId);
+        updateStatus('Sending...', '#0ea5e9', true);
         
         const msg = `🧊 *IceQube CDO: Order Confirmed!* \n\n` +
                     `Hello ${order.customer_name}, your order #${order.order_id} for ${order.total_bags || 'items'} is being processed. \n\n` +
-                    `📍 Delivery to: ${order.address} \n` +
-                    `💰 Total: ₱${order.total_amount || order.total} \n\n` +
+                    `📍 Delivery to: ${order.address || order.delivery_address} \n` +
+                    `💰 Total: ₱${order.total_amount || order.total || order.total_price} \n\n` +
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -660,9 +672,21 @@ var admin = {
                     message: msg
                 })
             });
-            console.log('✅ [Messenger] Notification dispatched successfully from Admin.');
+
+            if (response.ok) {
+                console.log('✅ [Messenger] Notification dispatched successfully from Admin.');
+                updateStatus('Sent!', '#22c55e');
+            } else {
+                const errText = await response.text();
+                console.error('🚫 [Messenger] Proxy returned error:', errText);
+                updateStatus(`Error: ${response.status}`, '#ef4444');
+            }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
+            updateStatus('Network Error', '#ef4444');
+        } finally {
+            // Reset to idle after 10 seconds
+            setTimeout(() => updateStatus('Idle', '#94a3b8'), 10000);
         }
     },
 
