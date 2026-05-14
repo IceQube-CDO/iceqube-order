@@ -662,7 +662,26 @@ var admin = {
         updateStatus('Sending...', '#0ea5e9', true);
         
         // Construct Simplified Detailed Message
-        const itemsText = order.items_summary || (Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : order.items) || 'Ice Products';
+        let itemsText = 'Ice Products';
+        try {
+            const rawItems = (typeof order.items === 'string') ? JSON.parse(order.items) : order.items;
+            if (rawItems && (rawItems.fullDice || rawItems.halfDice)) {
+                let parts = [];
+                // Check Full Dice
+                if (rawItems.fullDice?.bag3kg > 0 || rawItems.fullDice?.['3kg'] > 0) parts.push(`${rawItems.fullDice.bag3kg || rawItems.fullDice['3kg']}x 3kg Full`);
+                if (rawItems.fullDice?.bag1kg > 0 || rawItems.fullDice?.['1kg'] > 0) parts.push(`${rawItems.fullDice.bag1kg || rawItems.fullDice['1kg']}x 1kg Full`);
+                // Check Half Dice
+                if (rawItems.halfDice?.bag3kg > 0 || rawItems.halfDice?.['3kg'] > 0) parts.push(`${rawItems.halfDice.bag3kg || rawItems.halfDice['3kg']}x 3kg Half`);
+                if (rawItems.halfDice?.bag1kg > 0 || rawItems.halfDice?.['1kg'] > 0) parts.push(`${rawItems.halfDice.bag1kg || rawItems.halfDice['1kg']}x 1kg Half`);
+                
+                if (parts.length > 0) itemsText = parts.join(', ');
+            } else {
+                itemsText = order.items_summary || (Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : order.items);
+            }
+        } catch (e) {
+            console.warn('Items parse failed:', e);
+            itemsText = order.items_summary || 'Ice Products';
+        }
         
         const msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
                     `Establishment: ${order.customer_name}\n` +
