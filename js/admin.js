@@ -204,7 +204,9 @@ var admin = {
             if (window.IceQubeSync) {
                 const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
                 if (cloudMatrix) {
-                    this.pricingMatrix = cloudMatrix;
+                    if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
+                    if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
+                    
                     localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
                     const syncText = document.getElementById('cloud-sync-status-text');
                     if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
@@ -635,7 +637,10 @@ var admin = {
                 const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
                 if (cloudMatrix && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
                     console.log("☁️ [Admin] Pricing updated from Cloud (Background Sync)");
-                    this.pricingMatrix = cloudMatrix;
+                    
+                    if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
+                    if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
+                    
                     localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
                     this.updatePricingUI();
                     const syncText = document.getElementById('cloud-sync-status-text');
@@ -676,8 +681,10 @@ var admin = {
                 const errData = await response.json().catch(() => ({}));
                 throw new Error(errData.message || `HTTP ${response.status}`);
             }
-            const orders = await response.json();
-            console.log(`✅ Received ${orders.length} orders from Supabase.`);
+            let orders = await response.json();
+            // Filter out system configuration records from real business stats
+            orders = (orders || []).filter(o => o.order_id !== 'CONFIG_PRICING_MATRIX');
+            console.log(`✅ Received ${orders.length} business orders from Supabase.`);
             
             if (badge) {
                 badge.style.background = 'rgba(34, 197, 94, 0.1)';

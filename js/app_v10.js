@@ -32,24 +32,7 @@ const app = {
     },
 
     async loadPricingMatrix() {
-        // 1. Try Cloud Fetch
-        if (window.IceQubeSync) {
-            const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
-            if (cloudMatrix) {
-                this.pricingMatrix = cloudMatrix;
-                localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
-                this._lastSyncTime = new Date().toLocaleTimeString();
-                console.log("✅ [App] Pricing matrix updated from Cloud at", this._lastSyncTime);
-                
-                const syncText = document.getElementById('cloud-sync-status-text');
-                if (syncText) syncText.innerText = `☁️ Updated: ${this._lastSyncTime}`;
-            } else {
-                console.log("ℹ️ [App] Using Local Pricing (Cloud unavailable or no record found)");
-                const syncText = document.getElementById('cloud-sync-status-text');
-                if (syncText) syncText.innerText = `☁️ Using Local Cache`;
-            }
-        }
-
+        // 1. Load from Local Cache first (for immediate responsiveness)
         const saved = localStorage.getItem('iceqube_global_pricing');
         if (saved) {
             try {
@@ -58,7 +41,6 @@ const app = {
                     this.pricingMatrix = matrix;
                 } else if (matrix && matrix.products) {
                     // Migration for app_v10
-                    console.log("Migrating app_v10 pricing matrix...");
                     const oldProducts = matrix.products;
                     this.pricingMatrix = {
                         products: [
@@ -67,11 +49,49 @@ const app = {
                         ],
                         delivery: matrix.delivery || { baseFare: 30, perKmRate: 10, freeThreshold: 0 }
                     };
-                    localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
                 }
-                console.log("✅ Pricing Matrix Loaded:", this.pricingMatrix);
             } catch (e) {
-                console.warn("Failed to parse saved pricing matrix, using defaults.");
+                console.warn("Failed to parse saved pricing matrix.");
+            }
+        }
+
+        // 2. Try Cloud Merge
+        if (window.IceQubeSync) {
+            const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
+            if (cloudMatrix) {
+                // DEEP MERGE: Ensure we don't lose products if only delivery was synced (or vice versa)
+                if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
+                if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
+                
+                localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                this._lastSyncTime = new Date().toLocaleTimeString();
+                console.log("✅ [App] Pricing matrix merged from Cloud at", this._lastSyncTime);
+                
+                // Force Update Badge to LIVE
+                const cloudBadge = document.getElementById('cloud-sync-badge');
+                const cloudDot = document.getElementById('cloud-dot');
+                if (cloudBadge && cloudDot) {
+                    cloudBadge.style.background = 'rgba(34, 197, 94, 0.1)';
+                    cloudBadge.style.color = '#22c55e';
+                    cloudBadge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                    cloudDot.style.background = '#22c55e';
+                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 5px; height: 5px; background: #22c55e; border-radius: 50%;"></span> CLOUD LIVE';
+                }
+
+                const syncText = document.getElementById('cloud-sync-status-text');
+                if (syncText) syncText.innerText = `☁️ Updated: ${this._lastSyncTime}`;
+                
+                // CRITICAL: Re-calculate all fees with the new cloud rates immediately
+                this.updateTotal();
+                
+                // Show subtle feedback if this was a background update
+                if (this.currentStep > 0) {
+                    this.showToast('☁️ Pricing Matrix Synchronized', 'success');
+                }
+            } else {
+                console.log("ℹ️ [App] Using Local Pricing (Cloud unavailable or no record found)");
+                const syncText = document.getElementById('cloud-sync-status-text');
+                if (syncText) syncText.innerText = `☁️ Using Local Cache`;
             }
         }
 
