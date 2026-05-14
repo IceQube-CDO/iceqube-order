@@ -103,6 +103,9 @@ const app = {
                     cloudBadge.style.color = '#ef4444';
                     cloudBadge.innerHTML = `<span style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span> ${errMsg.toUpperCase()}`;
                 }
+
+                // IMPORTANT: Even if offline, recalculate using the new hardcoded 15/km defaults
+                this.updateTotal();
             }
         }
 
