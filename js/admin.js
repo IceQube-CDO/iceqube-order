@@ -829,32 +829,23 @@ var admin = {
 
             // Merge cloud data with local data
             const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-            const cloudOrders = orders || []; 
+            const cloudOrders = (orders || []).filter(o => o.order_id && o.order_id !== 'CONFIG_PRICING_MATRIX');
             
-            // --- NEW: Detect Background Orders for Alarming ---
-            // If we are already unlocked, check if any cloud order is brand new to this session
+            // --- ROBUST CLOUD DETECTION ---
+            // If we are unlocked, detect orders that exist in the cloud but NOT in our local database
             if (sessionStorage.getItem('iceqube_admin_unlocked') === 'true') {
                 cloudOrders.forEach(co => {
                     const orderId = co.order_id;
-                    const isNewToLocal = !localOrders.some(lo => lo.order_id === orderId);
-                    const hasAlarmedInThisTab = this.alarmedOrders.has(orderId);
+                    const alreadyLocal = localOrders.some(lo => lo.order_id === orderId);
+                    const alreadyAlarmed = this.alarmedOrders.has(orderId);
 
-                    // Alert if it's not in local storage OR it hasn't alarmed in this specific tab session yet
-                    // (This ensures that even if another tab synced it, THIS tab will still alert if it's seeing it for the first time)
-                    if (isNewToLocal || !hasAlarmedInThisTab) {
-                        // Double check it's a RECENT order (e.g. within last hour) to avoid spamming old orders on load
-                        const orderTime = new Date(co.created_at || 0);
-                        const oneHourAgo = new Date(Date.now() - 3600000);
+                    if (!alreadyLocal && !alreadyAlarmed) {
+                        console.log("🚀 [Sync] NEW EXTERNAL ORDER DETECTED:", orderId);
+                        this.alarmedOrders.add(orderId);
                         
-                        if (orderTime > oneHourAgo && !hasAlarmedInThisTab) {
-                            console.log("🔔 [Admin] New Cloud Order Detected via Polling:", orderId);
-                            this.alarmedOrders.add(orderId);
-                            
-                            // Visual confirmation for the user
-                            this.showNotification(`CLOUD: New Order from ${co.customer_name}`, orderId);
-                            
-                            this.handleIncomingOrder(co, true);
-                        }
+                        // Explicitly trigger the alarm flow
+                        this.showNotification(`EXTERNAL: New Order from ${co.customer_name}`, orderId);
+                        this.handleIncomingOrder(co, true); // true = skipSync
                     }
                 });
             }
