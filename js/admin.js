@@ -61,6 +61,7 @@ var admin = {
     buzzerMuted: JSON.parse(localStorage.getItem('iceqube_buzzer_muted') || 'false'),
     buzzerActive: false,
     alarmedOrders: new Set(),
+    isInitialLoadComplete: false,
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
@@ -511,14 +512,24 @@ var admin = {
         }
     },
 
+    logDebug(msg) {
+        const el = document.getElementById('debug-log');
+        if (el) {
+            const div = document.createElement('div');
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            el.prepend(div);
+        }
+        console.log(`[DEBUG] ${msg}`);
+    },
+
     startBuzzer() {
         if (this.buzzerActive) return;
         if (this.buzzerMuted) {
-            console.log("🔕 Buzzer is MUTED. Sound skipped.");
+            this.logDebug("Buzzer muted, skipping sound.");
             return;
         }
         
-        console.log("🔔 [Buzzer] Starting Alarm sequence...");
+        this.logDebug("!!! STARTING BUZZER !!!");
         this.buzzerActive = true;
         this.updateBuzzerUI();
         
@@ -531,58 +542,46 @@ var admin = {
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
 
-                // Standard resume attempt
                 if (this.audioCtx.state === 'suspended') {
-                    this.audioCtx.resume().catch(e => console.warn("Audio resume failed:", e));
+                    this.logDebug("Audio suspended. Resuming...");
+                    this.audioCtx.resume();
+                }
+
+                // Fallback: Also try the audio element
+                const audioEl = document.getElementById('buzzer-audio-element');
+                if (audioEl) {
+                    audioEl.currentTime = 0;
+                    audioEl.play().catch(e => this.logDebug("AudioEl play blocked"));
                 }
 
                 if (this.audioCtx.state === 'running') {
                     const osc = this.audioCtx.createOscillator();
                     const gain = this.audioCtx.createGain();
-                    
                     osc.type = 'sine';
-                    // Alternating siren effect
                     const now = this.audioCtx.currentTime;
-                    osc.frequency.setValueAtTime(880, now); // A5
-                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3); // A4
-                    
+                    osc.frequency.setValueAtTime(880, now);
+                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
                     gain.gain.setValueAtTime(0, now);
                     gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
                     gain.gain.linearRampToValueAtTime(0, now + 0.4);
-                    
                     osc.connect(gain);
                     gain.connect(this.audioCtx.destination);
-                    
                     osc.start(now);
                     osc.stop(now + 0.4);
                 } else {
-                    console.warn("⚠️ AudioContext is still suspended. Sound blocked by browser.");
-                    this.updateBuzzerUI(); // Ensure warning shows
+                    this.logDebug("Audio still suspended. CLICK DASHBOARD!");
+                    this.updateBuzzerUI();
                 }
             } catch (err) {
-                console.error("❌ Buzzer Error:", err);
+                this.logDebug("Buzzer error: " + err.message);
             }
 
-            // Schedule next beep if still active
             if (this.buzzerActive) {
                 this.buzzerTimeout = setTimeout(playBeep, 800);
             }
         };
         
         playBeep();
-        
-        // Stop buzzer on any interaction
-        const stopHandler = () => {
-            if (this.buzzerActive) {
-                this.stopBuzzer();
-            }
-            document.removeEventListener('click', stopHandler);
-            document.removeEventListener('touchstart', stopHandler);
-            document.removeEventListener('keydown', stopHandler);
-        };
-        document.addEventListener('click', stopHandler);
-        document.addEventListener('touchstart', stopHandler);
-        document.addEventListener('keydown', stopHandler);
     },
 
     stopBuzzer() {
@@ -832,26 +831,28 @@ var admin = {
             const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
             const cloudOrders = (orders || []).filter(o => o.order_id && o.order_id !== 'CONFIG_PRICING_MATRIX');
             
-            // --- ROBUST CLOUD DETECTION ---
-            // Detect orders that exist in the cloud but NOT in our local database
+            // --- SESSION-BASED CLOUD DETECTION ---
+            // We track alarms by memory (this.alarmedOrders) to ensure every order 
+            // is buzzed exactly once in this session, even if localStorage is already synced.
             cloudOrders.forEach(co => {
                 const orderId = co.order_id;
-                const alreadyLocal = localOrders.some(lo => lo.order_id === orderId);
                 const alreadyAlarmed = this.alarmedOrders.has(orderId);
 
-                if (!alreadyLocal && !alreadyAlarmed) {
-                    console.log("🚀 [Sync] NEW EXTERNAL ORDER DETECTED:", orderId);
+                if (!alreadyAlarmed) {
                     this.alarmedOrders.add(orderId);
                     
-                    // Force alarm even if browser is restricted (it will try to play)
-                    this.startBuzzer();
-                    
-                    // Show a very obvious notification
-                    this.showNotification(`⚠️ NEW PHONE ORDER: ${co.customer_name}`, orderId);
-                    
-                    this.handleIncomingOrder(co, true); // true = skipSync
+                    // Only alarm if this isn't the very first time we're loading the dashboard
+                    if (this.isInitialLoadComplete) {
+                        console.log("🚀 [Buzzer] Alarm Triggered for New Order:", orderId);
+                        this.startBuzzer();
+                        this.showNotification(`⚠️ NEW ORDER: ${co.customer_name}`, orderId);
+                        this.handleIncomingOrder(co, true); // true = skipSync
+                    }
                 }
             });
+
+            // Mark initial load as done after the first successful cloud fetch
+            this.isInitialLoadComplete = true;
 
             let merged = [...cloudOrders];
             localOrders.forEach(lo => {
