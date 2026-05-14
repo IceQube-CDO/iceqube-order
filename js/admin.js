@@ -632,7 +632,7 @@ var admin = {
         const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const profile = directory[order.customer_name];
         
-        const targetId = (profile && profile.messengerId) || (order.messengerId);
+        const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId);
         
         if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') {
             console.log('ℹ️ [Messenger] No ID found for this customer. Skipping notification.');
