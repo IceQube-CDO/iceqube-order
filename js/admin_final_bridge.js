@@ -667,30 +667,17 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // THE ULTIMATE BYPASS #4: Shotgun Payload
-            // Send the ID and Message in every possible format the proxy might expect
-            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            // CORRECTED ENDPOINT: The function is named messenger-webhook in Supabase
+            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
             const payload = JSON.stringify({
-                // ID Variations
                 recipientId: targetId,
-                recipient_id: targetId,
-                psid: targetId,
-                id: targetId,
-                
-                // Meta Variations
-                messaging_type: 'RESPONSE',
-                tag: 'CONFIRMED_EVENT_UPDATE',
-                
-                // Message Variations
-                message: msg,
-                text: msg,
-                msg: msg
+                message: msg
             });
 
             const blob = new Blob([payload], { type: 'text/plain' });
             navigator.sendBeacon(url, blob);
 
-            console.log('🚀 [Messenger] Shotgun signal emitted.');
+            console.log('🚀 [Messenger] Bare-bones signal emitted.');
             updateStatus(`Bridge Sent to ${targetId}`, '#22c55e');
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
