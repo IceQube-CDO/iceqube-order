@@ -4829,9 +4829,38 @@ const app = {
     },
 
     async sendConfirmation() {
-        // HAND-OFF: Direct mobile dispatch disabled due to CORS/Webview blocks.
-        // The Admin Command Center now detects the order via Sync and sends the notification.
-        console.log('📡 [Messenger] Order confirmation handed off to Admin Sync.');
+        if (!this.user.messengerEnabled) return true;
+
+        const targetId = this.user.messengerId || "26521276764196410";
+        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') return true;
+
+        console.log('🔔 [Messenger] Mobile triggering notification for:', targetId);
+        
+        const orderId = document.getElementById('finish-id-new')?.innerText || "NEW-ORDER";
+        const total = document.getElementById('finish-total-new')?.innerText || "0.00";
+        const msg = `Order #${orderId} Received! ❄️\nTotal: ${total}\nThank you!`;
+
+        try {
+            // MOBILE BRIDGE: Use the same bypass as Admin
+            const bridge = document.getElementById('hidden-bridge');
+            if (bridge) {
+                const formId = `msg-form-${Date.now()}`;
+                const frameId = `msg-frame-${Date.now()}`;
+                
+                bridge.innerHTML = `
+                    <iframe name="${frameId}" id="${frameId}"></iframe>
+                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
+                        <input type="hidden" name="recipientId" value="${targetId}">
+                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                    </form>
+                `;
+                
+                document.getElementById(formId).submit();
+                console.log('📡 [Messenger] Mobile signal sent via Bridge.');
+            }
+        } catch (error) {
+            console.error('❌ [Messenger] Mobile dispatch failed:', error);
+        }
         return true;
     },
 
