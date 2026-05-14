@@ -145,6 +145,7 @@ const app = {
                 if (event.type === 'PRICING_UPDATED') {
                     console.log("🔄 [App] Pricing matrix updated via Sync");
                     this.loadPricingMatrix();
+                    this.updateTotal(); // Force recalculation of fees and totals
                 }
             });
         }
@@ -3529,7 +3530,18 @@ const app = {
             isManualReview = true;
         } else {
             zone = `${distanceKm} km`;
-            fee = calculateMaximFee(distanceKm);
+            
+            // Apply Free Delivery Threshold if met
+            const threshold = parseFloat(this.pricingMatrix.delivery.freeThreshold) || 0;
+            const currentSubtotal = this.orderData.subtotal || 0;
+            
+            if (threshold > 0 && currentSubtotal >= threshold) {
+                console.log(`✅ [Logistics] Free Delivery threshold met (Subtotal: ₱${currentSubtotal} >= ₱${threshold})`);
+                fee = 0;
+                zone += " (FREE)";
+            } else {
+                fee = calculateMaximFee(distanceKm);
+            }
         }
 
         // Weight-based Priority Fee

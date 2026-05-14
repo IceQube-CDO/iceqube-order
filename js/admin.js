@@ -2864,8 +2864,10 @@ var admin = {
         // Sync Delivery Inputs
         const delBase = document.getElementById('m-del-base');
         const delKm = document.getElementById('m-del-km');
+        const delFree = document.getElementById('m-del-free');
         if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare;
         if (delKm) delKm.value = this.pricingMatrix.delivery.perKmRate;
+        if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold || 0;
     },
 
     toggleMatrixLock(cardId, btn) {
@@ -2911,7 +2913,7 @@ var admin = {
             delivery: {
                 baseFare: parseFloat(document.getElementById('m-del-base').value) || 0,
                 perKmRate: parseFloat(document.getElementById('m-del-km').value) || 0,
-                freeThreshold: this.pricingMatrix.delivery.freeThreshold || 0
+                freeThreshold: parseFloat(document.getElementById('m-del-free').value) || 0
             }
         };
 
