@@ -690,7 +690,7 @@ var admin = {
             itemsText = order.items_summary || 'Ice Products';
         }
         
-        const msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
+        const msg = `❄️ ICEQUBE RECEIVED & CONFIRMED!\n\n` +
                     `Establishment: ${order.customer_name}\n` +
                     `Items: ${itemsText}\n` +
                     `Delivery Fee: ₱${order.delivery_fee || '0.00'}\n` +

@@ -4829,54 +4829,9 @@ const app = {
     },
 
     async sendConfirmation() {
-        if (!this.user.messengerEnabled) return true;
-
-        const targetId = this.user.messengerId || "26521276764196410";
-        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') return true;
-
-        console.log('🔔 [Messenger] Mobile triggering notification for:', targetId);
-        
-        const orderId = document.getElementById('finish-id-new')?.innerText || "NEW-ORDER";
-        const total = document.getElementById('finish-total-new')?.innerText || "0.00";
-        
-        // Extract items summary
-        let itemsSummary = [];
-        if (this.orderData.qty.fullDice['1kg'] > 0) itemsSummary.push(`${this.orderData.qty.fullDice['1kg']}x 1kg Full`);
-        if (this.orderData.qty.fullDice['3kg'] > 0) itemsSummary.push(`${this.orderData.qty.fullDice['3kg']}x 3kg Full`);
-        if (this.orderData.qty.halfDice['1kg'] > 0) itemsSummary.push(`${this.orderData.qty.halfDice['1kg']}x 1kg Half`);
-        if (this.orderData.qty.halfDice['3kg'] > 0) itemsSummary.push(`${this.orderData.qty.halfDice['3kg']}x 3kg Half`);
-        
-        const address = this.orderData.address || "Standard Delivery";
-        
-        const msg = `❄️ ICEQUBE ORDER RECEIVED!\n\n` +
-                    `Establishment: ${this.user.companyName}\n` +
-                    `Items: ${itemsSummary.join(', ') || 'Ice Products'}\n` +
-                    `Delivery Fee: ₱${this.orderData.deliveryFee || '0.00'}\n` +
-                    `Total: ${total}\n` +
-                    `Payment: ${this.orderData.paymentMethod || 'Cash'}\n\n` +
-                    `Thank you!`;
-
-        try {
-            // MOBILE BRIDGE: Use the same bypass as Admin
-            const bridge = document.getElementById('hidden-bridge');
-            if (bridge) {
-                const formId = `msg-form-${Date.now()}`;
-                const frameId = `msg-frame-${Date.now()}`;
-                
-                bridge.innerHTML = `
-                    <iframe name="${frameId}" id="${frameId}"></iframe>
-                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
-                        <input type="hidden" name="recipientId" value="${targetId}">
-                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
-                    </form>
-                `;
-                
-                document.getElementById(formId).submit();
-                console.log('📡 [Messenger] Mobile signal sent via Bridge.');
-            }
-        } catch (error) {
-            console.error('❌ [Messenger] Mobile dispatch failed:', error);
-        }
+        // Antigravity: Disabled redundant mobile dispatch to prevent "Double Messages".
+        // The Admin Dashboard (Laptop) sends the definitive detailed receipt via Sync.
+        console.log('📡 [Messenger] Mobile hand-off to Admin Sync (Preventing double-msg).');
         return true;
     },
 
