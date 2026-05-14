@@ -102,8 +102,7 @@ window.IceQubeSync = {
                         customer_name: 'SYSTEM_CONFIG',
                         po_number: 'GLOBAL_CONFIG_V1', // Protected from purge logic
                         is_real: true, // Mark as real so it's not purged
-                        items: matrix,
-                        created_at: new Date().toISOString()
+                        items: matrix
                     })
                 });
                 
@@ -135,11 +134,17 @@ window.IceQubeSync = {
 
             try {
                 console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V1) from Cloud...");
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&order=created_at.desc&limit=1&select=items`, {
+                // Add cache-buster to bypass Messenger Webview caching
+                const cacheBuster = new Date().getTime();
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&order=created_at.desc&limit=1&select=items,created_at&cb=${cacheBuster}`, {
+                    method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                    }
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store'
                 });
 
                 clearTimeout(timeout);
@@ -148,6 +153,8 @@ window.IceQubeSync = {
                     const data = await response.json();
                     if (data && data.length > 0) {
                         console.log("✅ [Sync] Pricing Matrix retrieved from Cloud:", data[0].items);
+                        // Attach the cloud timestamp for debugging
+                        data[0].items._cloudCreatedAt = data[0].created_at;
                         resolve(data[0].items);
                     } else {
                         console.log("ℹ️ [Sync] No cloud pricing record found.");
