@@ -60,6 +60,7 @@ var admin = {
     _autoRefreshIntervalId: null,
     buzzerMuted: JSON.parse(localStorage.getItem('iceqube_buzzer_muted') || 'false'),
     buzzerActive: false,
+    alarmedOrders: new Set(),
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
@@ -285,6 +286,16 @@ var admin = {
         this.checkMonthlyReset();
         this.updateDates();
         this.updateBuzzerUI();
+
+        // PROACTIVE AUDIO UNLOCK: Any click on the page resumes the audio system
+        document.addEventListener('click', () => {
+            if (!this.audioCtx) {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume().then(() => this.updateBuzzerUI());
+            }
+        }, { once: false });
 
         // Restore active tab
         const lastTab = localStorage.getItem('iceqube_admin_tab');
@@ -597,11 +608,17 @@ var admin = {
         const dot = document.getElementById('buzzer-dot');
         if (!badge || !dot) return;
 
+        // --- NEW: Audio Permission Tracking ---
+        const isAudioBlocked = this.audioCtx && this.audioCtx.state === 'suspended';
+        
         if (this.buzzerActive) {
-            badge.classList.add('buzzer-active-alarm');
-            badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> STOP BUZZER`;
+            badge.className = 'buzzer-active-alarm';
+            badge.style.background = '#ef4444';
+            badge.style.color = 'white';
+            badge.style.borderColor = 'white';
+            badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: white; border-radius: 50%; box-shadow: 0 0 10px white;"></span> STOP BUZZER`;
         } else {
-            badge.classList.remove('buzzer-active-alarm');
+            badge.className = '';
             if (this.buzzerMuted) {
                 badge.style.background = 'rgba(255, 255, 255, 0.05)';
                 badge.style.color = '#94a3b8';
@@ -609,6 +626,13 @@ var admin = {
                 dot.style.background = '#64748b';
                 dot.style.boxShadow = 'none';
                 badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #64748b; border-radius: 50%;"></span> BUZZER (MUTED)`;
+            } else if (isAudioBlocked) {
+                badge.style.background = 'rgba(234, 179, 8, 0.1)';
+                badge.style.color = '#eab308';
+                badge.style.borderColor = 'rgba(234, 179, 8, 0.3)';
+                dot.style.background = '#eab308';
+                dot.style.boxShadow = '0 0 8px #eab308';
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #eab308; border-radius: 50%; box-shadow: 0 0 8px #eab308;"></span> ⚠️ CLICK TO ENABLE SOUND`;
             } else {
                 badge.style.background = 'rgba(34, 197, 94, 0.1)';
                 badge.style.color = '#22c55e';
@@ -783,15 +807,25 @@ var admin = {
             const cloudOrders = orders || []; 
             
             // --- NEW: Detect Background Orders for Alarming ---
-            // If we are already unlocked, check if any cloud order is brand new to us
+            // If we are already unlocked, check if any cloud order is brand new to this session
             if (sessionStorage.getItem('iceqube_admin_unlocked') === 'true') {
                 cloudOrders.forEach(co => {
-                    const isNew = !localOrders.some(lo => lo.order_id === co.order_id);
-                    if (isNew) {
-                        console.log("🔔 [Admin] New Cloud Order Detected via Polling:", co.order_id);
-                        // Trigger the incoming flow (notification, buzzer, etc.)
-                        // true = skipSync to avoid recursive fetchRealStats calls
-                        this.handleIncomingOrder(co, true);
+                    const orderId = co.order_id;
+                    const isNewToLocal = !localOrders.some(lo => lo.order_id === orderId);
+                    const hasAlarmedInThisTab = this.alarmedOrders.has(orderId);
+
+                    // Alert if it's not in local storage OR it hasn't alarmed in this specific tab session yet
+                    // (This ensures that even if another tab synced it, THIS tab will still alert if it's seeing it for the first time)
+                    if (isNewToLocal || !hasAlarmedInThisTab) {
+                        // Double check it's a RECENT order (e.g. within last hour) to avoid spamming old orders on load
+                        const orderTime = new Date(co.created_at || 0);
+                        const oneHourAgo = new Date(Date.now() - 3600000);
+                        
+                        if (orderTime > oneHourAgo && !hasAlarmedInThisTab) {
+                            console.log("🔔 [Admin] New Cloud Order Detected via Polling:", orderId);
+                            this.alarmedOrders.add(orderId);
+                            this.handleIncomingOrder(co, true);
+                        }
                     }
                 });
             }
