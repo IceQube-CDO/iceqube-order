@@ -843,8 +843,11 @@ var admin = {
                         console.log("🚀 [Sync] NEW EXTERNAL ORDER DETECTED:", orderId);
                         this.alarmedOrders.add(orderId);
                         
-                        // Explicitly trigger the alarm flow
+                        // EMERGENCY DEBUG ALERT - This will confirm if the code even reaches here
+                        // alert("DEBUG: New Phone Order Detected! " + orderId);
+                        
                         this.showNotification(`EXTERNAL: New Order from ${co.customer_name}`, orderId);
+                        this.startBuzzer(); // Direct start attempt
                         this.handleIncomingOrder(co, true); // true = skipSync
                     }
                 });
