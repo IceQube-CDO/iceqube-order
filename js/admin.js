@@ -650,7 +650,7 @@ var admin = {
         const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const profile = directory[order.customer_name];
         
-        const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || "61557321703652";
+        const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || "26521276764196410";
         
         if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') {
             console.log('ℹ️ [Messenger] No ID found for this customer. Skipping notification.');
@@ -691,11 +691,11 @@ var admin = {
     },
 
     testMessengerID() {
-        console.log("🧪 Diagnostic: Sending to 61557321703652");
+        console.log("🧪 Diagnostic: Sending to 26521276764196410");
         this.sendMessengerNotification({
             order_id: "TEST-SYNC",
             customer_name: "Admin",
-            messenger_id: "61557321703652"
+            messenger_id: "26521276764196410"
         });
     },
 
