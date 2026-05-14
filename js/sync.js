@@ -134,17 +134,18 @@ window.IceQubeSync = {
 
             try {
                 console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V1) from Cloud...");
-                // Add cache-buster to bypass Messenger Webview caching
-                const cacheBuster = new Date().getTime();
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&order=created_at.desc&limit=1&select=items,created_at&cb=${cacheBuster}`, {
+                
+                // standard fetch but with strict no-cache headers. 
+                // We use id=gt.0 as a safe filter that won't break PostgREST but helps ensure unique URL for some proxies
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&id=gt.0&order=created_at.desc&limit=1&select=items,created_at`, {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    },
-                    cache: 'no-store'
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
                 });
 
                 clearTimeout(timeout);
@@ -154,14 +155,19 @@ window.IceQubeSync = {
                     if (data && data.length > 0) {
                         console.log("✅ [Sync] Pricing Matrix retrieved from Cloud:", data[0].items);
                         // Attach the cloud timestamp for debugging
-                        data[0].items._cloudCreatedAt = data[0].created_at;
-                        resolve(data[0].items);
+                        if (data[0].items) {
+                            data[0].items._cloudCreatedAt = data[0].created_at;
+                            resolve(data[0].items);
+                        } else {
+                            resolve(null);
+                        }
                     } else {
                         console.log("ℹ️ [Sync] No cloud pricing record found.");
                         resolve(null);
                     }
                 } else {
-                    console.warn("⚠️ [Sync] Cloud Fetch failed with status:", response.status);
+                    const errorText = await response.text();
+                    console.warn("⚠️ [Sync] Cloud Fetch failed with status:", response.status, errorText);
                     resolve(null);
                 }
             } catch (err) {
