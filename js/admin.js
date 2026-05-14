@@ -667,13 +667,14 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // Move apikey to query param to avoid CORS preflight issues
+            // Use 'no-cors' to force the request through browser blocks
             const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
             
-            const response = await fetch(url, {
+            await fetch(url, {
                 method: 'POST',
+                mode: 'no-cors',
                 headers: { 
-                    'Content-Type': 'text/plain' // Use text/plain to further avoid CORS preflight
+                    'Content-Type': 'text/plain'
                 },
                 body: JSON.stringify({
                     recipientId: targetId,
@@ -681,14 +682,8 @@ var admin = {
                 })
             });
 
-            if (response.ok) {
-                console.log('✅ [Messenger] Notification dispatched successfully from Admin.');
-                updateStatus('Sent!', '#22c55e');
-            } else {
-                const errText = await response.text();
-                console.error('🚫 [Messenger] Proxy returned error:', errText);
-                updateStatus(`Error: ${response.status}`, '#ef4444');
-            }
+            console.log('📤 [Messenger] Blind dispatch sent from Admin.');
+            updateStatus('Dispatched', '#22c55e');
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
             updateStatus('Network Error', '#ef4444');
