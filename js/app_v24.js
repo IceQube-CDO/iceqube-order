@@ -6606,18 +6606,23 @@ function openReorderModal() {
 
     // Determine the "Real" Order Quantity
     let orders = [];
-    try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
+    try { 
+        const raw = localStorage.getItem('ice_orders') || '[]';
+        orders = JSON.parse(raw);
+        // Limit search to last 20 orders to prevent freezing on large history
+        if (orders.length > 20) orders = orders.slice(0, 20);
+    } catch(e) { console.warn("Orders parse error:", e); }
     
     const currentName = (app.user.companyName || "").trim().toLowerCase();
     
     // Find the most recent order for THIS user
-    let myOrders = orders.filter(o => {
-        if (currentName && currentName !== 'guest customer') {
+    let myOrders = [];
+    if (currentName && currentName !== 'guest customer') {
+        myOrders = orders.filter(o => {
             const orderName = (o.customer_name || "").trim().toLowerCase();
             return orderName === currentName || orderName.includes(currentName) || currentName.includes(orderName);
-        }
-        return false; 
-    });
+        });
+    }
 
     if (myOrders.length === 0 && orders.length > 0) {
         myOrders = [orders[0]];
