@@ -196,9 +196,18 @@ var admin = {
         }
     },
 
-    init() {
+    async init() {
         try {
             console.log('--- COMMAND CENTER INITIALIZED ---');
+            
+            // 0. Cloud Pricing Fetch
+            if (window.IceQubeSync) {
+                const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
+                if (cloudMatrix) {
+                    this.pricingMatrix = cloudMatrix;
+                    localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                }
+            }
         
         // Data Migration/Validation for Consumables
         if (!this.consumables.packaging || !this.consumables.cleaning) {
@@ -3069,9 +3078,9 @@ style.textContent = `
 document.head.appendChild(style);
 
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
-        admin.init();
+        await admin.init();
     } catch (e) {
         console.error('Fatal Initialization Error:', e);
     }

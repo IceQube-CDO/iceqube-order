@@ -31,7 +31,17 @@ const app = {
         }
     },
 
-    loadPricingMatrix() {
+    async loadPricingMatrix() {
+        // 1. Try Cloud Fetch
+        if (window.IceQubeSync) {
+            const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
+            if (cloudMatrix) {
+                this.pricingMatrix = cloudMatrix;
+                localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                console.log("☁️ Pricing Matrix updated from Cloud");
+            }
+        }
+
         const saved = localStorage.getItem('iceqube_global_pricing');
         if (saved) {
             try {
@@ -99,7 +109,7 @@ const app = {
     },
 
     // INITIALIZATION
-    init() {
+    async init() {
         console.log("IceQube Engine V3.0.0 Initializing...");
         this.currentStep = 0;
 
@@ -137,7 +147,7 @@ const app = {
         this.isQuickReorder = false;
         
         // Load Global Pricing Matrix
-        this.loadPricingMatrix();
+        await this.loadPricingMatrix();
 
         // Listen for sync updates
         if (window.IceQubeSync) {
@@ -6463,10 +6473,10 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
 // Expose app to global scope for Google Maps callback
 window.app = app;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log("🚀 IceQube DOM Ready. Initializing App...");
     if (typeof app !== 'undefined' && typeof app.init === 'function') {
-        app.init();
+        await app.init();
         // Mocking initial state for demonstration
         app.updateBillingStatus('unpaid', '₱2,550.00');
         console.log("✅ IceQube Initialized Successfully");

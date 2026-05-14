@@ -77,10 +77,70 @@ window.IceQubeSync = {
         ordersChannel.postMessage({ type: 'PROFILE_UPDATED', payload: profile });
     },
 
-    publishPricingUpdate: function(matrix) {
+    publishPricingUpdate: async function(matrix) {
         console.log("📡 [Sync] Publishing Pricing Matrix Update");
+        
+        // 1. Local Sync
         localStorage.setItem('iceqube_global_pricing', JSON.stringify(matrix));
         ordersChannel.postMessage({ type: 'PRICING_UPDATED', payload: matrix });
+
+        // 2. Cloud Sync
+        if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            console.log("☁️ [Sync] Syncing Pricing Matrix to Cloud...");
+            try {
+                // We use a "settings" table to store global configurations
+                // Using UPSERT logic: POST with Prefer: resolution=merge-duplicates
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({
+                        id: 'global_pricing',
+                        value: matrix,
+                        updated_at: new Date().toISOString()
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log("✅ [Sync] Pricing Matrix Synced to Cloud");
+                } else {
+                    console.warn("⚠️ [Sync] Cloud Sync returned status:", response.status);
+                }
+            } catch (err) {
+                console.error("❌ [Sync] Cloud Sync Error:", err);
+            }
+        }
+    },
+
+    fetchCloudPricing: async function() {
+        if (typeof SUPABASE_CONFIG === 'undefined' || !SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            return null;
+        }
+
+        try {
+            console.log("☁️ [Sync] Fetching Pricing Matrix from Cloud...");
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/settings?id=eq.global_pricing&select=value`, {
+                headers: {
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    console.log("✅ [Sync] Pricing Matrix retrieved from Cloud");
+                    return data[0].value;
+                }
+            }
+        } catch (err) {
+            console.warn("⚠️ [Sync] Failed to fetch cloud pricing:", err);
+        }
+        return null;
     },
 
     publishPurge: function() {
