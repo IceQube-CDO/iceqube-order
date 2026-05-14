@@ -209,7 +209,10 @@ var admin = {
                     
                     localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
                     const syncText = document.getElementById('cloud-sync-status-text');
-                    if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
+                    if (syncText) {
+                        const cloudTime = cloudMatrix._cloudCreatedAt ? new Date(cloudMatrix._cloudCreatedAt).toLocaleTimeString() : new Date().toLocaleTimeString();
+                        syncText.innerText = `☁️ Updated: ${cloudTime}`;
+                    }
                 } else {
                     const syncText = document.getElementById('cloud-sync-status-text');
                     if (syncText) syncText.innerText = `☁️ Using Local Cache`;

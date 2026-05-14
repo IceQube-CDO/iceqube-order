@@ -79,7 +79,10 @@ const app = {
                 }
 
                 const syncText = document.getElementById('cloud-sync-status-text');
-                if (syncText) syncText.innerText = `☁️ Updated: ${this._lastSyncTime}`;
+                if (syncText) {
+                    const cloudTime = cloudMatrix._cloudCreatedAt ? new Date(cloudMatrix._cloudCreatedAt).toLocaleTimeString() : this._lastSyncTime;
+                    syncText.innerText = `☁️ Updated: ${cloudTime}`;
+                }
                 
                 // CRITICAL: Re-calculate all fees with the new cloud rates immediately
                 this.updateTotal();

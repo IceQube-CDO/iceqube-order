@@ -136,8 +136,9 @@ window.IceQubeSync = {
                 console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V1) from Cloud...");
                 
                 // standard fetch but with strict no-cache headers. 
-                // We use id=gt.0 as a safe filter that won't break PostgREST but helps ensure unique URL for some proxies
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&id=gt.0&order=created_at.desc&limit=1&select=items,created_at`, {
+                // We remove the id=gt.0 as it fails on UUID columns. 
+                // Instead, we use a different valid filter if needed, but headers should suffice.
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V1&order=created_at.desc&limit=1&select=items,created_at`, {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
