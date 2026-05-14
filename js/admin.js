@@ -518,40 +518,64 @@ var admin = {
             return;
         }
         
+        console.log("🔔 [Buzzer] Starting Alarm sequence...");
         this.buzzerActive = true;
         this.updateBuzzerUI();
         
-        if (!this.audioCtx) {
-            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
+        // Use a recursive timeout for better timing control and reliability
+        const playBeep = () => {
+            if (!this.buzzerActive) return;
 
-        this.buzzerInterval = setInterval(() => {
-            const osc = this.audioCtx.createOscillator();
-            const gain = this.audioCtx.createGain();
-            
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
-            osc.frequency.setValueAtTime(600, this.audioCtx.currentTime + 0.2);
-            
-            gain.gain.setValueAtTime(0, this.audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.5, this.audioCtx.currentTime + 0.05);
-            gain.gain.setValueAtTime(0.5, this.audioCtx.currentTime + 0.35);
-            gain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.4);
-            
-            osc.connect(gain);
-            gain.connect(this.audioCtx.destination);
-            
-            osc.start();
-            osc.stop(this.audioCtx.currentTime + 0.4);
-        }, 500);
+            try {
+                if (!this.audioCtx) {
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // Standard resume attempt
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume().catch(e => console.warn("Audio resume failed:", e));
+                }
+
+                if (this.audioCtx.state === 'running') {
+                    const osc = this.audioCtx.createOscillator();
+                    const gain = this.audioCtx.createGain();
+                    
+                    osc.type = 'sine';
+                    // Alternating siren effect
+                    const now = this.audioCtx.currentTime;
+                    osc.frequency.setValueAtTime(880, now); // A5
+                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3); // A4
+                    
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.6, now + 0.05);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.audioCtx.destination);
+                    
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else {
+                    console.warn("⚠️ AudioContext is still suspended. Sound blocked by browser.");
+                    this.updateBuzzerUI(); // Ensure warning shows
+                }
+            } catch (err) {
+                console.error("❌ Buzzer Error:", err);
+            }
+
+            // Schedule next beep if still active
+            if (this.buzzerActive) {
+                this.buzzerTimeout = setTimeout(playBeep, 800);
+            }
+        };
+        
+        playBeep();
         
         // Stop buzzer on any interaction
         const stopHandler = () => {
-            this.stopBuzzer();
+            if (this.buzzerActive) {
+                this.stopBuzzer();
+            }
             document.removeEventListener('click', stopHandler);
             document.removeEventListener('touchstart', stopHandler);
             document.removeEventListener('keydown', stopHandler);
@@ -562,10 +586,11 @@ var admin = {
     },
 
     stopBuzzer() {
+        console.log("🔕 [Buzzer] Stopping Alarm.");
         this.buzzerActive = false;
-        if (this.buzzerInterval) {
-            clearInterval(this.buzzerInterval);
-            this.buzzerInterval = null;
+        if (this.buzzerTimeout) {
+            clearTimeout(this.buzzerTimeout);
+            this.buzzerTimeout = null;
         }
         this.updateBuzzerUI();
     },
@@ -824,6 +849,10 @@ var admin = {
                         if (orderTime > oneHourAgo && !hasAlarmedInThisTab) {
                             console.log("🔔 [Admin] New Cloud Order Detected via Polling:", orderId);
                             this.alarmedOrders.add(orderId);
+                            
+                            // Visual confirmation for the user
+                            this.showNotification(`CLOUD: New Order from ${co.customer_name}`, orderId);
+                            
                             this.handleIncomingOrder(co, true);
                         }
                     }
