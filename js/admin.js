@@ -550,11 +550,41 @@ var admin = {
             if (!this.buzzerActive) return;
 
             try {
-                // Play the high-quality MAGIC DING
+                if (!this.audioCtx) {
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // If it's suspended, we can't hear anything, but we keep trying to resume
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume().catch(() => {});
+                    this.updateBuzzerUI();
+                }
+
+                // Primary: Magic Ding MP3
                 const audioEl = document.getElementById('buzzer-audio-element');
                 if (audioEl) {
                     audioEl.currentTime = 0;
-                    audioEl.play().catch(e => console.warn("Sound blocked"));
+                    audioEl.play().catch(e => {
+                        console.warn("Audio element blocked");
+                        this.updateBuzzerUI(); // Show "Unmute" warning
+                    });
+                }
+
+                // Secondary Backup: Synthesized soft chime (often bypasses blocks better)
+                if (this.audioCtx.state === 'running') {
+                    const now = this.audioCtx.currentTime;
+                    const osc = this.audioCtx.createOscillator();
+                    const gain = this.audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1000, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.4);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+                    osc.connect(gain);
+                    gain.connect(this.audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.8);
                 }
             } catch (err) {
                 console.warn("Buzzer error:", err);
@@ -624,7 +654,14 @@ var admin = {
             badge.style.background = '#ef4444';
             badge.style.color = 'white';
             badge.style.borderColor = 'white';
-            badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: white; border-radius: 50%; box-shadow: 0 0 10px white;"></span> STOP BUZZER`;
+            
+            if (isAudioBlocked) {
+                badge.style.background = '#eab308'; // Amber to show block
+                badge.style.color = '#000';
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: black; border-radius: 50%; box-shadow: 0 0 10px black;"></span> ⚠️ CLICK TO UNMUTE`;
+            } else {
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: white; border-radius: 50%; box-shadow: 0 0 10px white;"></span> STOP BUZZER`;
+            }
         } else {
             badge.className = '';
             if (this.buzzerMuted) {
