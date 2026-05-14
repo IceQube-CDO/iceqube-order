@@ -4838,7 +4838,22 @@ const app = {
         
         const orderId = document.getElementById('finish-id-new')?.innerText || "NEW-ORDER";
         const total = document.getElementById('finish-total-new')?.innerText || "0.00";
-        const msg = `Order #${orderId} Received! ❄️\nTotal: ${total}\nThank you!`;
+        
+        // Extract items summary
+        let itemsSummary = [];
+        if (this.orderData.qty.fullDice['1kg'] > 0) itemsSummary.push(`${this.orderData.qty.fullDice['1kg']}x 1kg Full`);
+        if (this.orderData.qty.fullDice['3kg'] > 0) itemsSummary.push(`${this.orderData.qty.fullDice['3kg']}x 3kg Full`);
+        if (this.orderData.qty.halfDice['1kg'] > 0) itemsSummary.push(`${this.orderData.qty.halfDice['1kg']}x 1kg Half`);
+        if (this.orderData.qty.halfDice['3kg'] > 0) itemsSummary.push(`${this.orderData.qty.halfDice['3kg']}x 3kg Half`);
+        
+        const address = this.orderData.address || "Standard Delivery";
+        
+        const msg = `❄️ ICEQUBE ORDER RECEIVED!\n\n` +
+                    `Order: #${orderId}\n` +
+                    `Items: ${itemsSummary.join(', ') || 'Ice Products'}\n` +
+                    `Delivery: ${address}\n` +
+                    `Total: ${total}\n\n` +
+                    `Status: Processing...`;
 
         try {
             // MOBILE BRIDGE: Use the same bypass as Admin

@@ -661,7 +661,16 @@ var admin = {
         console.log('🔔 [Messenger] Admin triggering notification for:', targetId);
         updateStatus('Sending...', '#0ea5e9', true);
         
-        const msg = `Order #${order.order_id} Received! ❄️\nTotal: ₱${order.total_amount || order.total || order.total_price || '0.00'}\nThank you!`;
+        // Construct Detailed Message
+        const itemsText = order.items_summary || (Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : order.items) || 'Ice Products';
+        const addressText = order.delivery_address || order.address || 'Standard Delivery';
+        
+        const msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
+                    `Order: #${order.order_id}\n` +
+                    `Items: ${itemsText}\n` +
+                    `Delivery: ${addressText}\n` +
+                    `Total: ₱${order.total_amount || order.total || order.total_price || '0.00'}\n\n` +
+                    `Thank you for choosing IceQube!`;
 
         try {
             // THE DEFINITIVE BYPASS: Hidden Form with Correct Endpoint
