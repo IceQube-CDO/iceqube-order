@@ -4873,7 +4873,7 @@ const app = {
             const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'text/plain',
                     'apikey': SUPABASE_CONFIG.ANON_KEY
                 },
                 body: JSON.stringify({
@@ -6538,7 +6538,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'text/plain',
                     'apikey': SUPABASE_CONFIG.ANON_KEY
                 },
                 body: JSON.stringify({
