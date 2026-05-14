@@ -738,31 +738,30 @@ var admin = {
 
                 // --- 2. DISPATCH TO ADMIN (REFINED ALERT) ---
                 const ADMIN_PSID = "26521276764196410";
-                if (targetId !== ADMIN_PSID) {
-                    const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
-                                     `Deliver to: ${order.customer_name}\n` +
-                                     `Item: ${itemsText}\n` +
-                                     `Total: ₱${customerTotal.toLocaleString()}\n` +
-                                     `Payment: ${order.payment_method || 'Cash'}\n\n` +
-                                     `Check the Control Room!`;
-                    
-                    const adminFormId = `msg-form-admin-${Date.now()}`;
-                    const adminFrameId = `msg-frame-admin-${Date.now()}`;
-                    
-                    const adminDiv = document.createElement('div');
-                    adminDiv.innerHTML = `
-                        <iframe name="${adminFrameId}" id="${adminFrameId}"></iframe>
-                        <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
-                            <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
-                            <input type="hidden" name="message" value="${adminMsg.replace(/"/g, '&quot;')}">
-                        </form>
-                    `;
-                    
-                    bridgeContainer.appendChild(adminDiv);
-                    setTimeout(() => {
-                        document.getElementById(adminFormId).submit();
-                    }, 500);
-                }
+                
+                const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                                 `Deliver to: ${order.customer_name}\n` +
+                                 `Item: ${itemsText}\n` +
+                                 `Total: ₱${customerTotal.toLocaleString()}\n` +
+                                 `Payment: ${order.payment_method || 'Cash'}\n\n` +
+                                 `Check the Control Room!`;
+                
+                const adminFormId = `msg-form-admin-${Date.now()}`;
+                const adminFrameId = `msg-frame-admin-${Date.now()}`;
+                
+                const adminDiv = document.createElement('div');
+                adminDiv.innerHTML = `
+                    <iframe name="${adminFrameId}" id="${adminFrameId}"></iframe>
+                    <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
+                        <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
+                        <input type="hidden" name="message" value="${adminMsg.replace(/"/g, '&quot;')}">
+                    </form>
+                `;
+                
+                bridgeContainer.appendChild(adminDiv);
+                setTimeout(() => {
+                    document.getElementById(adminFormId).submit();
+                }, 500);
 
                 updateStatus(`Notified Customer & Admin`, '#22c55e');
             }
