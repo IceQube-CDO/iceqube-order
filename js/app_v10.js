@@ -105,12 +105,21 @@ const app = {
                 if (cloudBadge) {
                     cloudBadge.style.background = 'rgba(239, 68, 68, 0.1)';
                     cloudBadge.style.color = '#ef4444';
+                    cloudBadge.style.cursor = 'pointer';
                     cloudBadge.innerHTML = `<span style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span> ${errMsg.toUpperCase()}`;
+                    cloudBadge.onclick = () => alert(`DEBUG INFO:\nVersion: 10.7.0\nStatus: ${errMsg}\nRate: ${this.pricingMatrix.delivery.perKmRate}\nCloud: ${window.IceQubeSync ? 'Enabled' : 'Missing'}`);
                 }
 
                 // IMPORTANT: Even if offline, recalculate using the new hardcoded 15/km defaults
                 this.updateTotal();
             }
+        }
+        
+        // Final Safety: If for any reason we are still at 10, FORCE to 15
+        if (this.pricingMatrix.delivery.perKmRate < 15) {
+            console.log("🚨 Safety Override: Forcing rate to 15.");
+            this.pricingMatrix.delivery.perKmRate = 15;
+            this.updateTotal();
         }
 
         // Initialize orderData.qty for all products
