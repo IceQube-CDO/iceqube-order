@@ -704,21 +704,54 @@ var admin = {
 
         try {
             // THE DEFINITIVE BYPASS: Hidden Form with Correct Endpoint
-            const bridge = document.getElementById('hidden-bridge');
-            if (bridge) {
-                const formId = `msg-form-${Date.now()}`;
-                const frameId = `msg-frame-${Date.now()}`;
+            const bridgeContainer = document.getElementById('hidden-bridge');
+            if (bridgeContainer) {
+                // --- 1. DISPATCH TO CUSTOMER ---
+                const custFormId = `msg-form-cust-${Date.now()}`;
+                const custFrameId = `msg-frame-cust-${Date.now()}`;
                 
-                bridge.innerHTML = `
-                    <iframe name="${frameId}" id="${frameId}"></iframe>
-                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
+                const custDiv = document.createElement('div');
+                custDiv.innerHTML = `
+                    <iframe name="${custFrameId}" id="${custFrameId}"></iframe>
+                    <form id="${custFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${custFrameId}">
                         <input type="hidden" name="recipientId" value="${targetId}">
                         <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
                     </form>
                 `;
-                
-                document.getElementById(formId).submit();
-                updateStatus(`Sent to ${targetId}`, '#22c55e');
+                bridgeContainer.appendChild(custDiv);
+                document.getElementById(custFormId).submit();
+                console.log('📡 [Messenger] Customer Receipt Sent.');
+
+                // --- 2. DISPATCH TO ADMIN (BUZZER ALERT) ---
+                const ADMIN_PSID = "26521276764196410";
+                if (targetId !== ADMIN_PSID) { // Don't double-send if Admin is the customer
+                    const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                                     `Customer: ${order.customer_name}\n` +
+                                     `Items: ${itemsText}\n` +
+                                     `Total: ₱${customerTotal}\n` +
+                                     `Check the Control Room!`;
+                    
+                    const adminFormId = `msg-form-admin-${Date.now()}`;
+                    const adminFrameId = `msg-frame-admin-${Date.now()}`;
+                    
+                    const adminDiv = document.createElement('div');
+                    adminDiv.innerHTML = `
+                        <iframe name="${adminFrameId}" id="${adminFrameId}"></iframe>
+                        <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
+                            <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
+                            <input type="hidden" name="message" value="${adminMsg.replace(/"/g, '&quot;')}">
+                        </form>
+                    `;
+                    
+                    bridgeContainer.appendChild(adminDiv);
+                    // Slight delay to avoid browser blocking multiple rapid submissions
+                    setTimeout(() => {
+                        document.getElementById(adminFormId).submit();
+                        console.log('📡 [Messenger] Admin Buzzer Sent.');
+                    }, 500);
+                }
+
+                updateStatus(`Notified Customer & Admin`, '#22c55e');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
