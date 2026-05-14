@@ -6484,7 +6484,11 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             input.value = this.user.messengerId || '';
         }
 
-        if (this.user.messengerEnabled) {
+        // IMPROVED: Only show ON if both enabled AND an ID is present
+        const hasId = this.user.messengerId && this.user.messengerId.trim().length > 0;
+        const isActuallyOn = this.user.messengerEnabled && hasId;
+
+        if (isActuallyOn) {
             badge.innerText = "ON";
             badge.style.background = "#dcfce7";
             badge.style.color = "#16a34a";
@@ -6496,12 +6500,62 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     },
 
     handleMessengerInput(val) {
-        this.user.messengerId = val.trim();
+        let cleanVal = val.trim();
+        
+        // SMART LINK STRIPPING: If they paste a link, extract the ID/Username
+        if (cleanVal.includes('m.me/')) {
+            cleanVal = cleanVal.split('m.me/')[1].split('?')[0].split('/')[0];
+        } else if (cleanVal.includes('facebook.com/')) {
+            // Handle profile.php?id=...
+            if (cleanVal.includes('id=')) {
+                cleanVal = cleanVal.split('id=')[1].split('&')[0];
+            } else {
+                cleanVal = cleanVal.split('facebook.com/')[1].split('?')[0].split('/')[0];
+            }
+        }
+
+        this.user.messengerId = cleanVal;
+        
         // Keep the hidden input in sync for the save function
         const msgIdHidden = document.getElementById('profile-messenger-id');
         if (msgIdHidden) msgIdHidden.value = this.user.messengerId;
         
         this.updateMessengerStatusUI();
+    },
+
+    async testMessengerNotification() {
+        if (!this.user.messengerId) {
+            this.showToast("Please enter a Messenger ID first", "error");
+            return;
+        }
+
+        this.showToast("Sending test notification...", "info");
+        
+        const targetId = this.user.messengerId;
+        const testMsg = `🔔 IceQube CDO: This is a test notification for your account. If you received this, your Messenger ID is correctly configured! 🧊`;
+
+        try {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    recipientId: targetId,
+                    message: testMsg
+                })
+            });
+
+            if (response.ok) {
+                this.showToast("Test Sent! Check your Messenger.", "success");
+            } else {
+                throw new Error("Proxy returned error");
+            }
+        } catch (error) {
+            console.error('Test failed:', error);
+            this.showToast("Test Failed. Check ID or connection.", "error");
+        }
     },
 
     toggleMessengerNotifications() {

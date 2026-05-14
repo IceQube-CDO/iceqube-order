@@ -2196,7 +2196,10 @@
                         </div>
                         <div style="flex: 1;">
                             <p style="font-size: 0.95rem; font-weight: 800; margin: 0; color: var(--text-primary);">Messenger Updates</p>
-                            <input type="text" id="profile-messenger-input" placeholder="Enter Messenger ID / Link" style="font-size: 0.75rem; color: var(--text-secondary); background: transparent; border: none; outline: none; width: 100%; margin: 2px 0 0; padding: 0;" oninput="app.handleMessengerInput(this.value)">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="text" id="profile-messenger-input" placeholder="Enter Messenger ID / Link" style="font-size: 0.75rem; color: var(--text-secondary); background: transparent; border: none; outline: none; width: 100%; margin: 2px 0 0; padding: 0;" oninput="app.handleMessengerInput(this.value)">
+                                <button onclick="app.testMessengerNotification()" style="font-size: 0.65rem; background: var(--bg-primary); color: var(--accent); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-weight: 700; cursor: pointer;">Test</button>
+                            </div>
                         </div>
                     </div>
                     <div id="messenger-status-badge" class="status-badge" style="background: #fee2e2; color: #ef4444; font-size: 0.7rem; padding: 5px 10px; border-radius: 8px; font-weight: 800; letter-spacing: 0.02em; cursor: pointer; user-select: none;" onclick="app.toggleMessengerNotifications()">OFF</div>
