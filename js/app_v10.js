@@ -47,7 +47,11 @@ const app = {
                             { id: 'bag3kg', name: '3kg Ice Cube (Full/Half)', standard: oldProducts.bag3kg?.standard || 40, bulk: oldProducts.bag3kg?.bulk || 35, threshold: oldProducts.bag3kg?.threshold || 14 },
                             { id: 'bag1kg', name: '1kg Ice Cube (Full/Half)', standard: oldProducts.bag1kg?.standard || 15, bulk: oldProducts.bag1kg?.bulk || 14, threshold: oldProducts.bag1kg?.threshold || 40 }
                         ],
-                        delivery: matrix.delivery || { baseFare: 30, perKmRate: 15, freeThreshold: 0 }
+                        delivery: {
+                            baseFare: matrix.delivery?.baseFare || 30,
+                            perKmRate: Math.max(15, matrix.delivery?.perKmRate || 0),
+                            freeThreshold: matrix.delivery?.freeThreshold || 0
+                        }
                     };
                 }
             } catch (e) {
@@ -3587,7 +3591,9 @@ const app = {
         const calculateMaximFee = (distanceInKm) => {
             const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmRate: 15, freeThreshold: 0 };
             const baseFare = delivery.baseFare || 30;
-            const perKmRate = delivery.perKmRate || 15;
+            // FORCE a minimum of 15 to kill the 70 fee once and for all
+            const perKmRate = Math.max(15, parseFloat(delivery.perKmRate) || 0);
+            
             if (distanceInKm <= 1) return baseFare;
             return baseFare + (Math.ceil(distanceInKm - 1) * perKmRate);
         };
