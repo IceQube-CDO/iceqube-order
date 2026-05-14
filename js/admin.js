@@ -58,6 +58,8 @@ var admin = {
     autoDispatchType: 'broadcast',
     complaints: JSON.parse(localStorage.getItem('ice_complaints') || '[]'),
     _autoRefreshIntervalId: null,
+    buzzerMuted: JSON.parse(localStorage.getItem('iceqube_buzzer_muted') || 'false'),
+    buzzerActive: false,
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
@@ -282,6 +284,7 @@ var admin = {
         this.updatePricingUI();
         this.checkMonthlyReset();
         this.updateDates();
+        this.updateBuzzerUI();
 
         // Restore active tab
         const lastTab = localStorage.getItem('iceqube_admin_tab');
@@ -499,7 +502,13 @@ var admin = {
 
     startBuzzer() {
         if (this.buzzerActive) return;
+        if (this.buzzerMuted) {
+            console.log("🔕 Buzzer is MUTED. Sound skipped.");
+            return;
+        }
+        
         this.buzzerActive = true;
+        this.updateBuzzerUI();
         
         if (!this.audioCtx) {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -546,6 +555,58 @@ var admin = {
         if (this.buzzerInterval) {
             clearInterval(this.buzzerInterval);
             this.buzzerInterval = null;
+        }
+        this.updateBuzzerUI();
+    },
+
+    toggleBuzzerMute() {
+        if (this.buzzerActive) {
+            this.stopBuzzer();
+            return;
+        }
+        this.buzzerMuted = !this.buzzerMuted;
+        localStorage.setItem('iceqube_buzzer_muted', this.buzzerMuted);
+        console.log(`🔔 Buzzer Mute: ${this.buzzerMuted}`);
+        this.updateBuzzerUI();
+    },
+
+    testBuzzer() {
+        if (this.buzzerActive) {
+            this.stopBuzzer();
+        } else {
+            // Force start even if muted for testing
+            const wasMuted = this.buzzerMuted;
+            this.buzzerMuted = false;
+            this.startBuzzer();
+            this.buzzerMuted = wasMuted; // Restore original state
+        }
+    },
+
+    updateBuzzerUI() {
+        const badge = document.getElementById('buzzer-badge');
+        const dot = document.getElementById('buzzer-dot');
+        if (!badge || !dot) return;
+
+        if (this.buzzerActive) {
+            badge.classList.add('buzzer-active-alarm');
+            badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> STOP BUZZER`;
+        } else {
+            badge.classList.remove('buzzer-active-alarm');
+            if (this.buzzerMuted) {
+                badge.style.background = 'rgba(255, 255, 255, 0.05)';
+                badge.style.color = '#94a3b8';
+                badge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                dot.style.background = '#64748b';
+                dot.style.boxShadow = 'none';
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #64748b; border-radius: 50%;"></span> BUZZER (MUTED)`;
+            } else {
+                badge.style.background = 'rgba(34, 197, 94, 0.1)';
+                badge.style.color = '#22c55e';
+                badge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                dot.style.background = '#22c55e';
+                dot.style.boxShadow = '0 0 8px #22c55e';
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> BUZZER (ON)`;
+            }
         }
     },
 
