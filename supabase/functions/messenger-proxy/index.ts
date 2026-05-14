@@ -15,11 +15,30 @@ serve(async (req) => {
   }
 
   try {
-    const { recipientId, message } = await req.json()
+    let recipientId, message;
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("form") || req.method === "GET") {
+      // Handle Form Data or URL Params (Bypass mode)
+      const url = new URL(req.url);
+      recipientId = url.searchParams.get("recipientId");
+      message = url.searchParams.get("message");
+
+      if (!recipientId) {
+        const formData = await req.formData().catch(() => new FormData());
+        recipientId = formData.get("recipientId");
+        message = formData.get("message");
+      }
+    } else {
+      // Handle Standard JSON
+      const body = await req.json().catch(() => ({}));
+      recipientId = body.recipientId;
+      message = body.message;
+    }
 
     if (!recipientId || !message) {
-      return new Response(JSON.stringify({ error: "Missing recipientId or message" }), {
-        headers: { "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Missing recipientId or message", received: { recipientId, message } }), {
+        headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
         status: 400,
       })
     }
@@ -29,6 +48,8 @@ serve(async (req) => {
       message: { text: message },
     }
 
+    console.log(`[Messenger] Relaying to FB: ${recipientId}`);
+    
     const response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
