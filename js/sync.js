@@ -136,7 +136,10 @@ window.IceQubeSync = {
                 console.log("☁️ [Sync] Fetching latest Pricing Matrix (GLOBAL_CONFIG_V2) from Cloud...");
                 
                 // standard fetch but with strict no-cache headers. 
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=items,created_at`, {
+                // We add the apikey to the URL because some mobile browsers strip custom headers.
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_PRICING_MATRIX&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -165,13 +168,22 @@ window.IceQubeSync = {
                     }
                 } else {
                     const errorText = await response.text();
-                    console.warn("⚠️ [Sync] Cloud Fetch failed with status:", response.status, errorText);
-                    resolve({ _error: `HTTP ${response.status}: ${errorText.substring(0, 50)}` });
+                    const errMsg = `HTTP ${response.status}: ${errorText.substring(0, 100)}`;
+                    console.warn("⚠️ [Sync] Cloud Fetch failed:", errMsg);
+                    // EMERGENCY ALERT: Let the user see the exact error on their phone
+                    if (window.location.href.includes('messenger')) {
+                        alert("Sync Error: " + errMsg);
+                    }
+                    resolve({ _error: errMsg });
                 }
             } catch (err) {
                 clearTimeout(timeout);
-                console.error("❌ [Sync] Network Error:", err);
-                resolve({ _error: 'Network Error' });
+                const errMsg = `Network: ${err.message}`;
+                console.error("❌ [Sync] Network Error:", errMsg);
+                if (window.location.href.includes('messenger')) {
+                    alert("Sync Network Error: " + errMsg);
+                }
+                resolve({ _error: errMsg });
             }
         });
     },
