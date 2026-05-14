@@ -667,24 +667,30 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // THE ULTIMATE BYPASS: Disguise the message as an image request (GET)
-            // This bypasses CORS and standard network blocks entirely
-            const params = new URLSearchParams({
-                apikey: SUPABASE_CONFIG.ANON_KEY,
-                recipientId: targetId,
-                message: msg
-            });
-            
-            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?${params.toString()}`;
-            
-            const ping = new Image();
-            ping.src = url;
+            // THE ULTIMATE BYPASS #2: Hidden Form POST
+            // This bypasses CORS entirely by using a standard form submission to a hidden iframe
+            const bridge = document.getElementById('hidden-bridge');
+            if (bridge) {
+                const formId = `msg-form-${Date.now()}`;
+                const frameId = `msg-frame-${Date.now()}`;
+                
+                bridge.innerHTML = `
+                    <iframe name="${frameId}" id="${frameId}"></iframe>
+                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-proxy?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
+                        <input type="hidden" name="recipientId" value="${targetId}">
+                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                    </form>
+                `;
+                
+                const form = document.getElementById(formId);
+                if (form) form.submit();
+            }
 
-            console.log('📡 [Messenger] Signal sent via Image-Ping Bypass.');
-            updateStatus('Signal Sent', '#22c55e');
+            console.log('📬 [Messenger] Dispatching via Hidden Bridge POST...');
+            updateStatus('Bridge Sent', '#22c55e');
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
-            updateStatus('Bypass Failed', '#ef4444');
+            updateStatus('Bridge Failed', '#ef4444');
         } finally {
             // Reset to idle after 10 seconds
             setTimeout(() => updateStatus('Idle', '#94a3b8'), 10000);
