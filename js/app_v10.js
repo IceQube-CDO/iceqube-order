@@ -107,7 +107,13 @@ const app = {
                     cloudBadge.style.color = '#ef4444';
                     cloudBadge.style.cursor = 'pointer';
                     cloudBadge.innerHTML = `<span style="width: 5px; height: 5px; background: #ef4444; border-radius: 50%;"></span> ${errMsg.toUpperCase()}`;
-                    cloudBadge.onclick = () => alert(`DEBUG INFO:\nVersion: 10.7.0\nStatus: ${errMsg}\nRate: ${this.pricingMatrix.delivery.perKmRate}\nCloud: ${window.IceQubeSync ? 'Enabled' : 'Missing'}`);
+                    
+                    // Remove old listener if any and add new one
+                    cloudBadge.replaceWith(cloudBadge.cloneNode(true));
+                    const newBadge = document.getElementById('cloud-sync-badge');
+                    newBadge.addEventListener('click', () => {
+                        alert(`DEBUG INFO:\nVersion: 10.7.1\nStatus: ${errMsg}\nRate: ${this.pricingMatrix.delivery.perKmRate}\nCloud: ${window.IceQubeSync ? 'Enabled' : 'Missing'}`);
+                    });
                 }
 
                 // IMPORTANT: Even if offline, recalculate using the new hardcoded 15/km defaults
