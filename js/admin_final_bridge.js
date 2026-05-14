@@ -667,31 +667,31 @@ var admin = {
                     `Thank you for choosing IceQube! ❄️`;
 
         try {
-            // Reverting to standard fetch with the CORRECTED name
-            const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'apikey': SUPABASE_CONFIG.ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                },
-                body: JSON.stringify({
-                    recipientId: targetId,
-                    message: msg
-                })
-            });
-
-            if (response.ok) {
-                console.log('✅ [Messenger] Bridge signal launched successfully.');
-                updateStatus(`🚀 SIGNAL LAUNCHED to ${targetId}`, '#22c55e');
+            // THE DEFINITIVE BYPASS: Hidden Form with the Correct Name
+            const bridge = document.getElementById('hidden-bridge');
+            if (bridge) {
+                const formId = `msg-form-${Date.now()}`;
+                const frameId = `msg-frame-${Date.now()}`;
+                
+                bridge.innerHTML = `
+                    <iframe name="${frameId}" id="${frameId}"></iframe>
+                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
+                        <input type="hidden" name="recipientId" value="${targetId}">
+                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                    </form>
+                `;
+                
+                const form = document.getElementById(formId);
+                if (form) form.submit();
+                
+                console.log('📬 [Messenger] Dispatching via Corrected Webhook Bridge...');
+                updateStatus(`Bridge Sent to ${targetId}`, '#22c55e');
             } else {
-                updateStatus(`Error: ${response.status}`, '#ef4444');
+                updateStatus('Bridge Missing', '#ef4444');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
-            updateStatus('Network Error', '#ef4444');
+            updateStatus('Bridge Failed', '#ef4444');
         } finally {
             // Reset to idle after 15 seconds
             setTimeout(() => updateStatus('Idle', '#94a3b8'), 15000);
