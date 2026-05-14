@@ -625,7 +625,14 @@ var admin = {
         this.updateBuzzerUI();
     },
 
-    async sendMessengerNotification(order) {
+    async sendMessengerNotification(orderInput) {
+        let order = orderInput;
+        
+        // If passed an ID, look it up in the cache
+        if (typeof orderInput === 'string') {
+            order = (this.lastFetchedOrders || []).find(o => o.order_id === orderInput);
+        }
+
         if (!order || !order.customer_name) return;
         
         const statusText = document.getElementById('messenger-status');
@@ -945,8 +952,8 @@ var admin = {
                     this.alarmedOrders.add(orderId);
                     
                     const orderDate = new Date(co.created_at || 0);
-                    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-                    const isVeryRecent = orderDate > fiveMinutesAgo;
+                    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+                    const isVeryRecent = orderDate > thirtyMinutesAgo;
 
                     // 1. Always trigger notification for very recent orders (even on initial load)
                     if (isVeryRecent) {
@@ -2004,6 +2011,7 @@ var admin = {
 
         // Use provided orders (from cloud) or fallback to local only if orders is null/undefined
         let allOrders = Array.isArray(orders) ? [...orders] : JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        this.lastFetchedOrders = allOrders; // Store for manual lookups
 
         // SANITIZE: Remove any broken or malformed test data
         allOrders = allOrders.filter(o => o && o.order_id && o.created_at && !o.order_id.includes('undefined'));
@@ -2059,6 +2067,10 @@ var admin = {
                                        color: ${o.is_real ? '#22c55e' : '#64748b'}; 
                                        padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
                             ${o.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                        </button>
+                        <button onclick="admin.sendMessengerNotification('${o.order_id}')" 
+                                style="background: rgba(14, 165, 233, 0.1); border: 1px solid #0ea5e9; color: #0ea5e9; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
+                            💬 MSG
                         </button>
                         <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')">
                             ${isAwaiting ? 'Re-Dispatch' : 'Dispatch'}
