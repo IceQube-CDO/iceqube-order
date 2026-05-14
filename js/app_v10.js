@@ -4874,6 +4874,7 @@ const app = {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                 },
                 body: JSON.stringify({
@@ -6539,6 +6540,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                 },
                 body: JSON.stringify({
