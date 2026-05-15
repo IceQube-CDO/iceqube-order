@@ -74,16 +74,16 @@ var admin = {
                 try {
                     // 1. Local Purge
                     const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-                    const realOrders = orders.filter(o => o.is_real === true && o.po_number !== 'SYSTEM-GENERATED' && o.poNumber !== 'SYSTEM-GENERATED');
+                    const realOrders = orders.filter(o => o.is_real !== false && o.po_number !== 'SYSTEM-GENERATED' && o.poNumber !== 'SYSTEM-GENERATED');
                     localStorage.setItem('ice_orders', JSON.stringify(realOrders));
                     console.log(`- Filtered Orders: ${realOrders.length} kept locally`);
 
                     const deliveries = JSON.parse(localStorage.getItem('ice_deliveries') || '[]');
-                    const realDeliveries = deliveries.filter(d => d.is_real === true);
+                    const realDeliveries = deliveries.filter(d => d.is_real !== false);
                     localStorage.setItem('ice_deliveries', JSON.stringify(realDeliveries));
 
                     const cashflow = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
-                    const realCashflow = cashflow.filter(c => c.is_real === true);
+                    const realCashflow = cashflow.filter(c => c.is_real !== false);
                     localStorage.setItem('ice_cashflow', JSON.stringify(realCashflow));
 
                     localStorage.removeItem('ice_messages');
@@ -96,8 +96,8 @@ var admin = {
                     // 2. Cloud Purge (If active)
                     if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
                         console.log('☁️ Attempting Cloud Purge (Test orders and SYSTEM-GENERATED)...');
-                        // Delete non-real orders OR system-generated test orders from Supabase
-                        const cloudResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(is_real.is.null,is_real.eq.false,po_number.eq.SYSTEM-GENERATED)`, {
+                        // Delete ONLY explicit test orders OR system-generated test orders from Supabase
+                        const cloudResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(is_real.eq.false,po_number.eq.SYSTEM-GENERATED)`, {
                             method: 'DELETE',
                             headers: {
                                 'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -157,12 +157,16 @@ var admin = {
         const localData = JSON.parse(localStorage.getItem(key) || '[]');
         const localIdx = localData.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
         
-        let currentStatus = false;
+        let currentStatus = true; // Default to REAL for legacy data
         if (localIdx > -1) {
-            currentStatus = !!localData[localIdx].is_real;
+            const val = localData[localIdx].is_real;
+            currentStatus = (val === undefined || val === null) ? true : !!val;
         } else {
             const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
-            if (memoryItem) currentStatus = !!memoryItem.is_real;
+            if (memoryItem) {
+                const val = memoryItem.is_real;
+                currentStatus = (val === undefined || val === null) ? true : !!val;
+            }
         }
 
         const newStatus = !currentStatus;
@@ -2038,11 +2042,11 @@ var admin = {
                     </td>
                     <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
                         <button onclick="admin.toggleRealStatus('cashflow', '${entry.timestamp}')" 
-                                style="background: ${entry.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
-                                       border: 1px solid ${entry.is_real ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
-                                       color: ${entry.is_real ? '#22c55e' : '#64748b'}; 
+                                style="background: ${entry.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                       border: 1px solid ${entry.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                       color: ${entry.is_real !== false ? '#22c55e' : '#64748b'}; 
                                        padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
-                            ${entry.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                            ${entry.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
                         </button>
                         ${entry.source === 'MANUAL' ? `<button onclick="admin.deleteManualEntry('${entry.timestamp}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
                     </td>
@@ -2199,11 +2203,11 @@ var admin = {
                     </td>
                     <td style="text-align: right; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
-                                style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
-                                       border: 1px solid ${o.is_real ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
-                                       color: ${o.is_real ? '#22c55e' : '#64748b'}; 
+                                style="background: ${o.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                       border: 1px solid ${o.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                       color: ${o.is_real !== false ? '#22c55e' : '#64748b'}; 
                                        padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
-                            ${o.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                            ${o.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
                         </button>
                         <button onclick="admin.sendMessengerNotification('${o.order_id}')" 
                                 style="background: rgba(14, 165, 233, 0.1); border: 1px solid #0ea5e9; color: #0ea5e9; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
@@ -2247,11 +2251,11 @@ var admin = {
                     <td style="font-family: 'JetBrains Mono'; color: #64748b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
                     <td style="text-align: center;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
-                                style="background: ${o.is_real ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
-                                       border: 1px solid ${o.is_real ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
-                                       color: ${o.is_real ? '#22c55e' : '#64748b'}; 
+                                style="background: ${o.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                       border: 1px solid ${o.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                       color: ${o.is_real !== false ? '#22c55e' : '#64748b'}; 
                                        padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
-                            ${o.is_real ? '🛡️ REAL' : '🧪 TEST'}
+                            ${o.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
                         </button>
                     </td>
                     <td>
