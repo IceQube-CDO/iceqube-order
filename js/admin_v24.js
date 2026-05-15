@@ -633,8 +633,16 @@ var admin = {
             order = (this.lastFetchedOrders || []).find(o => o.order_id === orderInput);
         }
 
-        if (!order || !order.customer_name) return;
+        if (!order || !order.customer_name || !order.order_id) return;
         
+        // --- 1. DE-DUPLICATION CHECK ---
+        if (!this.notifiedOrders) this.notifiedOrders = new Set();
+        if (this.notifiedOrders.has(order.order_id)) {
+            console.log('⏭️ [Messenger] Already notified for order:', order.order_id);
+            return;
+        }
+        this.notifiedOrders.add(order.order_id);
+
         const statusText = document.getElementById('messenger-status');
         const statusDot = document.getElementById('messenger-dot');
         const updateStatus = (text, color, pulse = false) => {
@@ -734,36 +742,40 @@ var admin = {
                 `;
                 bridgeContainer.appendChild(custDiv);
                 document.getElementById(custFormId).submit();
-                console.log('📡 [Messenger] Refined Receipt Sent.');
+                console.log('📡 [Messenger] Customer Receipt Sent.');
 
-                // --- 2. DISPATCH TO ADMIN (REFINED ALERT) ---
+                // --- 2. DISPATCH TO ADMIN (PRIVACY SHIELD ACTIVE) ---
                 const ADMIN_PSID = "26521276764196410";
                 
-                const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
-                                 `Deliver to: ${order.customer_name}\n` +
-                                 `Item: ${itemsText}\n` +
-                                 `Total: ₱${customerTotal.toLocaleString()}\n` +
-                                 `Payment: ${order.payment_method || 'Cash'}\n\n` +
-                                 `Check the Control Room!`;
-                
-                const adminFormId = `msg-form-admin-${Date.now()}`;
-                const adminFrameId = `msg-frame-admin-${Date.now()}`;
-                
-                const adminDiv = document.createElement('div');
-                adminDiv.innerHTML = `
-                    <iframe name="${adminFrameId}" id="${adminFrameId}"></iframe>
-                    <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
-                        <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
-                        <input type="hidden" name="message" value="${adminMsg.replace(/"/g, '&quot;')}">
-                    </form>
-                `;
-                
-                bridgeContainer.appendChild(adminDiv);
-                setTimeout(() => {
-                    document.getElementById(adminFormId).submit();
-                }, 500);
+                // ONLY send alert if the customer is NOT the admin
+                if (targetId !== ADMIN_PSID) {
+                    const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                                     `Deliver to: ${order.customer_name}\n` +
+                                     `Item: ${itemsText}\n` +
+                                     `Total: ₱${customerTotal.toLocaleString()}\n` +
+                                     `Payment: ${order.payment_method || 'Cash'}\n\n` +
+                                     `Check the Control Room!`;
+                    
+                    const adminFormId = `msg-form-admin-${Date.now()}`;
+                    const adminFrameId = `msg-frame-admin-${Date.now()}`;
+                    
+                    const adminDiv = document.createElement('div');
+                    adminDiv.innerHTML = `
+                        <iframe name="${adminFrameId}" id="${adminFrameId}"></iframe>
+                        <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
+                            <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
+                            <input type="hidden" name="message" value="${adminMsg.replace(/"/g, '&quot;')}">
+                        </form>
+                    `;
+                    
+                    bridgeContainer.appendChild(adminDiv);
+                    setTimeout(() => {
+                        document.getElementById(adminFormId).submit();
+                        console.log('📡 [Messenger] Admin Buzzer Sent.');
+                    }, 800);
+                }
 
-                updateStatus(`Notified Customer & Admin`, '#22c55e');
+                updateStatus(`Notified Successfully`, '#22c55e');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
