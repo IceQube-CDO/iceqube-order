@@ -3170,17 +3170,81 @@ var admin = {
             const warnHtml = percent < 15 ? `<p style="font-size: 0.65rem; color: #ef4444; margin-top: 5px;">⚠️ Low</p>` : '';
             
             if (isPackaging) {
-                // Bin-style rendering for packaging (Label below)
+                // Style: "Half-Circle Folded Stack" - Contoured Organic Ties (Capped at 5 Levels)
+                const bundlesCount = Math.ceil(item.current / 500);
+                const maxBundlesPossible = Math.ceil(item.max / 500);
+                let bundlesHtml = '';
+                
+                // Capped at 5 levels per user request
+                const visualBundles = Math.min(bundlesCount, 5);
+                const spacing = 18; 
+
+                // Refined Gradients for White Plastic Texture
+                const sideGradients = `
+                    <defs>
+                        <linearGradient id="sideL-${item.id}" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#cbd5e1" />
+                            <stop offset="100%" stop-color="#94a3b8" />
+                        </linearGradient>
+                        <linearGradient id="sideR-${item.id}" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#94a3b8" />
+                            <stop offset="100%" stop-color="#64748b" />
+                        </linearGradient>
+                    </defs>
+                `;
+
+                for (let i = 0; i < visualBundles; i++) {
+                    const by = 80 - (i * spacing);
+                    
+                    bundlesHtml += `
+                        <g transform="translate(0, ${by})" style="transition: all 0.5s ease ${i * 0.02}s;">
+                            <!-- The Square Mass with Bold Half-Circle Folds -->
+                            
+                            <!-- Side Left (Bold Half-Circle Round) -->
+                            <path d="M0 20 Q-12 28 0 36 L50 51 L50 35 Z" fill="url(#sideL-${item.id})" />
+                            
+                            <!-- Side Right (Bold Half-Circle Round) -->
+                            <path d="M100 20 Q112 28 100 36 L50 51 L50 35 Z" fill="url(#sideR-${item.id})" />
+                            
+                            <!-- Top Surface (Sharp Square Corners) -->
+                            <path d="M0 20 L50 35 L100 20 L50 5 Z" fill="#ffffff" />
+                            <path d="M0 20 L50 35 L100 20 L50 5 Z" fill="rgba(255,255,255,0.4)" />
+                            
+                            <!-- Contoured Perpendicular Cross-Tie -->
+                            <g>
+                                <!-- Band 1 -->
+                                <path d="M23 25 L27 27 L77 12 L73 10 Z" fill="${color}" opacity="0.6" />
+                                <path d="M23 25 Q13 32 23 40 L27 42 Q17 34 27 27 Z" fill="${color}" opacity="0.8" />
+                                <!-- Band 2 -->
+                                <path d="M73 25 L77 27 L27 12 L23 10 Z" fill="${color}" opacity="0.6" />
+                                <path d="M77 27 Q87 34 77 42 L73 40 Q83 32 73 25 Z" fill="${color}" opacity="0.8" />
+                            </g>
+
+                            <!-- Center Intersection Knot -->
+                            <circle cx="50" cy="18.5" r="2.5" fill="white" opacity="0.4" pointer-events="none" />
+                        </g>
+                    `;
+                }
+
                 return `
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; flex-shrink: 0;">
-                        <div class="dynamic-bin" onclick="admin.showRestockModal('${item.id}')" title="Click to Restock">
-                            <div class="bin-fill" style="height: ${percent}%; background: ${color};"></div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 35px; flex-shrink: 0; width: 200px; margin-bottom: 70px;">
+                        <div onclick="admin.showRestockModal('${item.id}')" style="width: 160px; height: 180px; position: relative; cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);" onmouseover="this.style.transform='translateY(-15px) scale(1.05)'" onmouseout="this.style.transform='translateY(0) scale(1)'">
+                            <svg width="100%" height="100%" viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet">
+                                ${sideGradients}
+                                <!-- Capped Folded Stack -->
+                                ${bundlesHtml}
+                            </svg>
+                            <!-- Ground Ambience -->
+                            <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 85%; height: 15px; background: ${color}20; filter: blur(20px); border-radius: 50%; z-index: -1;"></div>
                         </div>
                         <div style="text-align: center;">
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #f8fafc; white-space: nowrap; margin-bottom: 4px;">${item.name}</div>
-                            <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.3;">
-                                <span style="color: #f8fafc; font-weight: 900; font-size: 1.2rem;">${item.current.toLocaleString()}</span><br>
-                                <span style="font-size: 0.75rem; opacity: 0.8;">pcs left of ${item.max.toLocaleString()}</span>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: #f8fafc; white-space: nowrap; margin-bottom: 8px; font-family: 'Outfit'; letter-spacing: -0.5px;">${item.name}</div>
+                            <div style="font-size: 1.1rem; color: #94a3b8; font-weight: 600; display: flex; align-items: baseline; justify-content: center; gap: 6px;">
+                                <span style="color: ${color}; font-weight: 900; font-size: 1.6rem;">${item.current.toLocaleString()}</span>
+                                <span style="opacity: 0.5; font-size: 0.9rem;">/ ${item.max.toLocaleString()}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b; margin-top: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">
+                                ${bundlesCount} BUNDLE${bundlesCount !== 1 ? 'S' : ''}
                             </div>
                             ${warnHtml}
                         </div>

@@ -2528,9 +2528,9 @@
         </div>
 
         <!-- CONSUMABLES VIEW -->
-            <div class="cc-grid" id="consumables-view" style="display: none;">
+            <div id="consumables-view" style="display: none; width: 100%; flex-direction: row; gap: 1.5rem; flex-wrap: wrap;">
 
-            <div class="cc-card" style="flex: 1; min-width: 380px;">
+            <div class="cc-card" style="flex: 1; min-width: 320px;">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
                     Cleaning & Maintenance
                     <button class="status-badge" onclick="admin.showRestockModal('CUSTOM')" style="padding: 2px 8px; border-radius: 8px; font-size: 1rem; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">+</button>
@@ -2542,12 +2542,12 @@
             </div>
 
 
-            <div class="cc-card" style="flex: 1; min-width: 380px;">
+            <div class="cc-card" style="flex: 2; min-width: 600px;">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
                     Packaging Supplies
                     <button class="status-badge" onclick="admin.showRestockModal('CUSTOM')" style="padding: 2px 8px; border-radius: 8px; font-size: 1rem; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">+</button>
                 </div>
-                <div id="packaging-list" style="margin-top: 2rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.5rem 1.5rem; text-align: center;">
+                <div id="packaging-list" style="margin-top: 2rem; display: flex; flex-direction: row; gap: 3rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 10px;">
                     <!-- Packaging items dynamically injected -->
                 </div>
             </div>
