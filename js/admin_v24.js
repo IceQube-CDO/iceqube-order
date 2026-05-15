@@ -21,6 +21,11 @@ var admin = {
         cleaning: [
             { id: 'sanitizer', name: 'Food Grade Sanitizer', current: 4.5, max: 10, unit: 'Liters' },
             { id: 'descaler', name: 'Machine Descaler', current: 2, max: 5, unit: 'Bottles' }
+        ],
+        filtration: [
+            { id: 'f-sediment', name: 'PP Sediment Filter', purchaseDate: '2026-04-01', lifespanMonths: 3, cost: 250, brand: 'Generic', company: 'Lazada', link: 'https://lazada.com.ph' },
+            { id: 'f-carbon', name: 'Carbon Block Filter', purchaseDate: '2026-02-15', lifespanMonths: 6, cost: 450, brand: 'Aqua', company: 'Shopee', link: 'https://shopee.ph' },
+            { id: 'f-uv', name: 'UV Sterilizer Lamp', purchaseDate: '2025-11-10', lifespanMonths: 12, cost: 1200, brand: 'Philips', company: 'Local Shop', link: '' }
         ]
     })),
     maintenanceLogs: JSON.parse(localStorage.getItem('iceqube_maintenance_logs') || '[]'),
@@ -233,17 +238,23 @@ var admin = {
             }
         
         // Data Migration/Validation for Consumables
-        if (!this.consumables.packaging || !this.consumables.cleaning) {
+        if (!this.consumables.packaging || !this.consumables.cleaning || !this.consumables.filtration) {
             console.log('Migrating old consumables structure...');
+            const oldConsumables = this.consumables || {};
             this.consumables = {
-                packaging: [
+                packaging: oldConsumables.packaging || [
                     { id: 'bags3kg', name: '3kg Bag', current: 4200, max: 10000, unit: 'pcs' },
                     { id: 'bags1kg', name: '1kg Bag', current: 1150, max: 5000, unit: 'pcs' },
                     { id: 'ecobag', name: 'Delivery Ecobag', current: 45, max: 100, unit: 'pcs' }
                 ],
-                cleaning: [
+                cleaning: oldConsumables.cleaning || [
                     { id: 'sanitizer', name: 'Food Grade Sanitizer', current: 4.5, max: 10, unit: 'Liters' },
                     { id: 'descaler', name: 'Machine Descaler', current: 2, max: 5, unit: 'Bottles' }
+                ],
+                filtration: oldConsumables.filtration || [
+                    { id: 'f-sediment', name: 'PP Sediment Filter', purchaseDate: '2026-04-01', lifespanMonths: 3, cost: 250, brand: 'Generic', company: 'Lazada', link: 'https://lazada.com.ph' },
+                    { id: 'f-carbon', name: 'Carbon Block Filter', purchaseDate: '2026-02-15', lifespanMonths: 6, cost: 450, brand: 'Aqua', company: 'Shopee', link: 'https://shopee.ph' },
+                    { id: 'f-uv', name: 'UV Sterilizer Lamp', purchaseDate: '2025-11-10', lifespanMonths: 12, cost: 1200, brand: 'Philips', company: 'Local Shop', link: '' }
                 ]
             };
             localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
@@ -285,6 +296,7 @@ var admin = {
         this.updateAlertCenter([]);
         this.startDataSync();
         this.updateConsumablesUI();
+        this.updateFiltrationUI();
         this.updateMaintenanceUI();
         this.updateAssetsUI();
         this.updateUtilitiesUI();
@@ -1417,7 +1429,10 @@ var admin = {
             this.updateUtilitiesUI();
             this.updateRentalUI();
         }
-        if (viewId === 'consumables') this.updateConsumablesUI();
+        if (viewId === 'consumables') {
+            this.updateConsumablesUI();
+            this.updateFiltrationUI();
+        }
         if (viewId === 'finance') this.loadPnL('mtd');
         if (viewId === 'matrix') this.updatePricingUI();
         
@@ -2929,6 +2944,217 @@ var admin = {
         alert('Item removed successfully.');
     },
 
+    updateFiltrationUI() {
+        const list = document.getElementById('filtration-list');
+        if (!list) return;
+
+        if (!this.consumables.filtration) this.consumables.filtration = [];
+
+        // Set list to flex for the connected look
+        list.style.display = 'flex';
+        list.style.flexWrap = 'wrap';
+        list.style.justifyContent = 'center';
+        list.style.alignItems = 'flex-start';
+        list.style.gap = '0';
+        list.style.padding = '20px';
+
+        list.innerHTML = this.consumables.filtration.map((item, index) => {
+            const purchaseDate = new Date(item.purchaseDate);
+            const expiryDate = new Date(item.purchaseDate);
+            expiryDate.setMonth(expiryDate.getMonth() + Number(item.lifespanMonths));
+            
+            const today = new Date();
+            const diffTime = expiryDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const totalLifeDays = Number(item.lifespanMonths) * 30; 
+            const percentRemaining = Math.max(0, Math.min(100, (diffDays / totalLifeDays) * 100));
+
+            // Color logic: Vibrant Blue (#00d2ff) -> Dark/Black (#020617)
+            let color = '#0ea5e9'; // Default Blue
+            let glow = '#0ea5e980';
+            if (diffDays < 7) {
+                color = '#020617'; 
+                glow = 'rgba(0,0,0,0)';
+            } else if (diffDays < 21) {
+                color = '#1e293b';
+                glow = '#1e293b80';
+            }
+
+            const isLast = index === this.consumables.filtration.length - 1;
+
+            return `
+                <div style="display: flex; align-items: flex-start; margin-bottom: 30px;">
+                    <!-- Filter Housing Stage -->
+                    <div style="display: flex; flex-direction: column; align-items: center; width: 160px; position: relative;">
+                        <!-- Stage Number -->
+                        <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #94a3b8; font-size: 0.6rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); z-index: 10;">
+                            STAGE ${index + 1}
+                        </div>
+
+                        <!-- Cap/Head -->
+                        <div style="width: 110px; height: 34px; background: linear-gradient(180deg, #334155 0%, #1e293b 100%); border-radius: 12px 12px 4px 4px; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                            <!-- Inlet/Outlet Ports -->
+                            <div style="position: absolute; top: 14px; left: -8px; width: 12px; height: 8px; background: #475569; border-radius: 2px;"></div>
+                            <div style="position: absolute; top: 14px; right: -8px; width: 12px; height: 8px; background: #475569; border-radius: 2px;"></div>
+                        </div>
+                        
+                        <!-- Tube Body -->
+                        <div onclick="admin.showEditFilterModal('${item.id}')" style="width: 86px; height: 180px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(255,255,255,0.1); border-radius: 0 0 43px 43px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s ease; box-shadow: inset 0 0 25px rgba(0,0,0,0.8); margin-top: -2px;">
+                            <!-- Fluid/Filter Core -->
+                            <div style="position: absolute; bottom: 0; width: 100%; height: ${percentRemaining}%; background: ${color}; opacity: 0.85; transition: all 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 -5px 25px ${glow};">
+                                <!-- Bubbles/Particles effect -->
+                                <div style="position: absolute; top: 10px; left: 20%; width: 4px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 50%;"></div>
+                                <div style="position: absolute; top: 30px; right: 25%; width: 3px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                            </div>
+                            
+                            <!-- Internal Core Column -->
+                            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 90%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0) 100%); border-radius: 0 0 12px 12px;"></div>
+                            
+                            <!-- Reflection -->
+                            <div style="position: absolute; top: 10%; left: 15%; width: 15%; height: 70%; background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%); border-radius: 20px;"></div>
+                        </div>
+
+                        <!-- Labels & Actions -->
+                        <div style="margin-top: 18px; text-align: center; width: 140px;">
+                            <div style="font-size: 0.8rem; font-weight: 800; color: #f8fafc; margin-bottom: 4px; font-family: 'Outfit';">${item.name}</div>
+                            <div style="font-size: 0.65rem; font-weight: 700; color: ${diffDays < 7 ? '#ef4444' : (diffDays < 21 ? '#f59e0b' : '#3b82f6')};">
+                                ${diffDays < 0 ? 'EXPIRED' : diffDays + ' Days Left'}
+                            </div>
+                            
+                            <div style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;">
+                                <button onclick="admin.resetFilterLife('${item.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.55rem; font-weight: 800; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='white'; this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.05)'">
+                                    RESET
+                                </button>
+                                ${item.link && item.link !== '#' ? `
+                                    <a href="${item.link}" target="_blank" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); color: #0ea5e9; padding: 4px 8px; border-radius: 6px; text-decoration: none; display: flex; align-items: center;">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connecting Pipe -->
+                    ${!isLast ? `
+                        <div style="width: 50px; height: 10px; background: linear-gradient(180deg, #475569 0%, #1e293b 100%); margin-top: 13px; position: relative; z-index: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(0,0,0,0.3);">
+                            <!-- Pipe shadow/highlight -->
+                            <div style="position: absolute; top: 2px; width: 100%; height: 2px; background: rgba(255,255,255,0.05);"></div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        this.checkFiltrationAlerts();
+    },
+
+    checkFiltrationAlerts() {
+        if (!this.consumables.filtration) return;
+        
+        const criticalItems = this.consumables.filtration.filter(item => {
+            const purchaseDate = new Date(item.purchaseDate);
+            const expiryDate = new Date(purchaseDate.setMonth(purchaseDate.getMonth() + Number(item.lifespanMonths)));
+            const today = new Date();
+            const diffDays = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            return diffDays < 7;
+        });
+
+        if (criticalItems.length > 0) {
+            const dot = document.getElementById('dot-consumables');
+            if (dot) {
+                dot.style.display = 'block';
+                dot.style.background = '#ef4444';
+            }
+            
+            // Only show one system notification for all critical filters to avoid spam
+            if (!this._filtrationNotified) {
+                this.showNotification("Water Filtration Alert", `${criticalItems.length} filters require immediate attention.`);
+                this._filtrationNotified = true;
+            }
+        }
+    },
+
+    showAddFilterModal() {
+        document.getElementById('filter-edit-id').value = '';
+        document.getElementById('filter-name').value = '';
+        document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('filter-lifespan').value = '3';
+        document.getElementById('filter-cost').value = '';
+        document.getElementById('filter-brand').value = '';
+        document.getElementById('filter-company').value = '';
+        document.getElementById('filter-link').value = '';
+        document.getElementById('modal-add-filter').classList.add('active');
+    },
+
+    showEditFilterModal(id) {
+        const item = this.consumables.filtration.find(f => f.id === id);
+        if (!item) return;
+
+        document.getElementById('filter-edit-id').value = item.id;
+        document.getElementById('filter-name').value = item.name;
+        document.getElementById('filter-date').value = item.purchaseDate;
+        document.getElementById('filter-lifespan').value = item.lifespanMonths;
+        document.getElementById('filter-cost').value = item.cost;
+        document.getElementById('filter-brand').value = item.brand;
+        document.getElementById('filter-company').value = item.company;
+        document.getElementById('filter-link').value = item.link;
+        document.getElementById('modal-add-filter').classList.add('active');
+    },
+
+    closeFilterModal() {
+        document.getElementById('modal-add-filter').classList.remove('active');
+    },
+
+    saveFilter() {
+        const id = document.getElementById('filter-edit-id').value;
+        const name = document.getElementById('filter-name').value;
+        const date = document.getElementById('filter-date').value;
+        const lifespan = document.getElementById('filter-lifespan').value;
+        const cost = document.getElementById('filter-cost').value;
+        const brand = document.getElementById('filter-brand').value;
+        const company = document.getElementById('filter-company').value;
+        const link = document.getElementById('filter-link').value;
+
+        if (!name || !date || !lifespan) {
+            alert('Please fill in Name, Date, and Lifespan.');
+            return;
+        }
+
+        const newFilter = {
+            id: id || 'f-' + Date.now(),
+            name,
+            purchaseDate: date,
+            lifespanMonths: Number(lifespan),
+            cost: Number(cost),
+            brand,
+            company,
+            link
+        };
+
+        if (id) {
+            const idx = this.consumables.filtration.findIndex(f => f.id === id);
+            if (idx > -1) this.consumables.filtration[idx] = newFilter;
+        } else {
+            this.consumables.filtration.push(newFilter);
+        }
+
+        localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+        this.updateFiltrationUI();
+        this.closeFilterModal();
+    },
+
+    resetFilterLife(id) {
+        const idx = this.consumables.filtration.findIndex(f => f.id === id);
+        if (idx > -1) {
+            const item = this.consumables.filtration[idx];
+            if (confirm(`Confirm replacement of ${item.name}? This will reset the lifespan countdown to today.`)) {
+                item.purchaseDate = new Date().toISOString().split('T')[0];
+                localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+                this.updateFiltrationUI();
+            }
+        }
+    },
 
     updateConsumablesUI() {
         const packagingList = document.getElementById('packaging-list');

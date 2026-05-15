@@ -2528,7 +2528,7 @@
         </div>
 
         <!-- CONSUMABLES VIEW -->
-            <div class="cc-flex" id="consumables-view" style="display: none;">
+            <div class="cc-grid" id="consumables-view" style="display: none;">
 
             <div class="cc-card" style="flex: 1; min-width: 380px;">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
@@ -2554,40 +2554,14 @@
 
 
 
-            <div class="cc-card" style="flex: 1; min-width: 380px;">
+            <div class="cc-card wide">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Water Filtration Supplies
-                    <button class="status-badge" onclick="admin.showRestockModal('CUSTOM')" style="padding: 2px 8px; border-radius: 8px; font-size: 1rem; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">+</button>
+                    Water Filtration Supplies & Life Monitoring
+                    <button class="status-badge" onclick="admin.showAddFilterModal()" style="padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; cursor: pointer; background: var(--admin-accent); border: none; color: white; font-weight: 800;">+ New Filter</button>
                 </div>
 
-                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
-                    <div class="rider-card">
-                        <div class="rider-info">
-                            <h4 style="margin: 0; font-size: 0.9rem;">PP Sediment Filter</h4>
-                            <small style="color: #64748b;">Remaining Life: 12 days</small>
-                        </div>
-                        <div style="margin-left: auto; text-align: right;">
-                            <div style="color: #f59e0b; font-weight: bold; font-size: 0.8rem;">REPLACE SOON</div>
-                        </div>
-                    </div>
-                    <div class="rider-card">
-                        <div class="rider-info">
-                            <h4 style="margin: 0; font-size: 0.9rem;">Carbon Block Filter</h4>
-                            <small style="color: #64748b;">Remaining Life: 45 days</small>
-                        </div>
-                        <div style="margin-left: auto; text-align: right;">
-                            <div style="color: #22c55e; font-weight: bold; font-size: 0.8rem;">OK</div>
-                        </div>
-                    </div>
-                    <div class="rider-card">
-                        <div class="rider-info">
-                            <h4 style="margin: 0; font-size: 0.9rem;">UV Sterilizer Lamp</h4>
-                            <small style="color: #64748b;">Installed: 4 months ago</small>
-                        </div>
-                        <div style="margin-left: auto; text-align: right;">
-                            <div style="color: #22c55e; font-weight: bold; font-size: 0.8rem;">OK</div>
-                        </div>
-                    </div>
+                <div id="filtration-list" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                    <!-- Filter cards dynamically injected -->
                 </div>
             </div>
         </div>
@@ -3317,6 +3291,62 @@
 
                 <button onclick="admin.addProduct()" style="background: #0ea5e9; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 1rem;">
                     CREATE PACKAGING
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Filter Modal -->
+    <div id="modal-add-filter" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); padding: 2rem; border-radius: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.2rem; color: #f8fafc;">Manage Filtration Supply</h3>
+                <button onclick="admin.closeFilterModal()" style="background: none; border: none; color: #64748b; cursor: pointer; padding: 5px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+                <input type="hidden" id="filter-edit-id">
+                <div>
+                    <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Supply Name</label>
+                    <input type="text" id="filter-name" class="matrix-input" placeholder="e.g. PP Sediment Filter" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Purchase Date</label>
+                        <input type="date" id="filter-date" class="matrix-input" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Lifespan (Months)</label>
+                        <input type="number" id="filter-lifespan" class="matrix-input" value="3" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Cost (₱)</label>
+                        <input type="number" id="filter-cost" class="matrix-input" placeholder="0.00" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Brand</label>
+                        <input type="text" id="filter-brand" class="matrix-input" placeholder="e.g. WaterPur" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Company / Supplier</label>
+                    <input type="text" id="filter-company" class="matrix-input" placeholder="e.g. Lazada, Local Shop" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Purchase Link</label>
+                    <input type="text" id="filter-link" class="matrix-input" placeholder="https://..." style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; width: 100%; padding: 12px; border-radius: 10px;">
+                </div>
+
+                <button onclick="admin.saveFilter()" style="background: var(--admin-accent); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 1rem;">
+                    SAVE FILTRATION SUPPLY
                 </button>
             </div>
         </div>
