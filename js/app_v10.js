@@ -609,6 +609,9 @@ const app = {
         walletBalance: 0.00,
         creditLimit: 50000.00
     },
+    isEliteUser() {
+        return ['Elite', 'Enterprise', 'Verified_Partner'].includes(this.user.accountType);
+    },
     invoices: [],
     isQuickReorder: false,
     orderData: {
@@ -741,7 +744,7 @@ const app = {
     },
 
     openDebtSheet() {
-        const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+        const isElite = this.isEliteUser();
         if (this.user.accountType === 'Standard') {
             const walletTitle = document.getElementById('wallet-sheet-title');
             if (walletTitle) walletTitle.innerText = 'Wallet Top Up';
@@ -987,7 +990,7 @@ const app = {
             if (dispatchFooter) dispatchFooter.style.display = 'flex';
 
             if (dispatchRef && dispatchStatus) {
-                if (this.user.accountType === 'Elite' || this.user.accountType === 'PO') {
+                if (this.isEliteUser()) {
                     dispatchRef.innerText = currentOrder.po_number || 'PO #8821';
                     dispatchStatus.innerText = 'Subscription Active';
                 } else {
@@ -1315,7 +1318,7 @@ const app = {
         const powerTitle = document.getElementById('power-title');
         const rechargeBtn = document.getElementById('recharge-btn');
 
-        if (this.user.accountType !== 'Elite' && this.user.accountType !== 'PO') {
+        if (!this.isEliteUser()) {
             this.renderStandardPowerBox();
             return;
         }
@@ -1390,7 +1393,7 @@ const app = {
         if (!btn) return;
 
         btn.classList.remove('safe', 'warning', 'critical');
-        const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+        const isElite = this.isEliteUser();
 
         if (ratio > 0.90) {
             btn.innerText = isElite ? "Account Healthy" : "Looking Great!";
@@ -1649,9 +1652,11 @@ const app = {
 
     checkUserPrivileges() {
         const poCard = document.getElementById('card-payment-po');
-        const isPrivileged = ['Enterprise', 'Verified_Partner', 'Elite', 'PO'].includes(this.user.accountType);
+        // RE-ENFORCE: Only Elite, Enterprise, and Verified Partners get PO. Standard is strictly excluded.
+        const isPrivileged = this.isEliteUser();
         
         if (poCard) {
+            // Ensure card is hidden for Standard users even if previously shown
             poCard.style.display = isPrivileged ? 'flex' : 'none';
         }
 
@@ -1743,11 +1748,14 @@ const app = {
         this.updateProgress();
 
         // --- ELITE TIER AUTO-SKIP PAYMENT ---
-        if (index === 4 && (this.user.accountType === 'Elite' || this.user.accountType === 'PO')) {
+        // STRICT CHECK: Only auto-select PO if user is actually Elite/Enterprise/Partner
+        const isActuallyElite = this.isEliteUser();
+
+        if (index === 4 && isActuallyElite) {
             // Auto-select PO
             const poCard = document.getElementById('card-payment-po');
             if (poCard) {
-                poCard.style.display = 'block';
+                poCard.style.display = 'flex'; // Consistent with flex in checkUserPrivileges
                 this.selectPayment('Purchase Order', poCard);
                 
                 // If it's a quick reorder, skip the screen entirely
@@ -1756,6 +1764,10 @@ const app = {
                     return;
                 }
             }
+        } else if (index === 4 && !isActuallyElite) {
+            // Ensure PO card is HIDDEN for non-elite users at payment step
+            const poCard = document.getElementById('card-payment-po');
+            if (poCard) poCard.style.display = 'none';
         }
 
         // Ensure the step container and the app shell scroll to the top
@@ -1807,7 +1819,7 @@ const app = {
                 }
                 this.calculatePriorityFee();
 
-                const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+                const isElite = this.isEliteUser();
 
                 if (isElite) {
                     this.orderData.payment = 'Purchase Order';
@@ -3927,7 +3939,7 @@ const app = {
             poBox.classList.add('active');
             
             // For Elite users, the "Place Order" button should be even more prominent
-            if (this.user.accountType === 'Elite' || this.user.accountType === 'PO') {
+            if (this.isEliteUser()) {
                  btn.innerHTML = `<span style="font-weight:900;">CONFIRM PO ORDER</span>`;
                  btn.style.background = 'var(--accent-gold, #eab308)';
                  btn.style.color = '#000';
@@ -5271,7 +5283,7 @@ const app = {
 
             // Update label based on tier
             const receiptLabel = document.getElementById('receipt-client-label');
-            const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+            const isElite = this.isEliteUser();
             if (receiptLabel) receiptLabel.innerText = isElite ? 'ELITE CLIENT DETAILS' : 'CLIENT DETAILS';
 
             // Populate Items
@@ -5440,7 +5452,7 @@ const app = {
         if (clientTierElem) clientTierElem.innerText = `Account Type: ${this.user.accountType || 'Standard'}`;
         
         if (clientLabelElem) {
-            const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+            const isElite = this.isEliteUser();
             clientLabelElem.innerText = isElite ? 'CLIENT:' : 'CUSTOMER:';
         }
 
@@ -6196,19 +6208,24 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                     this.user.accountType = (this.user.tier !== 'Standard') ? 'Elite' : 'Standard';
                     console.log(`✅ [Sync] Match found! Tier: ${this.user.tier}, Type: ${this.user.accountType}`);
                 } else {
-                    // Fallback for legacy sync
-                    const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
+                    // Fallback for legacy sync - STRICTER DEFAULTS
+                    const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["ZZ LOFT"]');
                     const isLegacyElite = eliteList.some(name => (name || "").trim().toLowerCase() === companyName);
                     
-                    if (isLegacyElite) {
+                    if (isLegacyElite && companyName !== 'guest customer') {
                         this.user.accountType = 'Elite';
-                        this.user.tier = 'Elite Gold'; // Default legacy fallback
+                        this.user.tier = 'Elite Gold'; 
                         this.user.creditLimit = 2500;
                         console.log(`⚠️ [Sync] Using legacy Elite fallback for ${companyName}`);
                     } else {
                         this.user.accountType = 'Standard';
                         this.user.tier = 'Standard';
-                        console.log(`ℹ️ [Sync] No Elite status found for ${companyName}, defaulting to Standard.`);
+                        console.log(`ℹ️ [Sync] No Elite status found for "${companyName}", defaulting to Standard.`);
+                    }
+                    
+                    // Final safety check to ensure Standard users NEVER have PO privileges
+                    if (this.user.accountType === 'Standard') {
+                        this.checkUserPrivileges(); // Force UI update
                     }
                 }
 
