@@ -393,7 +393,7 @@ var admin = {
     }
 },
 
-    handleIncomingOrder(order, skipSync = false) {
+    handleIncomingOrder(order, skipSync = false, silent = false) {
         if (!order || !order.order_id) return;
         
         const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
@@ -401,7 +401,7 @@ var admin = {
         
         // If order is new OR it exists but hasn't had supplies deducted yet
         if (existingIdx === -1 || !orders[existingIdx].supplies_deducted) {
-            console.log("📦 [Admin] Processing supplies for order:", order.order_id);
+            console.log(`📦 [Admin] Processing supplies for order ${order.order_id} (Silent: ${silent})`);
             
             if (existingIdx === -1) {
                 order.is_real = true; // Ensure visibility in filters
@@ -424,8 +424,10 @@ var admin = {
             // Deduct supplies using the payload data (more reliable)
             this.deductPackagingSupplies(order);
 
-            this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
-            this.startBuzzer();
+            if (!silent) {
+                this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
+                this.startBuzzer();
+            }
             
             // AUTOMATIC DISPATCH TRIGGER
             if (this.vacationMode) {
@@ -451,8 +453,9 @@ var admin = {
         const fd = items.fullDice || {};
         const hd = items.halfDice || {};
 
-        const total3kg = (parseFloat(fd['3kg']) || 0) + (parseFloat(hd['3kg']) || 0);
-        const total1kg = (parseFloat(fd['1kg']) || 0) + (parseFloat(hd['1kg']) || 0);
+        // Robust key checking (bag3kg vs 3kg)
+        const total3kg = (parseFloat(fd.bag3kg || fd['3kg'] || 0)) + (parseFloat(hd.bag3kg || hd['3kg'] || 0));
+        const total1kg = (parseFloat(fd.bag1kg || fd['1kg'] || 0)) + (parseFloat(hd.bag1kg || hd['1kg'] || 0));
 
         if (total3kg === 0 && total1kg === 0) return;
 
@@ -1062,11 +1065,15 @@ var admin = {
             const cloudOrders = (orders || []).filter(o => o.order_id && o.order_id !== 'CONFIG_PRICING_MATRIX');
             
             // --- SESSION-BASED CLOUD DETECTION ---
-            // We track alarms by memory (this.alarmedOrders) to ensure every order 
-            // is buzzed exactly once in this session, even if localStorage is already synced.
             cloudOrders.forEach(co => {
                 const orderId = co.order_id;
                 const alreadyAlarmed = this.alarmedOrders.has(orderId);
+
+                // Find if this order already exists in local storage to preserve its status
+                const existingLocal = localOrders.find(lo => lo.order_id === orderId);
+                if (existingLocal && existingLocal.supplies_deducted) {
+                    co.supplies_deducted = true;
+                }
 
                 if (!alreadyAlarmed) {
                     this.alarmedOrders.add(orderId);
@@ -1081,12 +1088,16 @@ var admin = {
                         this.sendMessengerNotification(co);
                     }
 
-                    // 2. Only alarm (buzzer) if this isn't the very first time we're loading the dashboard
+                    // 2. Automated Inventory Deduction (Silent if initial load)
                     if (this.isInitialLoadComplete) {
                         console.log("🚀 [Buzzer] Alarm Triggered for New Order:", orderId);
                         this.startBuzzer();
                         this.showNotification(`⚠️ NEW ORDER: ${co.customer_name}`, orderId);
-                        this.handleIncomingOrder(co, true); // true = skipSync
+                        this.handleIncomingOrder(co, true, false); // silent = false
+                    } else if (!co.supplies_deducted) {
+                        // If it's the initial load, we process it SILENTLY to ensure inventory is accurate
+                        console.log("📋 [Sync] Processing historical cloud order for inventory:", orderId);
+                        this.handleIncomingOrder(co, true, true); // silent = true
                     }
                 }
             });
@@ -1094,11 +1105,11 @@ var admin = {
             // Mark initial load as done after the first successful cloud fetch
             this.isInitialLoadComplete = true;
 
+            // Merge logic: Prioritize Cloud data but keep local flags (like supplies_deducted)
             let merged = [...cloudOrders];
             localOrders.forEach(lo => {
-                const alreadyInCloud = cloudOrders.some(co => co.order_id === lo.order_id);
-                // Criteria: Not in cloud AND (is_real OR has valid price/items)
-                if (!alreadyInCloud && (lo.is_real || lo.total_price > 0 || lo.items)) {
+                const cloudVer = cloudOrders.find(co => co.order_id === lo.order_id);
+                if (!cloudVer && (lo.is_real || lo.total_price > 0 || lo.items)) {
                     merged.push(lo);
                 }
             });
