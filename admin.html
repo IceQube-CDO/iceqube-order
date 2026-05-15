@@ -13,6 +13,7 @@
     <meta name="theme-color" content="#020617">
     <link rel="stylesheet" href="css/style_v10.css?v=10.0.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Print Fixes */
         @media print {
@@ -1480,6 +1481,13 @@
         .margin-badge { background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px; }
         .sub-text { font-size: 14px; color: #64748b; margin-top: 8px; }
 
+        /* Chart Containers */
+        .chart-container { position: relative; margin-top: 20px; width: 100%; height: 250px; }
+        .trend-chart-container { height: 180px; margin-top: 15px; }
+        .donut-wrapper { display: flex; align-items: center; gap: 20px; }
+        .donut-chart-container { width: 140px; height: 140px; flex-shrink: 0; }
+        .expense-bars { flex: 1; }
+
         /* --- Customer Profile Drawer --- */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 1000; display: none; }
         
@@ -2920,6 +2928,9 @@
                 </div>
                 <h1 id="hero-net-profit" class="text-green" style="font-size: 3.5rem; margin: 0;">₱0.00</h1>
                 <p class="sub-text">Includes all operational costs and asset depreciation.</p>
+                <div class="chart-container trend-chart-container">
+                    <canvas id="profitTrendChart"></canvas>
+                </div>
             </div>
 
             <div class="cc-card" style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 24px;">
@@ -2978,36 +2989,43 @@
                 <div class="stat-card">
                     <h3 class="card-title">EXPENSE DISTRIBUTION</h3>
                     
-                    <div class="expense-bar-container">
-                        <div class="expense-label">
-                            <span>Rider Payouts</span>
-                            <span id="exp-rider">₱0.00</span>
+                    <div class="donut-wrapper">
+                        <div class="donut-chart-container">
+                            <canvas id="expenseDonutChart"></canvas>
                         </div>
-                        <div class="progress-bar"><div class="fill bg-red" id="bar-rider" style="width: 0%;"></div></div>
-                    </div>
+                        <div class="expense-bars">
+                            <div class="expense-bar-container">
+                                <div class="expense-label">
+                                    <span>Rider Payouts</span>
+                                    <span id="exp-rider">₱0.00</span>
+                                </div>
+                                <div class="progress-bar"><div class="fill bg-red" id="bar-rider" style="width: 0%;"></div></div>
+                            </div>
 
-                    <div class="expense-bar-container">
-                        <div class="expense-label">
-                            <span>Utilities (Est.)</span>
-                            <span id="exp-utilities">₱0.00</span>
-                        </div>
-                        <div class="progress-bar"><div class="fill bg-red" id="bar-utilities" style="width: 0%;"></div></div>
-                    </div>
+                            <div class="expense-bar-container">
+                                <div class="expense-label">
+                                    <span>Utilities (Est.)</span>
+                                    <span id="exp-utilities">₱0.00</span>
+                                </div>
+                                <div class="progress-bar"><div class="fill bg-red" id="bar-utilities" style="width: 0%;"></div></div>
+                            </div>
 
-                    <div class="expense-bar-container">
-                        <div class="expense-label">
-                            <span>Consumables (COGS)</span>
-                            <span id="exp-cogs">₱0.00</span>
-                        </div>
-                        <div class="progress-bar"><div class="fill bg-orange" id="bar-cogs" style="width: 0%;"></div></div>
-                    </div>
+                            <div class="expense-bar-container">
+                                <div class="expense-label">
+                                    <span>Consumables (COGS)</span>
+                                    <span id="exp-cogs">₱0.00</span>
+                                </div>
+                                <div class="progress-bar"><div class="fill bg-red" id="bar-cogs" style="width: 0%;"></div></div>
+                            </div>
 
-                    <div class="expense-bar-container">
-                        <div class="expense-label">
-                            <span class="text-slate">Asset Depreciation (Paper Expense)</span>
-                            <span id="exp-depreciation" class="text-slate">₱0.00</span>
+                            <div class="expense-bar-container" style="margin-bottom: 0;">
+                                <div class="expense-label">
+                                    <span>Asset Depreciation</span>
+                                    <span id="exp-depreciation">₱0.00</span>
+                                </div>
+                                <div class="progress-bar"><div class="fill bg-slate" id="bar-depreciation" style="width: 0%;"></div></div>
+                            </div>
                         </div>
-                        <div class="progress-bar"><div class="fill bg-slate" id="bar-depreciation" style="width: 0%;"></div></div>
                     </div>
                 </div>
             </div>

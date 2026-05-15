@@ -62,6 +62,7 @@ var admin = {
     buzzerActive: false,
     alarmedOrders: new Set(),
     isInitialLoadComplete: false,
+    charts: {},
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
@@ -1730,6 +1731,124 @@ var admin = {
         updateBar('bar-utilities', p.utilities);
         updateBar('bar-cogs', p.cogs);
         updateBar('bar-depreciation', p.depreciation);
+
+        // --- NEW: Update Charts ---
+        this.updateCharts(p, period, allEntries);
+    },
+
+    updateCharts(p, period, allEntries) {
+        // 1. Expense Donut Chart
+        const donutCtx = document.getElementById('expenseDonutChart')?.getContext('2d');
+        if (donutCtx) {
+            const data = {
+                labels: ['Riders', 'Utilities', 'COGS', 'Depreciation'],
+                datasets: [{
+                    data: [p.riderPayouts, p.utilities, p.cogs, p.depreciation],
+                    backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#64748b'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            };
+
+            if (this.charts.expenseDonut) {
+                this.charts.expenseDonut.data = data;
+                this.charts.expenseDonut.update();
+            } else {
+                this.charts.expenseDonut = new Chart(donutCtx, {
+                    type: 'doughnut',
+                    data: data,
+                    options: {
+                        cutout: '70%',
+                        plugins: { legend: { display: false } },
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        }
+
+        // 2. Profit Trend Chart
+        const trendCtx = document.getElementById('profitTrendChart')?.getContext('2d');
+        if (trendCtx) {
+            const monthlyData = this.groupEntriesByMonth(allEntries);
+            const labels = Object.values(monthlyData).map(m => m.label);
+            const profits = Object.values(monthlyData).map(m => m.profit);
+            const revenues = Object.values(monthlyData).map(m => m.revenue);
+
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Net Profit',
+                        data: profits,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Gross Revenue',
+                        data: revenues,
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderDash: [5, 5],
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            };
+
+            if (this.charts.profitTrend) {
+                this.charts.profitTrend.data = data;
+                this.charts.profitTrend.update();
+            } else {
+                this.charts.profitTrend = new Chart(trendCtx, {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                        scales: {
+                            y: { display: false },
+                            x: { 
+                                grid: { display: false },
+                                ticks: { color: '#64748b', font: { size: 10 } }
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' }
+                    }
+                });
+            }
+        }
+    },
+
+    groupEntriesByMonth(entries) {
+        const months = {};
+        const now = new Date();
+        // Initialize last 6 months
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            months[key] = { revenue: 0, expenses: 0, profit: 0, label: d.toLocaleString('default', { month: 'short' }) };
+        }
+
+        entries.forEach(e => {
+            const d = new Date(e.timestamp);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (months[key]) {
+                if (e.type === 'IN' && e.category === 'Sales') months[key].revenue += e.amount;
+                else if (e.type === 'OUT') months[key].expenses += e.amount;
+            }
+        });
+
+        Object.keys(months).forEach(k => {
+            months[k].profit = months[k].revenue - months[k].expenses;
+        });
+
+        return months;
     },
 
 
