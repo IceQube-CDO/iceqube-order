@@ -387,7 +387,7 @@ var admin = {
     }
 },
 
-    handleIncomingOrder(order, skipSync = false) {
+    handleIncomingOrder(order, skipSync = false, silent = false) {
         if (!order || !order.order_id) return;
         
         const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
@@ -418,8 +418,10 @@ var admin = {
             // Deduct supplies using the payload data (more reliable)
             this.deductPackagingSupplies(order);
 
-            this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
-            this.startBuzzer();
+            if (!silent) {
+                this.showNotification(`New Order from ${order.customer_name}`, `${order.order_id}`);
+                this.startBuzzer();
+            }
             
             // AUTOMATIC DISPATCH TRIGGER
             if (this.vacationMode) {
@@ -430,7 +432,7 @@ var admin = {
             }
 
             // --- NEW: AUTOMATIC MESSENGER NOTIFICATION ---
-            this.sendMessengerNotification(order);
+            if (!silent) this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
@@ -445,8 +447,8 @@ var admin = {
         const fd = items.fullDice || {};
         const hd = items.halfDice || {};
 
-        const total3kg = (parseFloat(fd['3kg']) || 0) + (parseFloat(hd['3kg']) || 0);
-        const total1kg = (parseFloat(fd['1kg']) || 0) + (parseFloat(hd['1kg']) || 0);
+        const total3kg = (parseFloat(fd.bag3kg || fd['3kg']) || 0) + (parseFloat(hd.bag3kg || hd['3kg']) || 0);
+        const total1kg = (parseFloat(fd.bag1kg || fd['1kg']) || 0) + (parseFloat(hd.bag1kg || hd['1kg']) || 0);
 
         if (total3kg === 0 && total1kg === 0) return;
 
@@ -972,13 +974,18 @@ var admin = {
                         this.sendMessengerNotification(co);
                     }
 
-                    // 2. Only alarm (buzzer) if this isn't the very first time we're loading the dashboard
-                    if (this.isInitialLoadComplete) {
+                    // 2. ALWAYS process for supplies (deduction), but only ALARM if not initial load
+                    const isSilent = !this.isInitialLoadComplete;
+                    if (isSilent) {
+                        console.log("📦 [Admin] Processing supplies silently for initial load order:", orderId);
+                    } else {
                         console.log("🚀 [Buzzer] Alarm Triggered for New Order:", orderId);
-                        this.startBuzzer();
-                        this.showNotification(`⚠️ NEW ORDER: ${co.customer_name}`, orderId);
-                        this.handleIncomingOrder(co, true); // true = skipSync
+                        // Notifications/Buzzer now handled inside handleIncomingOrder(..., silent=false)
                     }
+                    
+                    // Call handleIncomingOrder for ALL new orders to ensure inventory stays synced
+                    // silent=true on initial load, silent=false for real-time orders
+                    this.handleIncomingOrder(co, true, isSilent); // skipSync=true, silent=isSilent
                 }
             });
 
@@ -2221,14 +2228,14 @@ var admin = {
                 return { fullDice: {}, halfDice: {}, raw: items };
             }
             if (!isNaN(items)) {
-                return { fullDice: { '3kg': parseInt(items) }, halfDice: {} };
+                return { fullDice: { 'bag3kg': parseInt(items) }, halfDice: {} };
             }
             return { fullDice: {}, halfDice: {}, raw: items };
         }
 
         // Handle Number inputs
         if (typeof items === 'number') {
-            return { fullDice: { '3kg': items }, halfDice: {} };
+            return { fullDice: { 'bag3kg': items }, halfDice: {} };
         }
 
         return items;
