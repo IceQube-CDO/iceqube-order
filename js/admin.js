@@ -2250,6 +2250,10 @@ var admin = {
             const itemsStr = this.formatOrderItems(o);
             const isAwaiting = o.delivery_status === 'Awaiting Acceptance';
 
+            const scheduleDisplay = (!o.delivery_schedule || o.delivery_schedule === 'Immediate') 
+                ? '<span style="background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.7rem;">⚡ ASAP</span>' 
+                : '<div style="display: flex; flex-direction: column; gap: 2px;"><span style="color: #f1f5f9; font-weight: 600;">' + (o.delivery_schedule || '') + '</span></div>';
+
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
@@ -2264,6 +2268,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${o.delivery_address || 'N/A'}</a>` : `<div style="margin-bottom: 4px;">${o.delivery_address || 'N/A'}</div>`}
+                    </td>
+                    <td style="font-size: 0.75rem; white-space: nowrap;">
+                        ${scheduleDisplay}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
@@ -2305,6 +2312,10 @@ var admin = {
             const itemsStr = this.formatOrderItems(o);
             const addr = o.delivery_address && o.delivery_address !== 'N/A' ? o.delivery_address : 'Pickup / Store';
 
+            const ledgerScheduleDisplay = (!o.delivery_schedule || o.delivery_schedule === 'Immediate') 
+                ? '<span style="background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.7rem;">⚡ ASAP</span>' 
+                : '<div style="display: flex; flex-direction: column; gap: 2px;"><span style="color: #f1f5f9; font-weight: 600;">' + (o.delivery_schedule || '') + '</span></div>';
+
             return `
                 <tr>
                     <td>${displayTime}</td>
@@ -2319,6 +2330,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
+                    </td>
+                    <td style="font-size: 0.75rem; white-space: nowrap;">
+                        ${ledgerScheduleDisplay}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>

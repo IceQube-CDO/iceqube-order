@@ -2414,7 +2414,55 @@ var admin = {
 
         if (pendingBadge) pendingBadge.innerText = `${pendingOrders.length} Pending`;
         if (ledgerBadge) ledgerBadge.innerText = `${ledgerOrders.length} Orders`;
-        
+
+        const parseSchedule = (scheduleStr) => {
+            if (!scheduleStr || scheduleStr === 'Immediate') {
+                return '<span style="background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.7rem;">⚡ ASAP</span>';
+            }
+            
+            let timePart = '';
+            let datePart = '';
+            
+            const parts = scheduleStr.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                const dateStr = parts[0];
+                const timeStr = parts[1];
+                
+                const ymd = dateStr.split('-');
+                if (ymd.length === 3) {
+                    const year = parseInt(ymd[0]);
+                    const month = parseInt(ymd[1]) - 1;
+                    const day = parseInt(ymd[2]);
+                    
+                    const hm = timeStr.split(':');
+                    const hour = hm[0] ? parseInt(hm[0]) : 0;
+                    const minute = hm[1] ? parseInt(hm[1]) : 0;
+                    
+                    const tempDate = new Date(year, month, day, hour, minute);
+                    if (!isNaN(tempDate.getTime())) {
+                        timePart = tempDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+                        datePart = tempDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                    }
+                }
+            }
+            
+            if (!timePart || !datePart) {
+                const fallbackDate = new Date(scheduleStr);
+                if (!isNaN(fallbackDate.getTime())) {
+                    timePart = fallbackDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+                    datePart = fallbackDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                } else {
+                    datePart = parts[0] || '';
+                    timePart = parts.slice(1).join(' ') || '';
+                }
+            }
+            
+            return `<div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="color: #f1f5f9; font-weight: 600; font-size: 0.75rem;">${timePart}</span>
+                <span style="color: #f1f5f9; font-weight: 600; font-size: 0.75rem;">${datePart}</span>
+            </div>`;
+        };
+
         const ridersList = ['Unassigned', 'John', 'Mark', 'Dave', 'Rico'];
 
         // Render Pending Table
@@ -2426,6 +2474,8 @@ var admin = {
             const displayTime = `<div style="display: flex; flex-direction: column;"><div>${timeStr}</div>${dateDisplay}</div>`;
             const itemsStr = this.formatOrderItems(o);
             const isAwaiting = o.delivery_status === 'Awaiting Acceptance';
+ 
+            const scheduleDisplay = parseSchedule(o.delivery_schedule);
 
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
@@ -2441,6 +2491,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${o.delivery_address || 'N/A'}</a>` : `<div style="margin-bottom: 4px;">${o.delivery_address || 'N/A'}</div>`}
+                    </td>
+                    <td style="font-size: 0.75rem; white-space: nowrap;">
+                        ${scheduleDisplay}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
@@ -2483,6 +2536,8 @@ var admin = {
             const itemsStr = this.formatOrderItems(o);
             const addr = o.delivery_address && o.delivery_address !== 'N/A' ? o.delivery_address : 'Pickup / Store';
 
+            const ledgerScheduleDisplay = parseSchedule(o.delivery_schedule);
+
             return `
                 <tr>
                     <td>${displayTime}</td>
@@ -2497,6 +2552,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
+                    </td>
+                    <td style="font-size: 0.75rem; white-space: nowrap;">
+                        ${ledgerScheduleDisplay}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
