@@ -2985,50 +2985,50 @@ var admin = {
 
             return `
                 <div style="display: flex; align-items: flex-start; margin-bottom: 30px;">
-                    <!-- Filter Housing Stage -->
-                    <div style="display: flex; flex-direction: column; align-items: center; width: 160px; position: relative;">
+                    <!-- Filter Housing Stage (10% Smaller) -->
+                    <div style="display: flex; flex-direction: column; align-items: center; width: 144px; position: relative;">
                         <!-- Stage Number -->
-                        <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #94a3b8; font-size: 0.6rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); z-index: 10;">
+                        <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #94a3b8; font-size: 0.55rem; padding: 2px 7px; border-radius: 9px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); z-index: 10; white-space: nowrap;">
                             STAGE ${index + 1}
                         </div>
 
                         <!-- Cap/Head -->
-                        <div style="width: 110px; height: 34px; background: linear-gradient(180deg, #334155 0%, #1e293b 100%); border-radius: 12px 12px 4px 4px; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                        <div style="width: 99px; height: 31px; background: linear-gradient(180deg, #334155 0%, #1e293b 100%); border-radius: 11px 11px 4px 4px; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 5; box-shadow: 0 4px 9px rgba(0,0,0,0.3);">
                             <!-- Inlet/Outlet Ports -->
-                            <div style="position: absolute; top: 14px; left: -8px; width: 12px; height: 8px; background: #475569; border-radius: 2px;"></div>
-                            <div style="position: absolute; top: 14px; right: -8px; width: 12px; height: 8px; background: #475569; border-radius: 2px;"></div>
+                            <div style="position: absolute; top: 12px; left: -7px; width: 11px; height: 7px; background: #475569; border-radius: 2px;"></div>
+                            <div style="position: absolute; top: 12px; right: -7px; width: 11px; height: 7px; background: #475569; border-radius: 2px;"></div>
                         </div>
                         
                         <!-- Tube Body -->
-                        <div onclick="admin.showEditFilterModal('${item.id}')" style="width: 86px; height: 180px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(255,255,255,0.1); border-radius: 0 0 43px 43px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s ease; box-shadow: inset 0 0 25px rgba(0,0,0,0.8); margin-top: -2px;">
+                        <div onclick="admin.showEditFilterModal('${item.id}')" style="width: 77px; height: 162px; background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(255,255,255,0.1); border-radius: 0 0 39px 39px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s ease; box-shadow: inset 0 0 22px rgba(0,0,0,0.8); margin-top: -2px;">
                             <!-- Fluid/Filter Core -->
-                            <div style="position: absolute; bottom: 0; width: 100%; height: ${percentRemaining}%; background: ${color}; opacity: 0.85; transition: all 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 -5px 25px ${glow};">
+                            <div style="position: absolute; bottom: 0; width: 100%; height: ${percentRemaining}%; background: ${color}; opacity: 0.85; transition: all 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 -5px 22px ${glow};">
                                 <!-- Bubbles/Particles effect -->
-                                <div style="position: absolute; top: 10px; left: 20%; width: 4px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 50%;"></div>
-                                <div style="position: absolute; top: 30px; right: 25%; width: 3px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="position: absolute; top: 9px; left: 20%; width: 3.5px; height: 3.5px; background: rgba(255,255,255,0.2); border-radius: 50%;"></div>
+                                <div style="position: absolute; top: 27px; right: 25%; width: 2.7px; height: 2.7px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
                             </div>
                             
                             <!-- Internal Core Column -->
-                            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 90%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0) 100%); border-radius: 0 0 12px 12px;"></div>
+                            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 21px; height: 90%; background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0) 100%); border-radius: 0 0 11px 11px;"></div>
                             
                             <!-- Reflection -->
-                            <div style="position: absolute; top: 10%; left: 15%; width: 15%; height: 70%; background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%); border-radius: 20px;"></div>
+                            <div style="position: absolute; top: 10%; left: 15%; width: 15%; height: 70%; background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%); border-radius: 18px;"></div>
                         </div>
 
                         <!-- Labels & Actions -->
-                        <div style="margin-top: 18px; text-align: center; width: 140px;">
-                            <div style="font-size: 0.8rem; font-weight: 800; color: #f8fafc; margin-bottom: 4px; font-family: 'Outfit';">${item.name}</div>
-                            <div style="font-size: 0.65rem; font-weight: 700; color: ${diffDays < 7 ? '#ef4444' : (diffDays < 21 ? '#f59e0b' : '#3b82f6')};">
+                        <div style="margin-top: 16px; text-align: center; width: 126px;">
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #f8fafc; margin-bottom: 4px; font-family: 'Outfit';">${item.name}</div>
+                            <div style="font-size: 0.6rem; font-weight: 700; color: ${diffDays < 7 ? '#ef4444' : (diffDays < 21 ? '#f59e0b' : '#3b82f6')};">
                                 ${diffDays < 0 ? 'EXPIRED' : diffDays + ' Days Left'}
                             </div>
                             
-                            <div style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;">
-                                <button onclick="admin.resetFilterLife('${item.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.55rem; font-weight: 800; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='white'; this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.05)'">
+                            <div style="display: flex; justify-content: center; gap: 7px; margin-top: 9px;">
+                                <button onclick="admin.resetFilterLife('${item.id}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 3px 9px; border-radius: 5px; font-size: 0.5rem; font-weight: 800; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='white'; this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255,255,255,0.05)'">
                                     RESET
                                 </button>
                                 ${item.link && item.link !== '#' ? `
-                                    <a href="${item.link}" target="_blank" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); color: #0ea5e9; padding: 4px 8px; border-radius: 6px; text-decoration: none; display: flex; align-items: center;">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    <a href="${item.link}" target="_blank" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); color: #0ea5e9; padding: 3px 7px; border-radius: 5px; text-decoration: none; display: flex; align-items: center;">
+                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                     </a>
                                 ` : ''}
                             </div>
@@ -3037,9 +3037,9 @@ var admin = {
 
                     <!-- Connecting Pipe -->
                     ${!isLast ? `
-                        <div style="width: 50px; height: 10px; background: linear-gradient(180deg, #475569 0%, #1e293b 100%); margin-top: 13px; position: relative; z-index: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(0,0,0,0.3);">
+                        <div style="width: 45px; height: 9px; background: linear-gradient(180deg, #475569 0%, #1e293b 100%); margin-top: 11px; position: relative; z-index: 1; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(0,0,0,0.3);">
                             <!-- Pipe shadow/highlight -->
-                            <div style="position: absolute; top: 2px; width: 100%; height: 2px; background: rgba(255,255,255,0.05);"></div>
+                            <div style="position: absolute; top: 2px; width: 100%; height: 1.8px; background: rgba(255,255,255,0.05);"></div>
                         </div>
                     ` : ''}
                 </div>
