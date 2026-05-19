@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    let recipientId, message;
+    let recipientId, message, messagingType, tag;
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("form") || req.method === "GET") {
@@ -23,17 +23,23 @@ serve(async (req) => {
       const url = new URL(req.url);
       recipientId = url.searchParams.get("recipientId");
       message = url.searchParams.get("message");
+      messagingType = url.searchParams.get("messaging_type");
+      tag = url.searchParams.get("tag");
 
       if (!recipientId) {
         const formData = await req.formData().catch(() => new FormData());
         recipientId = formData.get("recipientId");
         message = formData.get("message");
+        messagingType = formData.get("messaging_type") || messagingType;
+        tag = formData.get("tag") || tag;
       }
     } else {
       // Handle Standard JSON
       const body = await req.json().catch(() => ({}));
       recipientId = body.recipientId;
       message = body.message;
+      messagingType = body.messaging_type;
+      tag = body.tag;
     }
 
     if (!recipientId || !message) {
@@ -43,12 +49,23 @@ serve(async (req) => {
       })
     }
 
-    const payload = {
+    // Default to MESSAGE_TAG and CONFIRMED_ORDER_UPDATE to bypass the 24-hour restriction window
+    if (!messagingType) messagingType = "MESSAGE_TAG";
+    if (!tag) tag = "CONFIRMED_ORDER_UPDATE";
+
+    const payload: any = {
       recipient: { id: recipientId },
-      message: { text: message },
+      message: { text: message }
     }
 
-    console.log(`[Messenger] Relaying to FB: ${recipientId}`);
+    if (messagingType) {
+      payload.messaging_type = messagingType;
+    }
+    if (tag) {
+      payload.tag = tag;
+    }
+
+    console.log(`[Messenger] Relaying to FB: ${recipientId} (messaging_type: ${messagingType}, tag: ${tag})`);
     
     const response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
       method: "POST",
