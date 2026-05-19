@@ -4857,13 +4857,9 @@ const app = {
     },
 
     async sendConfirmation() {
-        if (!this.user.messengerEnabled) return true;
+        const ADMIN_PSID = "26521276764196410";
+        const customerTargetId = this.user.messengerId || null;
 
-        const targetId = this.user.messengerId || "26521276764196410";
-        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') return true;
-
-        console.log('🔔 [Messenger] Mobile triggering notification for:', targetId);
-        
         const orderId = document.getElementById('finish-id-new')?.innerText || "NEW-ORDER";
         const total = document.getElementById('finish-total-new')?.innerText || "0.00";
         
@@ -4875,31 +4871,60 @@ const app = {
         if (this.orderData.qty.halfDice['3kg'] > 0) itemsSummary.push(`${this.orderData.qty.halfDice['3kg']}x 3kg Half`);
         
         const address = this.orderData.address || "Standard Delivery";
+        const customerName = (this.orderData.deliveryDetails && this.orderData.deliveryDetails.establishment) || this.user.companyName || 'Customer';
         
         const msg = `❄️ ICEQUBE ORDER RECEIVED!\n\n` +
                     `Order: #${orderId}\n` +
+                    `Customer: ${customerName}\n` +
                     `Items: ${itemsSummary.join(', ') || 'Ice Products'}\n` +
                     `Delivery: ${address}\n` +
                     `Total: ${total}\n\n` +
                     `Status: Processing...`;
 
         try {
-            // MOBILE BRIDGE: Use the same bypass as Admin
             const bridge = document.getElementById('hidden-bridge');
-            if (bridge) {
-                const formId = `msg-form-${Date.now()}`;
-                const frameId = `msg-frame-${Date.now()}`;
+            if (!bridge || !SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                console.warn('📡 [Messenger] Bridge or Supabase not available. Skipping notification.');
+                return true;
+            }
+
+            // --- 1. ALWAYS send Admin copy (unconditional — this is the critical alert) ---
+            const adminFormId = `msg-form-admin-${Date.now()}`;
+            const adminFrameId = `msg-frame-admin-${Date.now()}`;
+            
+            const adminDiv = document.createElement('div');
+            adminDiv.innerHTML = `
+                <iframe name="${adminFrameId}" id="${adminFrameId}" style="display:none"></iframe>
+                <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
+                    <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
+                    <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                </form>
+            `;
+            bridge.appendChild(adminDiv);
+            document.getElementById(adminFormId).submit();
+            console.log('📡 [Messenger] ✅ Admin alert ALWAYS sent to:', ADMIN_PSID);
+
+            // --- 2. Send Customer copy ONLY if they opted in ---
+            if (this.user.messengerEnabled && customerTargetId && customerTargetId !== 'YOUR_RECIPIENT_PSID_HERE' && customerTargetId !== ADMIN_PSID) {
+                const custFormId = `msg-form-cust-${Date.now()}`;
+                const custFrameId = `msg-frame-cust-${Date.now()}`;
                 
-                bridge.innerHTML = `
-                    <iframe name="${frameId}" id="${frameId}"></iframe>
-                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
-                        <input type="hidden" name="recipientId" value="${targetId}">
+                const custDiv = document.createElement('div');
+                custDiv.innerHTML = `
+                    <iframe name="${custFrameId}" id="${custFrameId}" style="display:none"></iframe>
+                    <form id="${custFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${custFrameId}">
+                        <input type="hidden" name="recipientId" value="${customerTargetId}">
                         <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
                     </form>
                 `;
-                
-                document.getElementById(formId).submit();
-                console.log('📡 [Messenger] Mobile signal sent via Bridge.');
+                bridge.appendChild(custDiv);
+                setTimeout(() => {
+                    const frm = document.getElementById(custFormId);
+                    if (frm) frm.submit();
+                    console.log('📡 [Messenger] Customer receipt sent to:', customerTargetId);
+                }, 400);
+            } else {
+                console.log('ℹ️ [Messenger] Customer notification skipped (disabled or no PSID).');
             }
         } catch (error) {
             console.error('❌ [Messenger] Mobile dispatch failed:', error);
