@@ -1651,6 +1651,34 @@
     </style>
     <style>
         /* MOBILE APP OVERRIDES - Forced for all viewports */
+            html, body.admin-mode {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                height: -webkit-fill-available !important;
+                overflow: hidden !important;
+                overscroll-behavior: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #command-center {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-y: contain !important;
+                padding: calc(10px + env(safe-area-inset-top)) 10px 10px !important;
+            }
             body.admin-mode {
                 font-size: 14px;
             }
@@ -1662,6 +1690,15 @@
             .cc-header {
                 padding-top: 10px !important;
                 padding-bottom: 5px !important;
+            }
+            .cc-header h1 {
+                font-size: 1.2rem !important;
+            }
+            .cc-header img {
+                height: 32px !important;
+            }
+            .cc-header > div > div:first-child {
+                gap: 8px !important;
             }
             .cc-header > div {
                 flex-direction: row !important;
@@ -1794,15 +1831,10 @@
             #orders-view .cashflow-table tbody {
                 display: flex;
                 flex-direction: column;
-                height: 65vh; 
-                overflow-y: scroll;
-                scroll-snap-type: y mandatory;
-                scrollbar-width: none;
-                -webkit-overflow-scrolling: touch;
-                padding-bottom: 20px;
-            }
-            #orders-view .cashflow-table tbody::-webkit-scrollbar {
-                display: none;
+                height: auto !important;
+                overflow-y: visible !important;
+                -webkit-overflow-scrolling: auto !important;
+                padding-bottom: 0 !important;
             }
             #orders-view .cashflow-table tr {
                 display: block;
