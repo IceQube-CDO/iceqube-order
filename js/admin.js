@@ -3615,8 +3615,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Drawer Controls
+let previousActiveTab = null;
+
 function openCustomerDrawer(customerId) {
     try {
+        const currentTab = localStorage.getItem('iceqube_admin_tab') || 'ops';
+        if (currentTab !== 'customers') {
+            previousActiveTab = currentTab;
+            admin.switchView('customers');
+        } else {
+            previousActiveTab = null;
+        }
+
         let customer = admin.customerData?.find(c => c.name === customerId) || admin.customerData?.find(c => c.name.trim().toLowerCase() === customerId.trim().toLowerCase());
         
         if (!customer) {
@@ -3749,6 +3759,12 @@ function closeCustomerDrawer() {
         if (overlay) overlay.style.display = 'none';
         // Reset pricing UI on close
         togglePricingEdit(false);
+        
+        // Restore previous tab if we auto-switched to customer view
+        if (previousActiveTab) {
+            admin.switchView(previousActiveTab);
+            previousActiveTab = null;
+        }
     }, 300);
 }
 

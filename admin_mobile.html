@@ -2015,17 +2015,19 @@
         <div class="admin-shell">
             <header class="cc-header">
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 10px; width: 100%; white-space: nowrap;">
-                <!-- LEFT: LOGO & BRAND -->
-                <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                <!-- LEFT: LOGO & TITLE -->
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1; flex-shrink: 0;">
                     <img src="assets/logo2.png" alt="IceQube" style="height: 39px; filter: drop-shadow(0 0 15px var(--admin-accent)); flex-shrink: 0;">
-                    <div style="color: white; font-weight: 500; font-size: 2.2rem; letter-spacing: -0.03em; font-family: 'Outfit', sans-serif; flex-shrink: 0;">IceQube <span style="color: #0284c7; font-size: 0.9em;">CDO</span></div>
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="color: #94a3b8; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.1em; font-family: 'Inter', sans-serif; text-transform: uppercase; margin-bottom: 2px;">IceQube <span style="color: #0ea5e9;">CDO</span></div>
+                        <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 900; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; line-height: 1;">CONTROL ROOM</h1>
+                    </div>
                 </div>
 
-                <!-- CENTER: STATUS & TITLE -->
-                <div style="text-align: center; cursor: pointer;" onclick="const btn = document.getElementById('test-id-btn'); if(btn) btn.style.display = btn.style.display === 'none' ? 'inline-block' : 'none';">
-                <p style="font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; color: #64748b; margin-bottom: 4px; text-transform: uppercase;">• SYSTEM ONLINE • MAY 15, 2026 • V2.4.0</p>
-                <h1 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900; margin: 0; letter-spacing: -1px; text-transform: uppercase;">CONTROL ROOM</h1>
-                <div id="messenger-bridge-badge" style="display: none; align-items: center; gap: 8px; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; color: #0ea5e9; transition: all 0.3s ease;">
+                <!-- CENTER: STATUS -->
+                <div style="text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;" onclick="const btn = document.getElementById('test-id-btn'); if(btn) btn.style.display = btn.style.display === 'none' ? 'inline-block' : 'none';">
+                <p style="font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; color: #64748b; margin: 0; text-transform: uppercase;">• SYSTEM ONLINE • V2.4.0</p>
+                <div id="messenger-bridge-badge" style="display: none; align-items: center; gap: 8px; background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; color: #0ea5e9; transition: all 0.3s ease; margin-top: 6px;">
                     <span id="messenger-dot" style="width: 6px; height: 6px; background: #0ea5e9; border-radius: 50%; box-shadow: 0 0 8px #0ea5e9;"></span> 
                     <span id="messenger-status">MESSENGER BRIDGE: IDLE</span>
                     <button id="test-id-btn" onclick="app.testMessengerID()" style="display: none; background: #0ea5e9; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 0.55rem; cursor: pointer; margin-left: 4px;">TEST MY ID</button>
@@ -3371,7 +3373,7 @@
 
     <script src="js/app_header.js?v=2.4.0"></script>
     <script src="js/sync.js?v=2.4.0"></script>
-    <script src="js/admin_v24.js?v=2.4.2"></script>
+    <script src="js/admin_v24.js?v=2.4.3"></script>
 
 
     <!-- PWA Install Prompt -->
