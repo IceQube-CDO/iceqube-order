@@ -3915,10 +3915,12 @@ const app = {
         if (method === 'Cash on Delivery') {
             btn.innerText = 'Confirm Order (COD)';
             
-            // Check for repeat buyer status (previously verified number)
+            // Check for repeat buyer status (previously verified number or has past orders)
             const savedPhone = localStorage.getItem('ice_verified_phone');
+            const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const isRepeatBuyer = savedPhone || (orders && orders.length > 0);
             
-            if (savedPhone) {
+            if (isRepeatBuyer) {
                 this.orderData.codVerified = true;
                 codBox.classList.remove('active'); // Hide for repeat buyers
                 btn.disabled = false;
@@ -3928,7 +3930,7 @@ const app = {
                 
                 const phoneInput = document.getElementById('cod-phone-input');
                 if (!phoneInput.value) {
-                                        phoneInput.value = this.formatPhone(this.orderData.deliveryDetails.contact || '');
+                    phoneInput.value = this.formatPhone(this.orderData.deliveryDetails.contact || '');
                 }
             }
             poBox.classList.remove('active');
@@ -3998,7 +4000,21 @@ const app = {
             // Focus OTP input
             setTimeout(() => {
                 const otpInput = document.getElementById('cod-otp-input');
-                if (otpInput) otpInput.focus();
+                if (otpInput) {
+                    otpInput.focus();
+                    
+                    // Autofill if using the same phone number they are ordering from
+                    const orderPhone = (this.orderData.deliveryDetails && this.orderData.deliveryDetails.contact) ? this.orderData.deliveryDetails.contact : '';
+                    const cleanPhone = (num) => (num || '').replace(/\D/g, '').slice(-9);
+                    
+                    if (cleanPhone(orderPhone) && cleanPhone(orderPhone) === cleanPhone(phone)) {
+                        console.log(`[IceQube Verification] Same phone number detected. Autofilling OTP.`);
+                        setTimeout(() => {
+                            otpInput.value = this._currentOTP;
+                            this.verifyOTP();
+                        }, 800);
+                    }
+                }
             }, 500);
 
             // Re-enable after 30 seconds for resend (optional improvement)
