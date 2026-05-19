@@ -121,7 +121,7 @@ var admin = {
         );
     },
 
-    showConfirmModal(title, message, onConfirm) {
+    showConfirmModal(title, message, onConfirm, confirmText = 'Confirm') {
         console.log(`[UI] Showing Confirm Modal: ${title}`);
         const modal = document.getElementById('global-confirm-modal');
         const titleEl = document.getElementById('confirm-modal-title');
@@ -136,6 +136,7 @@ var admin = {
         
         titleEl.innerText = title;
         bodyEl.innerText = message;
+        confirmBtn.innerText = confirmText;
         confirmBtn.onclick = () => {
             console.log('[UI] Modal confirmed');
             modal.style.display = 'none';
@@ -487,18 +488,28 @@ var admin = {
     },
 
     toggleVacationMode() {
-        this.vacationMode = !this.vacationMode;
-        localStorage.setItem('iceqube_vacation_mode', this.vacationMode);
+        const action = this.vacationMode ? "DISABLE" : "ENABLE";
+        const msg = `Are you sure you want to ${action} Vacation Mode? When enabled, all incoming orders are automatically accepted/dispatched.`;
         
-        if (this.vacationMode) {
-            document.body.classList.add('vacation-active');
-            console.log("✈️ Vacation Mode ENABLED: Autopilot Active.");
-        } else {
-            document.body.classList.remove('vacation-active');
-            console.log("🏠 Vacation Mode DISABLED: Manual Control Restored.");
-        }
-        
-        this.updateVacationUI();
+        this.showConfirmModal(
+            "Vacation Mode",
+            msg,
+            () => {
+                this.vacationMode = !this.vacationMode;
+                localStorage.setItem('iceqube_vacation_mode', this.vacationMode);
+                
+                if (this.vacationMode) {
+                    document.body.classList.add('vacation-active');
+                    console.log("✈️ Vacation Mode ENABLED: Autopilot Active.");
+                } else {
+                    document.body.classList.remove('vacation-active');
+                    console.log("🏠 Vacation Mode DISABLED: Manual Control Restored.");
+                }
+                
+                this.updateVacationUI();
+            },
+            action === "ENABLE" ? "Enable Vacation" : "Disable Vacation"
+        );
     },
 
     updateVacationUI() {
@@ -506,10 +517,8 @@ var admin = {
         if (!btn) return;
 
         if (this.vacationMode) {
-            btn.innerHTML = '<span class="vacation-dot active"></span> VACATION MODE ON';
             btn.classList.add('active');
         } else {
-            btn.innerHTML = '<span class="vacation-dot"></span> VACATION MODE OFF';
             btn.classList.remove('active');
         }
     },

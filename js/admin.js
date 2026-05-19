@@ -122,7 +122,7 @@ var admin = {
         );
     },
 
-    showConfirmModal(title, message, onConfirm) {
+    showConfirmModal(title, message, onConfirm, confirmText = 'Confirm') {
         console.log(`[UI] Showing Confirm Modal: ${title}`);
         const modal = document.getElementById('global-confirm-modal');
         const titleEl = document.getElementById('confirm-modal-title');
@@ -137,6 +137,7 @@ var admin = {
         
         titleEl.innerText = title;
         bodyEl.innerText = message;
+        confirmBtn.innerText = confirmText;
         confirmBtn.onclick = () => {
             console.log('[UI] Modal confirmed');
             modal.style.display = 'none';
@@ -494,18 +495,28 @@ var admin = {
     },
 
     toggleVacationMode() {
-        this.vacationMode = !this.vacationMode;
-        localStorage.setItem('iceqube_vacation_mode', this.vacationMode);
+        const action = this.vacationMode ? "DISABLE" : "ENABLE";
+        const msg = `Are you sure you want to ${action} Vacation Mode? When enabled, all incoming orders are automatically accepted/dispatched.`;
         
-        if (this.vacationMode) {
-            document.body.classList.add('vacation-active');
-            console.log("✈️ Vacation Mode ENABLED: Autopilot Active.");
-        } else {
-            document.body.classList.remove('vacation-active');
-            console.log("🏠 Vacation Mode DISABLED: Manual Control Restored.");
-        }
-        
-        this.updateVacationUI();
+        this.showConfirmModal(
+            "Vacation Mode",
+            msg,
+            () => {
+                this.vacationMode = !this.vacationMode;
+                localStorage.setItem('iceqube_vacation_mode', this.vacationMode);
+                
+                if (this.vacationMode) {
+                    document.body.classList.add('vacation-active');
+                    console.log("✈️ Vacation Mode ENABLED: Autopilot Active.");
+                } else {
+                    document.body.classList.remove('vacation-active');
+                    console.log("🏠 Vacation Mode DISABLED: Manual Control Restored.");
+                }
+                
+                this.updateVacationUI();
+            },
+            action === "ENABLE" ? "Enable Vacation" : "Disable Vacation"
+        );
     },
 
     updateVacationUI() {
@@ -513,10 +524,8 @@ var admin = {
         if (!btn) return;
 
         if (this.vacationMode) {
-            btn.innerHTML = '<span class="vacation-dot active"></span> VACATION MODE ON';
             btn.classList.add('active');
         } else {
-            btn.innerHTML = '<span class="vacation-dot"></span> VACATION MODE OFF';
             btn.classList.remove('active');
         }
     },
@@ -1446,7 +1455,12 @@ var admin = {
             
             if (clientLabel) clientLabel.innerText = isElite ? 'ELITE CLIENT DETAILS' : 'CLIENT DETAILS';
             if (custNameEl) custNameEl.innerText = order.customer_name || 'Customer';
-            if (custAddrEl) custAddrEl.innerText = order.delivery_address || order.address || 'No address provided';
+            if (custAddrEl) {
+                const addrText = order.delivery_address || order.address || 'No address provided';
+                custAddrEl.innerHTML = (order.delivery_lat && order.delivery_lng) 
+                    ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${order.delivery_lat},${order.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px;">${addrText}</a>` 
+                    : addrText;
+            }
 
             // Items - Use robust parsing
             const parsedItems = this.parseItems(order.items);
@@ -2243,12 +2257,14 @@ var admin = {
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem;">${o.customer_name}</b>
+                                <b style="font-size: 1rem; cursor: pointer; color: #0ea5e9; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
                                 ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
                     </td>
-                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${o.delivery_address || 'N/A'}</td>
+                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
+                        ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${o.delivery_address || 'N/A'}</a>` : `<div style="margin-bottom: 4px;">${o.delivery_address || 'N/A'}</div>`}
+                    </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
@@ -2296,12 +2312,14 @@ var admin = {
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem;">${o.customer_name}</b>
+                                <b style="font-size: 1rem; cursor: pointer; color: #0ea5e9; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
                                 ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
                     </td>
-                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">${addr}</td>
+                    <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
+                        ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
+                    </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
@@ -3598,91 +3616,125 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Drawer Controls
 function openCustomerDrawer(customerId) {
-    const customer = admin.customerData?.find(c => c.name === customerId);
-    if (!customer) return;
-
-    const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    const profile = profiles[customer.name] || {};
-
-    document.getElementById('drawer-customer-name').innerText = customer.name;
-    document.getElementById('drawer-customer-address').innerText = profile.address || customer.address;
-    document.getElementById('drawer-contact-person').innerText = profile.contactPerson || customer.contactPerson || customer.name;
-    document.getElementById('drawer-phone').innerText = profile.contactNumber || customer.phone;
-    
-    // Load Discounts & Tier
-    const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-    const custPricing = discounts[customer.name] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard' };
-    
-    // Set Tier Selection
-    const tierSelect = document.getElementById('elite-tier-select');
-    if (tierSelect) {
-        // Fallback for legacy data that only has isElite boolean
-        const currentTier = custPricing.tier || (customer.isElite ? 'Elite Gold' : 'Standard');
-        tierSelect.value = currentTier;
-        const tierDisplay = document.getElementById('display-customer-tier');
-        if (tierDisplay) tierDisplay.innerText = currentTier;
+    try {
+        let customer = admin.customerData?.find(c => c.name === customerId) || admin.customerData?.find(c => c.name.trim().toLowerCase() === customerId.trim().toLowerCase());
         
-        updateTierVisuals(currentTier);
-    }
-
-    // Set Discounts & Credit Limit
-    document.getElementById('drawer-discount-percent').value = custPricing.percent || 0;
-    document.getElementById('display-discount-percent').innerText = custPricing.percent || 0;
-    
-    document.getElementById('drawer-discount-fixed').value = (custPricing.fixed || 0).toFixed(2);
-    document.getElementById('display-discount-fixed').innerText = (custPricing.fixed || 0).toFixed(2);
-
-    document.getElementById('drawer-credit-limit').value = custPricing.creditLimit || 0;
-    document.getElementById('display-credit-limit').innerText = (custPricing.creditLimit || 0).toLocaleString();
-
-    // Default to locked mode
-    togglePricingEdit(false);
-
-    document.getElementById('drawer-clv').innerText = `₱${customer.totalRevenue.toLocaleString()}`;
-    
-    const msDiff = new Date(customer.lastOrderDate) - new Date(customer.firstOrderDate);
-    const daysDiff = msDiff / (1000 * 60 * 60 * 24);
-    
-    if (customer.orders.length > 1 && daysDiff > 0) {
-        const freq = daysDiff / (customer.orders.length - 1);
-        document.getElementById('drawer-frequency').innerText = `Every ${freq.toFixed(1)} days`;
-        
-        const daysSinceLastOrder = (new Date() - new Date(customer.lastOrderDate)) / (1000 * 60 * 60 * 24);
-        if (daysSinceLastOrder > 14 && customer.orders.length > 2) {
-            document.getElementById('drawer-churn-alert').style.display = 'flex';
-        } else {
-            document.getElementById('drawer-churn-alert').style.display = 'none';
+        if (!customer) {
+            console.warn('Customer not found in admin.customerData:', customerId);
+            customer = {
+                name: customerId,
+                address: 'No Address Provided',
+                phone: 'No Phone provided',
+                contactPerson: customerId,
+                totalRevenue: 0,
+                orders: [],
+                firstOrderDate: new Date(),
+                lastOrderDate: new Date(),
+                isElite: false
+            };
         }
-    } else {
-        document.getElementById('drawer-frequency').innerText = '1st Order Only';
-        document.getElementById('drawer-churn-alert').style.display = 'none';
+
+        const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+        const profile = profiles[customer.name] || {};
+
+        const nameEl = document.getElementById('drawer-customer-name');
+        if (nameEl) nameEl.innerText = customer.name || customerId;
+
+        const addrEl = document.getElementById('drawer-customer-address');
+        if (addrEl) addrEl.innerText = profile.address || customer.address || 'No Address';
+
+        const contactEl = document.getElementById('drawer-contact-person');
+        if (contactEl) contactEl.innerText = profile.contactPerson || customer.contactPerson || customer.name || customerId;
+
+        const phoneEl = document.getElementById('drawer-phone');
+        if (phoneEl) phoneEl.innerText = profile.contactNumber || customer.phone || 'N/A';
+        
+        // Load Discounts & Tier
+        const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+        const custPricing = discounts[customer.name] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard' };
+        
+        // Set Tier Selection
+        const tierSelect = document.getElementById('elite-tier-select');
+        if (tierSelect) {
+            const currentTier = custPricing.tier || (customer.isElite ? 'Elite Gold' : 'Standard');
+            tierSelect.value = currentTier;
+            const tierDisplay = document.getElementById('display-customer-tier');
+            if (tierDisplay) tierDisplay.innerText = currentTier;
+            
+            updateTierVisuals(currentTier);
+        }
+
+        // Set Discounts & Credit Limit
+        const discPercEl = document.getElementById('drawer-discount-percent');
+        if (discPercEl) discPercEl.value = custPricing.percent || 0;
+        const dispDiscPercEl = document.getElementById('display-discount-percent');
+        if (dispDiscPercEl) dispDiscPercEl.innerText = custPricing.percent || 0;
+        
+        const discFixEl = document.getElementById('drawer-discount-fixed');
+        if (discFixEl) discFixEl.value = (custPricing.fixed || 0).toFixed(2);
+        const dispDiscFixEl = document.getElementById('display-discount-fixed');
+        if (dispDiscFixEl) dispDiscFixEl.innerText = (custPricing.fixed || 0).toFixed(2);
+
+        const credLimEl = document.getElementById('drawer-credit-limit');
+        if (credLimEl) credLimEl.value = custPricing.creditLimit || 0;
+        const dispCredLimEl = document.getElementById('display-credit-limit');
+        if (dispCredLimEl) dispCredLimEl.innerText = (custPricing.creditLimit || 0).toLocaleString();
+
+        // Default to locked mode
+        togglePricingEdit(false);
+
+        const clvEl = document.getElementById('drawer-clv');
+        if (clvEl) clvEl.innerText = `₱${(customer.totalRevenue || 0).toLocaleString()}`;
+        
+        const msDiff = new Date(customer.lastOrderDate || new Date()) - new Date(customer.firstOrderDate || new Date());
+        const daysDiff = msDiff / (1000 * 60 * 60 * 24);
+        
+        const freqEl = document.getElementById('drawer-frequency');
+        const churnEl = document.getElementById('drawer-churn-alert');
+        if (customer.orders && customer.orders.length > 1 && daysDiff > 0) {
+            const freq = daysDiff / (customer.orders.length - 1);
+            if (freqEl) freqEl.innerText = `Every ${freq.toFixed(1)} days`;
+            
+            const daysSinceLastOrder = (new Date() - new Date(customer.lastOrderDate || new Date())) / (1000 * 60 * 60 * 24);
+            if (daysSinceLastOrder > 14 && customer.orders.length > 2) {
+                if (churnEl) churnEl.style.display = 'flex';
+            } else {
+                if (churnEl) churnEl.style.display = 'none';
+            }
+        } else {
+            if (freqEl) freqEl.innerText = '1st Order Only';
+            if (churnEl) churnEl.style.display = 'none';
+        }
+
+        const historyList = document.getElementById('drawer-history-list');
+        if (historyList && customer.orders) {
+            let historyHtml = '';
+            customer.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10).forEach(order => {
+                historyHtml += `
+                    <div class="history-row">
+                        <span>${order.order_id}</span>
+                        <span>₱${order.total_price}</span>
+                        <span><span class="badge-resolved">${order.delivery_status || 'Completed'}</span></span>
+                        <button class="btn-icon" onclick="admin.toggleReceipt(true, '${order.order_id}')">📄</button>
+                    </div>
+                `;
+            });
+            historyList.innerHTML = historyHtml;
+        }
+
+        const customerView = document.getElementById('customer-view');
+        if (customerView) customerView.classList.add('drawer-open');
+
+        const overlay = document.getElementById('customer-drawer-overlay');
+        if (overlay) overlay.style.display = 'block';
+
+        setTimeout(() => {
+            const drawerEl = document.getElementById('customer-drawer');
+            if (drawerEl) drawerEl.classList.add('open');
+        }, 10);
+    } catch (err) {
+        console.error('Error in openCustomerDrawer:', err);
     }
-
-    const historyList = document.getElementById('drawer-history-list');
-    if (historyList) {
-        let historyHtml = '';
-        customer.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10).forEach(order => {
-            historyHtml += `
-                <div class="history-row">
-                    <span>${order.order_id}</span>
-                    <span>₱${order.total_price}</span>
-                    <span><span class="badge-resolved">${order.delivery_status || 'Completed'}</span></span>
-                    <button class="btn-icon" onclick="admin.toggleReceipt(true, '${order.order_id}')">📄</button>
-                </div>
-            `;
-        });
-        historyList.innerHTML = historyHtml;
-    }
-
-    const customerView = document.getElementById('customer-view');
-    if (customerView) customerView.classList.add('drawer-open');
-
-    const overlay = document.getElementById('customer-drawer-overlay');
-    if (overlay) overlay.style.display = 'block';
-
-    setTimeout(() => {
-        document.getElementById('customer-drawer').classList.add('open');
-    }, 10);
 }
 
 function closeCustomerDrawer() {

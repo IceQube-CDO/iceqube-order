@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IceQube CDO | Control Room</title>
-    <link rel="manifest" href="manifest_admin.json">
+    <link rel="manifest" href="manifest_admin_mobile.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1649,6 +1649,232 @@
         .btn-pricing-action { padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
         .btn-pricing-action:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
     </style>
+    <style>
+        /* MOBILE APP OVERRIDES - Forced for all viewports */
+            body.admin-mode {
+                font-size: 14px;
+            }
+            .admin-shell {
+                padding: 10px !important;
+                max-width: 480px !important; /* Force phone width */
+                margin: 0 auto !important;
+            }
+            .cc-header {
+                padding-top: 10px !important;
+                padding-bottom: 5px !important;
+            }
+            .cc-header > div {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                white-space: nowrap !important;
+                gap: 10px !important;
+            }
+            .cc-header > div > div:nth-child(2) {
+                display: none !important;
+            }
+            .cc-header > div > div:nth-child(3) {
+                width: auto !important;
+                flex-wrap: nowrap !important;
+                justify-content: flex-end !important;
+            }
+            #buzzer-test-btn, 
+            #cloud-sync-badge, #purge-test-data-btn, 
+            #refresh-btn {
+                display: none !important;
+            }
+            #buzzer-badge .hide-mobile {
+                display: none !important;
+            }
+            #buzzer-badge .show-mobile {
+                display: inline-block !important;
+                margin-left: 2px !important;
+            }
+            #notif-bell {
+                background: transparent !important;
+                border: none !important;
+                padding: 4px !important;
+            }
+            .cc-title h1, .cc-header h1 {
+                font-size: 1.5rem !important;
+            }
+            .cc-tabs {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                justify-content: flex-start !important;
+                margin: 0 -10px 15px -10px !important;
+                padding: 10px !important;
+                width: calc(100% + 20px) !important;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .cc-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .cc-tab {
+                flex: 0 0 auto !important;
+                width: auto !important;
+                padding: 6px 8px !important;
+                font-size: 0.82rem !important;
+                white-space: nowrap !important;
+                margin-right: 1px !important;
+            }
+            .cc-grid, #customer-view.cc-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px !important;
+            }
+            #customer-view.cc-grid:not(.drawer-open) {
+                grid-template-columns: 1fr !important;
+                gap: 15px !important;
+            }
+            .metrics-row {
+                flex-direction: column !important;
+                gap: 15px !important;
+            }
+            .cc-card {
+                padding: 15px !important;
+                border-radius: 16px !important;
+            }
+            .metric-value {
+                font-size: 1.8rem !important;
+            }
+            .cashflow-table th, .cashflow-table td {
+                padding: 10px !important;
+                font-size: 0.8rem !important;
+                white-space: nowrap;
+            }
+            .drawer-panel {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100vh !important;
+                max-height: 100vh !important;
+                border-radius: 0 !important;
+                z-index: 100000 !important;
+                transform: translateX(100%) !important;
+                opacity: 1 !important;
+                display: flex !important;
+                transition: transform 0.3s ease !important;
+            }
+            .drawer-panel.open {
+                transform: translateX(0) !important;
+            }
+            .drawer-body {
+                padding: 15px !important;
+            }
+            #admin-gate .gate-content {
+                padding: 1.5rem !important;
+                width: 90% !important;
+            }
+            .numpad {
+                gap: 10px !important;
+            }
+            .num-btn {
+                width: 55px !important;
+                height: 55px !important;
+            }
+
+            /* ORDER VIEW CARDS (Swipeable) */
+            #orders-view .table-container {
+                overflow: hidden !important; 
+                padding: 10px 0;
+            }
+            #orders-view .cashflow-table {
+                display: block;
+                width: 100%;
+            }
+            #orders-view .cashflow-table thead {
+                display: none;
+            }
+            #orders-view .cashflow-table tbody {
+                display: flex;
+                flex-direction: column;
+                height: 65vh; 
+                overflow-y: scroll;
+                scroll-snap-type: y mandatory;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 20px;
+            }
+            #orders-view .cashflow-table tbody::-webkit-scrollbar {
+                display: none;
+            }
+            #orders-view .cashflow-table tr {
+                display: block;
+                scroll-snap-align: start;
+                background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)) !important;
+                border: 1px solid rgba(14, 165, 233, 0.2) !important;
+                border-radius: 20px;
+                margin-bottom: 15px;
+                padding: 15px 20px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+                flex-shrink: 0;
+            }
+            #orders-view .cashflow-table td {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 12px 0 !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+                border-left: none !important;
+                border-right: none !important;
+                border-top: none !important;
+                white-space: normal !important;
+                text-align: right !important;
+                font-size: 0.9rem !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+            }
+            #orders-view .cashflow-table td:nth-child(4) {
+                max-width: none !important;
+                flex-grow: 1;
+                text-align: right !important;
+            }
+            #orders-view .cashflow-table td:last-child {
+                border-bottom: none !important;
+            }
+            #orders-view .cashflow-table td::before {
+                font-size: 0.75rem;
+                color: #94a3b8;
+                font-weight: 800;
+                text-transform: uppercase;
+                margin-right: 15px;
+                flex-shrink: 0;
+                letter-spacing: 0.05em;
+            }
+
+            /* Labels for Pending Dispatch Table */
+            #pending-dispatch-body tr td:nth-child(1)::before { content: "TIME"; }
+            #pending-dispatch-body tr td:nth-child(2)::before { content: "ORDER ID"; }
+            #pending-dispatch-body tr td:nth-child(3)::before { content: "CUSTOMER"; }
+            #pending-dispatch-body tr td:nth-child(4)::before { content: "ADDRESS"; }
+            #pending-dispatch-body tr td:nth-child(5)::before { content: "ITEMS"; }
+            #pending-dispatch-body tr td:nth-child(6)::before { content: "PAYMENT"; }
+            #pending-dispatch-body tr td:nth-child(7)::before { content: "ITEM TOTAL"; }
+            #pending-dispatch-body tr td:nth-child(8)::before { content: "DELIVERY FEE"; }
+            #pending-dispatch-body tr td:nth-child(9)::before { content: "HEAVY LOAD"; }
+            #pending-dispatch-body tr td:nth-child(10)::before { content: "ASSIGNMENT"; }
+            #pending-dispatch-body tr td:nth-child(11)::before { content: "ACTION"; }
+
+            /* Labels for Order Ledger Table */
+            #order-ledger-body tr td:nth-child(1)::before { content: "TIME"; }
+            #order-ledger-body tr td:nth-child(2)::before { content: "ORDER ID"; }
+            #order-ledger-body tr td:nth-child(3)::before { content: "CUSTOMER"; }
+            #order-ledger-body tr td:nth-child(4)::before { content: "ADDRESS"; }
+            #order-ledger-body tr td:nth-child(5)::before { content: "ITEMS"; }
+            #order-ledger-body tr td:nth-child(6)::before { content: "PAYMENT"; }
+            #order-ledger-body tr td:nth-child(7)::before { content: "ITEM TOTAL"; }
+            #order-ledger-body tr td:nth-child(8)::before { content: "DELIVERY FEE"; }
+            #order-ledger-body tr td:nth-child(9)::before { content: "HEAVY LOAD"; }
+            #order-ledger-body tr td:nth-child(10)::before { content: "TYPE"; }
+            #order-ledger-body tr td:nth-child(11)::before { content: "RIDER"; }
+            #order-ledger-body tr td:nth-child(12)::before { content: "STATUS"; }
+    </style>
 </head>
 <body class="admin-mode">
     <!-- Digital Receipt System -->
@@ -1862,7 +2088,7 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
 
-                <button onclick="location.reload()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <button id="refresh-btn" onclick="location.reload()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                 </button>
             </div>

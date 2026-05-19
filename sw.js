@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-cache-v10.7.1';
+const CACHE_NAME = 'iceqube-cache-v10.7.2';
 const ASSETS = [
   './',
   './index.html',
@@ -35,6 +35,8 @@ self.addEventListener('fetch', event => {
   // STRICT NETWORK-ONLY for these critical files to prevent stale caching
   if (event.request.url.includes('sync.js') || 
       event.request.url.includes('app_v10.js') || 
+      event.request.url.includes('admin_v24.js') || 
+      event.request.url.includes('admin.js') || 
       event.request.url.includes('app_header.js')) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(event.request))
