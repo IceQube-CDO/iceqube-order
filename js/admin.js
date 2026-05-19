@@ -657,15 +657,10 @@ var admin = {
         const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const profile = directory[order.customer_name];
         
-        const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || "26521276764196410";
+        const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || null;
+        const ADMIN_PSID = "26521276764196410";
         
-        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') {
-            console.log('ℹ️ [Messenger] No ID found for this customer. Skipping notification.');
-            updateStatus('Missing ID', '#f59e0b');
-            return;
-        }
-
-        console.log('🔔 [Messenger] Admin triggering notification for:', targetId);
+        console.log('🔔 [Messenger] Admin triggering notification. Target customer ID:', targetId);
         updateStatus('Sending...', '#0ea5e9', true);
         
         // Construct Detailed Message
@@ -678,24 +673,51 @@ var admin = {
                     `Delivery: ${addressText}\n` +
                     `Total: ₱${order.total_amount || order.total || order.total_price || '0.00'}\n\n` +
                     `Thank you for choosing IceQube!`;
-
+ 
         try {
             // THE DEFINITIVE BYPASS: Hidden Form with Correct Endpoint
             const bridge = document.getElementById('hidden-bridge');
             if (bridge) {
-                const formId = `msg-form-${Date.now()}`;
-                const frameId = `msg-frame-${Date.now()}`;
+                // --- 1. DISPATCH TO CUSTOMER ---
+                if (targetId && targetId !== ADMIN_PSID) {
+                    const custFormId = `msg-form-cust-${Date.now()}`;
+                    const custFrameId = `msg-frame-cust-${Date.now()}`;
+                    
+                    const custDiv = document.createElement('div');
+                    custDiv.innerHTML = `
+                        <iframe name="${custFrameId}" id="${custFrameId}"></iframe>
+                        <form id="${custFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${custFrameId}">
+                            <input type="hidden" name="recipientId" value="${targetId}">
+                            <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                        </form>
+                    `;
+                    bridge.appendChild(custDiv);
+                    document.getElementById(custFormId).submit();
+                    console.log('📡 [Messenger] Customer Receipt Sent to:', targetId);
+                } else {
+                    console.log('ℹ️ [Messenger] No customer PSID found. Skipping direct customer receipt.');
+                }
+ 
+                // --- 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account ---
+                const adminReceiptFormId = `msg-form-admin-receipt-${Date.now()}`;
+                const adminReceiptFrameId = `msg-frame-admin-receipt-${Date.now()}`;
                 
-                bridge.innerHTML = `
-                    <iframe name="${frameId}" id="${frameId}"></iframe>
-                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
-                        <input type="hidden" name="recipientId" value="${targetId}">
+                const adminReceiptDiv = document.createElement('div');
+                adminReceiptDiv.innerHTML = `
+                    <iframe name="${adminReceiptFrameId}" id="${adminReceiptFrameId}"></iframe>
+                    <form id="${adminReceiptFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminReceiptFrameId}">
+                        <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
                         <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
                     </form>
                 `;
-                
-                document.getElementById(formId).submit();
-                updateStatus(`Sent to ${targetId}`, '#22c55e');
+                bridge.appendChild(adminReceiptDiv);
+                setTimeout(() => {
+                    const frm = document.getElementById(adminReceiptFormId);
+                    if (frm) frm.submit();
+                    console.log('📡 [Messenger] Copy of Receipt Sent to Admin.');
+                }, 400);
+ 
+                updateStatus(`Notified Successfully`, '#22c55e');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
@@ -1157,6 +1179,42 @@ var admin = {
             this.showNotification(`New Complaint: ${complaint.customerName}`, complaint.issueType);
             this.startBuzzer();
             this.updateComplaintsUI();
+            
+            // --- NEW: Trigger Messenger Notification for Admin ---
+            this.sendComplaintMessengerNotification(complaint);
+        }
+    },
+
+    async sendComplaintMessengerNotification(complaint) {
+        if (!complaint || !complaint.customerName) return;
+        
+        const ADMIN_PSID = "26521276764196410";
+        const msg = `🚨 NEW CUSTOMER SUPPORT ISSUE!\n\n` +
+                    `Customer: ${complaint.customerName}\n` +
+                    `Issue: ${complaint.issueType}\n` +
+                    `Details: ${complaint.description || 'No description provided.'}\n\n` +
+                    `Check the Control Room complaints ledger!`;
+                    
+        try {
+            const bridgeContainer = document.getElementById('hidden-bridge');
+            if (bridgeContainer) {
+                const formId = `msg-form-complaint-${Date.now()}`;
+                const frameId = `msg-frame-complaint-${Date.now()}`;
+                
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <iframe name="${frameId}" id="${frameId}"></iframe>
+                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
+                        <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
+                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
+                    </form>
+                `;
+                bridgeContainer.appendChild(div);
+                document.getElementById(formId).submit();
+                console.log('📡 [Messenger] Customer Support Notification Sent to Admin.');
+            }
+        } catch (error) {
+            console.error('❌ [Messenger] Support notification failed:', error);
         }
     },
 
