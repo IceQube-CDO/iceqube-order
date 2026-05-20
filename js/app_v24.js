@@ -205,10 +205,35 @@ const app = {
             this.user.messengerEnabled = true; // Auto-enable if coming from Messenger
             localStorage.setItem('ice_messenger_psid', psid);
             
+            // Update existing profile in localStorage if present
+            const profileStr = localStorage.getItem('iceqube_user_profile');
+            if (profileStr) {
+                try {
+                    const p = JSON.parse(profileStr);
+                    p.messengerId = psid;
+                    p.messengerEnabled = true;
+                    p.updatedAt = new Date().toISOString();
+                    localStorage.setItem('iceqube_user_profile', JSON.stringify(p));
+                    
+                    // Broadcast update to Admin Command Center
+                    if (window.IceQubeSync) {
+                        window.IceQubeSync.publishProfileUpdate(p);
+                    }
+                    console.log('Syncing linked PSID to user profile and database.');
+                } catch(e) {
+                    console.error('Error auto-updating profile with PSID:', e);
+                }
+            }
+            
             // Sync to UI immediately
             this.updateMessengerStatusUI();
-            const msgIdHidden = document.getElementById('profile-messenger-id');
-            if (msgIdHidden) msgIdHidden.value = psid;
+            const msgIdInput = document.getElementById('profile-messenger-id');
+            if (msgIdInput) msgIdInput.value = psid;
+            
+            // Show success toast
+            setTimeout(() => {
+                this.showToast('✅ Messenger Account Linked Automatically!', 'success');
+            }, 1000);
         } else {
             // Fallback 1: Last known technical PSID
             const storedPsid = localStorage.getItem('ice_messenger_psid');
@@ -4815,6 +4840,53 @@ const app = {
 
         const contactNumber = (this.orderData.deliveryDetails && this.orderData.deliveryDetails.contact) ? this.orderData.deliveryDetails.contact : 'N/A';
 
+        let finalMessengerId = this.user.messengerId;
+        if (!finalMessengerId && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                // Query previous orders for this establishment or contact number containing a messenger_id
+                const nameQuery = encodeURIComponent(customerName);
+                const phoneQuery = encodeURIComponent(contactNumber);
+                const queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(customer_name.eq.${nameQuery},contact_number.eq.${phoneQuery})&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
+                
+                const res = await fetch(queryUrl, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0 && data[0].messenger_id) {
+                        finalMessengerId = data[0].messenger_id;
+                        console.log('🔄 [Auto-Link] Found existing Messenger ID from past orders:', finalMessengerId);
+                        
+                        // Sync to memory and localStorage user profile
+                        this.user.messengerId = finalMessengerId;
+                        this.user.messengerEnabled = true;
+                        
+                        const profileStr = localStorage.getItem('iceqube_user_profile');
+                        if (profileStr) {
+                            try {
+                                const p = JSON.parse(profileStr);
+                                p.messengerId = finalMessengerId;
+                                p.messengerEnabled = true;
+                                p.updatedAt = new Date().toISOString();
+                                localStorage.setItem('iceqube_user_profile', JSON.stringify(p));
+                                
+                                // Broadcast update to Admin Command Center
+                                if (window.IceQubeSync) {
+                                    window.IceQubeSync.publishProfileUpdate(p);
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not auto-fetch messenger ID from past orders:', err);
+            }
+        }
+
         const payload = {
             order_id: orderId, 
             customer_name: customerName,
@@ -4832,7 +4904,7 @@ const app = {
             delivery_fee: this.orderData.deliveryFee || 0,
             priority_fee: this.orderData.priorityFee || 0,
             po_number: this.orderData.poNumber,
-            messenger_id: this.user.messengerId,
+            messenger_id: finalMessengerId || null,
             is_real: true, // Safeguard for Purge Logic
             created_at: new Date().toISOString()
         };
@@ -5309,7 +5381,7 @@ const app = {
             address: rawOrder.delivery_address || 'N/A',
             items: mappedItems,
             delivery: parseFloat(rawOrder.delivery_fee) || 0,
-            priorityFee: parseFloat(rawOrder.priority_fee) || 0,
+            priorityFee: parseFloat(rawOrder.priority_fee) || parseFloat(rawOrder.heavy_load_fee) || 0,
             payment: rawOrder.payment_method || rawOrder.payment || 'Cash on Delivery',
             total: parseFloat(rawOrder.total_price) || 0
         };
@@ -5405,12 +5477,24 @@ const app = {
             const deliveryFee = order.delivery || 0;
             document.getElementById('receipt-delivery').innerText = '₱' + deliveryFee.toLocaleString();
             
+            const priorityFee = order.priorityFee || 0;
+            const priorityRow = document.getElementById('receipt-priority-fee-row');
+            const priorityEl = document.getElementById('receipt-priority-fee');
+            if (priorityRow && priorityEl) {
+                if (priorityFee > 0) {
+                    priorityRow.style.display = 'flex';
+                    priorityEl.innerText = '₱' + priorityFee.toLocaleString();
+                } else {
+                    priorityRow.style.display = 'none';
+                }
+            }
+            
             // 2. Identify the Master Total (What was actually paid)
-            const masterTotal = order.total || (grossSubtotal + deliveryFee);
+            const masterTotal = order.total || (grossSubtotal + deliveryFee + priorityFee);
             
             // 3. Calculate the "Actual" discount to make the math balance
-            // Discount = (Gross + Delivery) - MasterTotal
-            const actualDiscount = Math.max(0, (grossSubtotal + deliveryFee) - masterTotal);
+            // Discount = (Gross + Delivery + Priority) - MasterTotal
+            const actualDiscount = Math.max(0, (grossSubtotal + deliveryFee + priorityFee) - masterTotal);
             
             // Populate Discount Row
             const discRow = document.getElementById('receipt-discount-row');
@@ -6879,9 +6963,6 @@ function closeReorderModal() {
 
 function processOrder(reorderPayload) {
     app.processOrder(reorderPayload);
-    const defaultThreshold = (app && app.pricingMatrix && app.pricingMatrix.products[0]?.threshold) || 14;
-    const qtyToDisplay = app._lastReorderQty || (typeof reorderPayload === 'number' ? reorderPayload : defaultThreshold);
-    app.showToast(`Items Selected: ${qtyToDisplay} bags. Choose a delivery time.`, 'success');
     closeReorderModal();
 }
 

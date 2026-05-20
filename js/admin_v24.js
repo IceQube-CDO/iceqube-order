@@ -1773,17 +1773,21 @@ var admin = {
                 </div>
             `;
 
-            itemEntries.forEach(item => {
+             itemEntries.forEach(item => {
                 const qty = parseInt(item.qty) || 0;
-                const unitPrice = item.price;
+                const unitPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
                 let lineTotal = qty * unitPrice;
                 if (itemEntries.length === 1) lineTotal = subtotalVal;
+
+                const nameParts = (item.name || '').split(' (');
+                const displayName = nameParts[0] || 'Item';
+                const subLabel = nameParts[1] ? `(${nameParts[1]}` : '';
 
                 itemsHtml += `
                     <div class="receipt-item-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; align-items: center; font-family: 'Outfit', sans-serif;">
                         <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a; line-height: 1.2;">
-                            ${item.name.split(' (')[0]}<br>
-                            <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(${item.name.split(' (')[1]}</span>
+                            ${displayName}<br>
+                            ${subLabel ? `<span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">${subLabel}</span>` : ''}
                         </div>
                         <div style="text-align: center; font-size: 0.8rem; color: #64748b; font-weight: 500;">₱${unitPrice.toFixed(0)}</div>
                         <div style="text-align: center; font-size: 0.85rem; font-weight: 700; color: #0f172a;">${qty}</div>

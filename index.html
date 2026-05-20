@@ -2184,7 +2184,7 @@
                 </div>
             </div>
 
-            <div class="input-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
+            <div class="input-group" style="display: none !important; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
                 <label style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Notification Channel</label>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; background: var(--bg-secondary); padding: 14px; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
                     <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
@@ -2700,6 +2700,10 @@
                     <div class="total-row">
                         <span>Delivery Fee</span>
                         <span id="receipt-delivery">₱0.00</span>
+                    </div>
+                    <div id="receipt-priority-fee-row" class="total-row" style="display: none;">
+                        <span>Bulk Weight Fee</span>
+                        <span id="receipt-priority-fee">₱0.00</span>
                     </div>
                     <div class="total-row grand-total">
                         <span id="receipt-total-label">Amount Paid</span>

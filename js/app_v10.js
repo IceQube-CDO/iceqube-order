@@ -5321,7 +5321,7 @@ const app = {
             address: rawOrder.delivery_address || 'N/A',
             items: mappedItems,
             delivery: parseFloat(rawOrder.delivery_fee) || 0,
-            priorityFee: parseFloat(rawOrder.priority_fee) || 0,
+            priorityFee: parseFloat(rawOrder.priority_fee) || parseFloat(rawOrder.heavy_load_fee) || 0,
             payment: rawOrder.payment_method || rawOrder.payment || 'Cash on Delivery',
             total: parseFloat(rawOrder.total_price) || 0
         };
@@ -5417,12 +5417,24 @@ const app = {
             const deliveryFee = order.delivery || 0;
             document.getElementById('receipt-delivery').innerText = '₱' + deliveryFee.toLocaleString();
             
+            const priorityFee = order.priorityFee || 0;
+            const priorityRow = document.getElementById('receipt-priority-fee-row');
+            const priorityEl = document.getElementById('receipt-priority-fee');
+            if (priorityRow && priorityEl) {
+                if (priorityFee > 0) {
+                    priorityRow.style.display = 'flex';
+                    priorityEl.innerText = '₱' + priorityFee.toLocaleString();
+                } else {
+                    priorityRow.style.display = 'none';
+                }
+            }
+            
             // 2. Identify the Master Total (What was actually paid)
-            const masterTotal = order.total || (grossSubtotal + deliveryFee);
+            const masterTotal = order.total || (grossSubtotal + deliveryFee + priorityFee);
             
             // 3. Calculate the "Actual" discount to make the math balance
-            // Discount = (Gross + Delivery) - MasterTotal
-            const actualDiscount = Math.max(0, (grossSubtotal + deliveryFee) - masterTotal);
+            // Discount = (Gross + Delivery + Priority) - MasterTotal
+            const actualDiscount = Math.max(0, (grossSubtotal + deliveryFee + priorityFee) - masterTotal);
             
             // Populate Discount Row
             const discRow = document.getElementById('receipt-discount-row');
