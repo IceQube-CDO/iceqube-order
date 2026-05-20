@@ -7111,6 +7111,7 @@ body.soa-active .app-header {
     box-shadow: 0 10px 25px rgba(0,0,0,0.05);
     position: relative;
     overflow: hidden; /* For the holographic seal */
+    flex-shrink: 0;
 }
 
 /* Holographic Seal */
@@ -7276,12 +7277,12 @@ body.soa-active .app-header {
 }
 
 .receipt-totals {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #f1f5f9;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 4px;
 }
 
 .total-row {
@@ -7291,6 +7292,21 @@ body.soa-active .app-header {
     color: #64748b;
 }
 
+.receipt-totals .total-row {
+    padding: 3px 0;
+}
+
+.receipt-totals .total-row span:first-child {
+    color: #475569;
+    font-weight: 500;
+}
+
+.receipt-totals .total-row span:last-child {
+    color: #0f172a;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+}
+
 .total-row.grand-total {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
@@ -7298,13 +7314,32 @@ body.soa-active .app-header {
     color: #0f172a;
 }
 
+.receipt-totals .total-row.grand-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1.5px solid #0f172a;
+}
+
 .total-row.grand-total span {
     font-weight: 800;
+}
+
+.receipt-totals .total-row.grand-total span {
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 1.05rem;
 }
 
 .total-row.grand-total strong {
     font-size: 1.25rem;
     font-weight: 900;
+}
+
+.receipt-totals .total-row.grand-total strong {
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #0f172a;
+    font-family: 'Outfit', sans-serif;
 }
 
 .receipt-footer {

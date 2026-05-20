@@ -29,7 +29,7 @@
         /* Receipt Specific (Matched to Customer App v10) */
         .receipt-panel { background: #ffffff !important; }
         .receipt-content-wrapper { padding: 0 !important; overflow-y: auto; }
-        .receipt-paper { background: white; color: #0f172a; padding: 2.5rem 1.5rem; margin: 0; width: 100%; box-shadow: none; position: relative; overflow: hidden; }
+        .receipt-paper { background: white; color: #0f172a; padding: 2.5rem 1.5rem; margin: 0; width: 100%; box-shadow: none; position: relative; overflow: hidden; flex-shrink: 0; }
         .receipt-paper::after {
             content: 'ICEQUBE AUTHENTIC';
             position: absolute;
@@ -63,6 +63,45 @@
         .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.95rem; color: #64748b; font-weight: 500; }
         .total-row strong { color: #0f172a; font-weight: 700; }
         .grand-total { border-top: 2px solid #0f172a; margin-top: 12px; padding-top: 12px; font-size: 1.15rem; font-weight: 900; color: #0f172a; }
+        
+        /* Balanced Digital Receipt Totals */
+        .receipt-totals {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .receipt-totals .total-row {
+            padding: 3px 0;
+            font-size: 0.9rem;
+        }
+        .receipt-totals .total-row span:first-child {
+            color: #475569;
+            font-weight: 500;
+        }
+        .receipt-totals .total-row span:last-child {
+            color: #0f172a;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+        }
+        .receipt-totals .grand-total {
+            border-top: 1.5px solid #0f172a;
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+        .receipt-totals .grand-total span {
+            color: #0f172a;
+            font-weight: 800;
+            font-size: 1.05rem;
+        }
+        .receipt-totals .grand-total strong {
+            color: #0f172a;
+            font-weight: 900;
+            font-size: 1.3rem;
+            font-family: 'Outfit', sans-serif;
+        }
         
         .receipt-footer { text-align: center; margin-top: 3rem; border-top: 1px solid #f1f5f9; padding-top: 2.5rem; }
         .payment-tag { 
