@@ -4826,6 +4826,22 @@ const app = {
             }
 
             console.log('✅ Order successfully synced to Supabase Cloud.');
+            
+            // Trigger admin + customer Messenger notifications via Edge Function
+            try {
+                await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'INSERT',
+                        table: 'orders',
+                        record: payload
+                    })
+                });
+                console.log('✅ Admin Messenger alerts dispatched via Edge Function.');
+            } catch (msgErr) {
+                console.warn('⚠️ Messenger notification dispatch failed:', msgErr);
+            }
         } catch (err) {
             console.error('❌ Supabase Cloud Sync Failed:', err);
             // Show toast for non-blocking error feedback
