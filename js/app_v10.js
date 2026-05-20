@@ -26,7 +26,10 @@ const app = {
         ],
         delivery: {
             baseFare: 30,
-            perKmRate: 10,
+            perKmShort: 15,
+            perKmLong: 20,
+            lateNightFee: 0,
+            peakHoursFee: 0,
             freeThreshold: 0
         }
     },
@@ -49,7 +52,10 @@ const app = {
                         ],
                         delivery: {
                             baseFare: matrix.delivery?.baseFare || 30,
-                            perKmRate: Math.max(15, matrix.delivery?.perKmRate || 0),
+                            perKmShort: matrix.delivery?.perKmShort || matrix.delivery?.perKmRate || 15,
+                            perKmLong: matrix.delivery?.perKmLong || 20,
+                            lateNightFee: matrix.delivery?.lateNightFee || 0,
+                            peakHoursFee: matrix.delivery?.peakHoursFee || 0,
                             freeThreshold: matrix.delivery?.freeThreshold || 0
                         }
                     };
@@ -91,9 +97,7 @@ const app = {
                 // CRITICAL: Re-calculate all fees with the new cloud rates immediately
                 this.updateTotal();
                 
-                if (this.currentStep > 0) {
-                    this.showToast('☁️ Pricing Matrix Synchronized', 'success');
-                }
+                // Pricing sync is silent — no toast needed
             } else {
                 const errMsg = (cloudMatrix && cloudMatrix._error) ? cloudMatrix._error : 'Cloud Offline';
                 console.log(`ℹ️ [App] Cloud Sync Unavailable (${errMsg}). Using Local Cache.`);
@@ -121,10 +125,12 @@ const app = {
             }
         }
         
-        // Final Safety: If for any reason we are still at 10, FORCE to 15
-        if (this.pricingMatrix.delivery.perKmRate < 15) {
-            console.log("🚨 Safety Override: Forcing rate to 15.");
-            this.pricingMatrix.delivery.perKmRate = 15;
+        // Final Safety: Ensure new tiered fields exist with sane defaults
+        if (!this.pricingMatrix.delivery.perKmShort && this.pricingMatrix.delivery.perKmRate) {
+            console.log("🔄 [Migration] Migrating legacy perKmRate to tiered fields.");
+            this.pricingMatrix.delivery.perKmShort = this.pricingMatrix.delivery.perKmRate;
+            this.pricingMatrix.delivery.perKmLong = Math.round(this.pricingMatrix.delivery.perKmRate * 1.33);
+            localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
             this.updateTotal();
         }
 
@@ -3647,6 +3653,9 @@ const app = {
             
             return baseFare + distanceFee;
         };
+
+        // DEBUG: Log what pricing values are actually loaded
+        console.log('📊 [DEBUG] Delivery Matrix:', JSON.stringify(this.pricingMatrix.delivery));
 
         // Time-based surcharge calculation
         const calculateTimeSurcharge = () => {

@@ -1711,6 +1711,10 @@
                         <span>Delivery Fee</span>
                         <span id="receipt-delivery">₱0.00</span>
                     </div>
+                    <div id="receipt-priority-fee-row" class="total-row" style="display: none;">
+                        <span>Bulk Weight Fee</span>
+                        <span id="receipt-priority-fee">₱0.00</span>
+                    </div>
                     <div class="total-row grand-total">
                         <span id="receipt-total-label">Amount Paid</span>
                         <strong id="receipt-total">₱0.00</strong>
@@ -2007,7 +2011,7 @@
                                 <th>PAYMENT METHOD</th>
                                 <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
-                                <th>HEAVY LOAD FEE</th>
+                                <th>BULK WEIGHT FEE</th>
                                 <th>RIDER ASSIGNMENT</th>
                                 <th style="text-align: right;">ACTION</th>
                             </tr>
@@ -2040,7 +2044,7 @@
                                 <th>PAYMENT METHOD</th>
                                 <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
-                                <th>HEAVY LOAD FEE</th>
+                                <th>BULK WEIGHT FEE</th>
                                 <th style="text-align: center;">TYPE</th>
                                 <th>RIDER</th>
                                 <th>STATUS</th>
@@ -2081,8 +2085,15 @@
                 <div class="drawer-body">
                     <!-- SECTION 1: Contact & Status -->
                     <div class="profile-section">
-                        <h4 class="section-title">ACCOUNT STATUS & CONTACT</h4>
-                        <div class="contact-grid">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 class="section-title" style="margin: 0; border: none; padding: 0;">ACCOUNT STATUS & CONTACT</h4>
+                            <button id="profile-edit-btn" class="btn-pricing-action" onclick="toggleProfileEdit(true)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Profile Display Mode -->
+                        <div id="profile-display-mode" class="contact-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
                                 <span class="label">Contact Person</span>
                                 <span class="value" id="drawer-contact-person">Ian</span>
@@ -2090,6 +2101,41 @@
                             <div>
                                 <span class="label">Phone</span>
                                 <span class="value" id="drawer-phone">+63 917 123 4567</span>
+                            </div>
+                            <div style="grid-column: span 2;">
+                                <span class="label">Delivery Address</span>
+                                <span class="value" id="drawer-address-display">No Address</span>
+                            </div>
+                            <div style="grid-column: span 2;">
+                                <span class="label">Messenger ID</span>
+                                <span class="value" id="drawer-messenger-display">Not Linked</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Edit Mode -->
+                        <div id="profile-edit-mode" style="display: none; flex-direction: column; gap: 10px;">
+                            <div>
+                                <span class="label">Contact Person</span>
+                                <input type="text" id="drawer-contact-person-input" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+                            <div>
+                                <span class="label">Phone</span>
+                                <input type="text" id="drawer-phone-input" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+                            <div>
+                                <span class="label">Delivery Address</span>
+                                <input type="text" id="drawer-address-input" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+                            <div>
+                                <span class="label">Messenger PSID</span>
+                                <input type="text" id="drawer-messenger-input" placeholder="Enter Messenger PSID (e.g. 26521276764196410)" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
+                            </div>
+                            <div id="profile-actions" style="display: flex; gap: 10px; margin-top: 5px;">
+                                <button class="btn-text" style="flex: 2; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #22c55e; border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.2); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="saveCustomerProfile()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    Save Profile
+                                </button>
+                                <button class="btn-text" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); color: #94a3b8; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); font-weight: 700; cursor: pointer;" onclick="toggleProfileEdit(false)">Cancel</button>
                             </div>
                         </div>
                     </div>
@@ -2672,6 +2718,31 @@
                         <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Min. Subtotal for Free Delivery (₱)</label>
                         <input type="number" id="m-del-free" class="matrix-input" value="0" readonly>
                         <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Set to 0 to disable free delivery.</small>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #eab308;">Bulk Weight Fee</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Tier 1 Min. Weight (kg)</label>
+                                <input type="number" id="m-del-heavy-t1-weight" class="matrix-input" value="19" readonly>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Tier 1 Surcharge (₱)</label>
+                                <input type="number" id="m-del-heavy-t1-fee" class="matrix-input" value="10" readonly>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Tier 2 Min. Weight (kg)</label>
+                                <input type="number" id="m-del-heavy-t2-weight" class="matrix-input" value="31" readonly>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Tier 2 Surcharge (₱)</label>
+                                <input type="number" id="m-del-heavy-t2-fee" class="matrix-input" value="15" readonly>
+                            </div>
+                        </div>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Surcharges added to the order based on total weight of products.</small>
                     </div>
 
                     <button class="btn-matrix-lock" onclick="admin.toggleMatrixLock('matrix-card-logistics', this)" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 800; margin-top: 0.5rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">

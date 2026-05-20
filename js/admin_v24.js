@@ -54,8 +54,15 @@ var admin = {
         ],
         delivery: {
             baseFare: 30,
-            perKmRate: 10,
-            freeThreshold: 0 // 0 means no free delivery by default
+            perKmShort: 15,
+            perKmLong: 20,
+            lateNightFee: 0,
+            peakHoursFee: 0,
+            freeThreshold: 0,
+            heavyLoadT1Weight: 19,
+            heavyLoadT1Fee: 10,
+            heavyLoadT2Weight: 31,
+            heavyLoadT2Fee: 15
         }
     })),
     cashflowFilter: 'daily', 
@@ -288,9 +295,22 @@ var admin = {
                 delivery: (this.pricingMatrix && this.pricingMatrix.delivery) || {
                     baseFare: 30,
                     perKmRate: 10,
-                    freeThreshold: 0
+                    freeThreshold: 0,
+                    heavyLoadT1Weight: 19,
+                    heavyLoadT1Fee: 10,
+                    heavyLoadT2Weight: 31,
+                    heavyLoadT2Fee: 15
                 }
             };
+            localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+        }
+
+        // Final Safety: Ensure heavy load fields exist on loaded delivery matrix
+        if (this.pricingMatrix && this.pricingMatrix.delivery && this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
+            this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
+            this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
+            this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
+            this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
         }
 
@@ -742,26 +762,29 @@ var admin = {
         // --- MATH RECONCILIATION (REFINED) ---
         const totalGross = Number(order.total_price || order.total || 0);
         const deliveryFee = Number(order.delivery_fee || 0);
-        const heavyLoad = Number(order.heavy_load_fee || 0);
-        const discount = Number(order.discount || 0);
+        const heavyLoad = Number(order.priority_fee || order.heavy_load_fee || 0);
+        const discount = Number(order.discount || order.discount_total || 0);
         
-        // Calculate Subtotal (Items only)
-        const subtotal = totalGross - deliveryFee - heavyLoad;
-        // Customer Total (Items + Delivery - Discount)
-        const customerTotal = subtotal + deliveryFee - discount;
+        // Calculate Subtotal (Items only before discount)
+        const subtotal = Math.max(0, totalGross - deliveryFee - heavyLoad + discount);
         
         let msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
                     `Deliver to: ${order.customer_name}\n` +
                     `Item: ${itemsText}\n` +
-                    `Subtotal: ₱${subtotal.toLocaleString()}\n`;
+                    `Subtotal: ₱${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
         
         // Only show discount if it exists
         if (discount > 0) {
-            msg += `Discount: ₱${discount.toLocaleString()}\n`;
+            msg += `Discount: -₱${discount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
         }
  
-        msg += `Delivery fee: ₱${deliveryFee.toLocaleString()}\n` +
-               `Total: ₱${customerTotal.toLocaleString()}\n` +
+        msg += `Delivery fee: ₱${deliveryFee.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
+        
+        if (heavyLoad > 0) {
+            msg += `Bulk Weight Fee: ₱${heavyLoad.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
+        }
+
+        msg += `Total: ₱${totalGross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n` +
                `Payment: ${order.payment_method || 'Cash'}\n\n` +
                `Thank you for your order!`;
  
@@ -1630,6 +1653,7 @@ var admin = {
             };
 
             const delivery = parseMoney(order.delivery_fee);
+            const priority = parseMoney(order.priority_fee);
             const totalVal = parseMoney(order.total_price);
             let discount = parseMoney(order.discount_total);
             let subtotalVal = parseMoney(order.subtotal);
@@ -1639,7 +1663,7 @@ var admin = {
                 const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
                 const custName = order.customer_name || '';
                 const expectedSubtotal = itemEntries.reduce((sum, item) => sum + (item.qty * item.price), 0);
-                const actualPaidSubtotal = totalVal - delivery;
+                const actualPaidSubtotal = Math.max(0, totalVal - delivery - priority);
 
                 if (expectedSubtotal > actualPaidSubtotal && actualPaidSubtotal > 0) {
                     discount = expectedSubtotal - actualPaidSubtotal;
@@ -1648,7 +1672,7 @@ var admin = {
             }
 
             if (subtotalVal === 0) {
-                subtotalVal = totalVal - delivery + discount;
+                subtotalVal = Math.max(0, totalVal - delivery - priority + discount);
             }
 
             // Render Rows - Columnar Layout (Detailed Breakdown)
@@ -1697,6 +1721,18 @@ var admin = {
             }
 
             if (deliveryEl) deliveryEl.innerText = `₱${delivery.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            
+            const priorityRow = document.getElementById('receipt-priority-fee-row');
+            const priorityEl = document.getElementById('receipt-priority-fee');
+            if (priorityRow && priorityEl) {
+                if (priority > 0) {
+                    priorityRow.style.display = 'flex';
+                    priorityEl.innerText = `₱${priority.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                } else {
+                    priorityRow.style.display = 'none';
+                }
+            }
+
             if (totalEl) totalEl.innerText = `₱${totalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
             
             // Payment Tag Logic
@@ -1836,11 +1872,6 @@ var admin = {
         // 1. Process Automatic Entries from Orders (Revenue)
         const autoEntries = syncedOrders.map(o => {
             let amount = parseFloat(o.total_price) || 0;
-            // COD Adjustment: Business only receives (Item Total - Priority Fee) 
-            // because Delivery + Priority goes directly to the rider.
-            if (o.payment_method === 'Cash on Delivery') {
-                amount = Math.max(0, amount - (parseFloat(o.priority_fee) || 0));
-            }
             return {
                 timestamp: o.created_at,
                 category: 'Sales',
@@ -2230,11 +2261,6 @@ var admin = {
         // 1. Process Automatic Entries from Orders
         const autoEntries = orders.map(o => {
             let amount = parseFloat(o.total_price) || 0;
-            // COD Adjustment: Business only receives (Item Total - Priority Fee) 
-            // because Delivery + Priority goes directly to the rider.
-            if (o.payment_method === 'Cash on Delivery') {
-                amount = Math.max(0, amount - (parseFloat(o.priority_fee) || 0));
-            }
             return {
                 timestamp: o.created_at,
                 category: 'Sales',
@@ -3916,12 +3942,21 @@ var admin = {
         const delLate = document.getElementById('m-del-late');
         const delPeak = document.getElementById('m-del-peak');
         const delFree = document.getElementById('m-del-free');
+        const delHeavyT1Weight = document.getElementById('m-del-heavy-t1-weight');
+        const delHeavyT1Fee = document.getElementById('m-del-heavy-t1-fee');
+        const delHeavyT2Weight = document.getElementById('m-del-heavy-t2-weight');
+        const delHeavyT2Fee = document.getElementById('m-del-heavy-t2-fee');
+        
         if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare || 30;
         if (delKmShort) delKmShort.value = this.pricingMatrix.delivery.perKmShort || this.pricingMatrix.delivery.perKmRate || 15;
         if (delKmLong) delKmLong.value = this.pricingMatrix.delivery.perKmLong || 20;
         if (delLate) delLate.value = this.pricingMatrix.delivery.lateNightFee || 0;
         if (delPeak) delPeak.value = this.pricingMatrix.delivery.peakHoursFee || 0;
         if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold || 0;
+        if (delHeavyT1Weight) delHeavyT1Weight.value = this.pricingMatrix.delivery.heavyLoadT1Weight || 19;
+        if (delHeavyT1Fee) delHeavyT1Fee.value = this.pricingMatrix.delivery.heavyLoadT1Fee || 10;
+        if (delHeavyT2Weight) delHeavyT2Weight.value = this.pricingMatrix.delivery.heavyLoadT2Weight || 31;
+        if (delHeavyT2Fee) delHeavyT2Fee.value = this.pricingMatrix.delivery.heavyLoadT2Fee || 15;
     },
 
     toggleMatrixLock(cardId, btn) {
@@ -3964,6 +3999,11 @@ var admin = {
             };
         });
 
+        const delHeavyT1WeightEl = document.getElementById('m-del-heavy-t1-weight');
+        const delHeavyT1FeeEl = document.getElementById('m-del-heavy-t1-fee');
+        const delHeavyT2WeightEl = document.getElementById('m-del-heavy-t2-weight');
+        const delHeavyT2FeeEl = document.getElementById('m-del-heavy-t2-fee');
+
         const newMatrix = {
             products: products,
             delivery: {
@@ -3972,7 +4012,11 @@ var admin = {
                 perKmLong: parseFloat(document.getElementById('m-del-km-long').value) || 0,
                 lateNightFee: parseFloat(document.getElementById('m-del-late').value) || 0,
                 peakHoursFee: parseFloat(document.getElementById('m-del-peak').value) || 0,
-                freeThreshold: parseFloat(document.getElementById('m-del-free').value) || 0
+                freeThreshold: parseFloat(document.getElementById('m-del-free').value) || 0,
+                heavyLoadT1Weight: delHeavyT1WeightEl ? parseFloat(delHeavyT1WeightEl.value) : 19,
+                heavyLoadT1Fee: delHeavyT1FeeEl ? parseFloat(delHeavyT1FeeEl.value) : 10,
+                heavyLoadT2Weight: delHeavyT2WeightEl ? parseFloat(delHeavyT2WeightEl.value) : 31,
+                heavyLoadT2Fee: delHeavyT2FeeEl ? parseFloat(delHeavyT2FeeEl.value) : 15
             }
         };
 
@@ -4172,14 +4216,41 @@ function openCustomerDrawer(customerId) {
         const nameEl = document.getElementById('drawer-customer-name');
         if (nameEl) nameEl.innerText = customer.name || customerId;
 
+        const addressVal = profile.address || customer.address || '';
+        const contactVal = profile.contactPerson || customer.contactPerson || customer.name || customerId;
+        const phoneVal = profile.contactNumber || customer.phone || '';
+        const messengerVal = profile.messengerId || '';
+
         const addrEl = document.getElementById('drawer-customer-address');
-        if (addrEl) addrEl.innerText = profile.address || customer.address || 'No Address';
+        if (addrEl) addrEl.innerText = addressVal ? `Premium Partner • ${addressVal}` : 'Premium Partner';
 
         const contactEl = document.getElementById('drawer-contact-person');
-        if (contactEl) contactEl.innerText = profile.contactPerson || customer.contactPerson || customer.name || customerId;
+        if (contactEl) contactEl.innerText = contactVal;
 
         const phoneEl = document.getElementById('drawer-phone');
-        if (phoneEl) phoneEl.innerText = profile.contactNumber || customer.phone || 'N/A';
+        if (phoneEl) phoneEl.innerText = phoneVal || 'N/A';
+
+        const addrDisplayEl = document.getElementById('drawer-address-display');
+        if (addrDisplayEl) addrDisplayEl.innerText = addressVal || 'No Address';
+
+        const messengerDisplayEl = document.getElementById('drawer-messenger-display');
+        if (messengerDisplayEl) messengerDisplayEl.innerText = messengerVal || 'Not Linked';
+
+        // Pre-populate inputs
+        const contactInput = document.getElementById('drawer-contact-person-input');
+        if (contactInput) contactInput.value = contactVal;
+
+        const phoneInput = document.getElementById('drawer-phone-input');
+        if (phoneInput) phoneInput.value = phoneVal;
+
+        const addrInput = document.getElementById('drawer-address-input');
+        if (addrInput) addrInput.value = addressVal;
+
+        const messengerInput = document.getElementById('drawer-messenger-input');
+        if (messengerInput) messengerInput.value = messengerVal;
+
+        // Reset profile edit mode back to default display
+        toggleProfileEdit(false);
         
         // Load Discounts & Tier
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
@@ -4422,4 +4493,84 @@ function saveCustomerDiscounts() {
     setTimeout(() => {
         savedStatus.style.display = 'none';
     }, 3000);
+}
+
+function toggleProfileEdit(isEditing) {
+    const displayMode = document.getElementById('profile-display-mode');
+    const editMode = document.getElementById('profile-edit-mode');
+    const editBtn = document.getElementById('profile-edit-btn');
+
+    if (!displayMode || !editMode || !editBtn) return;
+
+    if (isEditing) {
+        displayMode.style.display = 'none';
+        editMode.style.display = 'flex';
+        editBtn.style.display = 'none';
+    } else {
+        displayMode.style.display = 'grid';
+        editMode.style.display = 'none';
+        editBtn.style.display = 'flex';
+        
+        // Update display values from inputs
+        const contactVal = document.getElementById('drawer-contact-person-input').value;
+        const phoneVal = document.getElementById('drawer-phone-input').value;
+        const addressVal = document.getElementById('drawer-address-input').value;
+        const messengerVal = document.getElementById('drawer-messenger-input').value;
+
+        const cEl = document.getElementById('drawer-contact-person');
+        if (cEl) cEl.innerText = contactVal || 'N/A';
+        const pEl = document.getElementById('drawer-phone');
+        if (pEl) pEl.innerText = phoneVal || 'N/A';
+        const aEl = document.getElementById('drawer-address-display');
+        if (aEl) aEl.innerText = addressVal || 'No Address';
+        const mEl = document.getElementById('drawer-messenger-display');
+        if (mEl) mEl.innerText = messengerVal || 'Not Linked';
+        
+        const addrEl = document.getElementById('drawer-customer-address');
+        if (addrEl) addrEl.innerText = addressVal ? `Premium Partner • ${addressVal}` : 'Premium Partner';
+    }
+}
+
+function saveCustomerProfile() {
+    const customerName = document.getElementById('drawer-customer-name').innerText.trim();
+    const contactPerson = document.getElementById('drawer-contact-person-input').value.trim();
+    const contactNumber = document.getElementById('drawer-phone-input').value.trim();
+    const address = document.getElementById('drawer-address-input').value.trim();
+    const messengerId = document.getElementById('drawer-messenger-input').value.trim();
+
+    const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+    const currentProfile = profiles[customerName] || {};
+    
+    const updatedProfile = {
+        ...currentProfile,
+        establishment: customerName,
+        contactPerson,
+        contactNumber,
+        address,
+        messengerId
+    };
+
+    profiles[customerName] = updatedProfile;
+    localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
+    
+    // Broadcast updating profile to other tabs
+    if (window.IceQubeSync && typeof window.IceQubeSync.publishProfileUpdate === 'function') {
+        window.IceQubeSync.publishProfileUpdate(updatedProfile);
+    } else {
+        const channel = new BroadcastChannel('iceqube_sync_channel');
+        channel.postMessage({
+            type: 'PROFILE_UPDATED',
+            payload: updatedProfile
+        });
+        channel.close();
+    }
+
+    console.log(`[SYSTEM] Profile updated for ${customerName}`);
+    alert(`Profile details saved for ${customerName}.`);
+
+    toggleProfileEdit(false);
+
+    if (typeof admin !== 'undefined' && typeof admin.loadCustomers === 'function') {
+        admin.loadCustomers();
+    }
 }

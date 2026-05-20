@@ -26,8 +26,15 @@ const app = {
         ],
         delivery: {
             baseFare: 30,
-            perKmRate: 10,
-            freeThreshold: 0
+            perKmShort: 15,
+            perKmLong: 20,
+            lateNightFee: 0,
+            peakHoursFee: 0,
+            freeThreshold: 0,
+            heavyLoadT1Weight: 19,
+            heavyLoadT1Fee: 10,
+            heavyLoadT2Weight: 31,
+            heavyLoadT2Fee: 15
         }
     },
 
@@ -49,7 +56,10 @@ const app = {
                         ],
                         delivery: {
                             baseFare: matrix.delivery?.baseFare || 30,
-                            perKmRate: Math.max(15, matrix.delivery?.perKmRate || 0),
+                            perKmShort: matrix.delivery?.perKmShort || matrix.delivery?.perKmRate || 15,
+                            perKmLong: matrix.delivery?.perKmLong || 20,
+                            lateNightFee: matrix.delivery?.lateNightFee || 0,
+                            peakHoursFee: matrix.delivery?.peakHoursFee || 0,
                             freeThreshold: matrix.delivery?.freeThreshold || 0
                         }
                     };
@@ -91,9 +101,7 @@ const app = {
                 // CRITICAL: Re-calculate all fees with the new cloud rates immediately
                 this.updateTotal();
                 
-                if (this.currentStep > 0) {
-                    this.showToast('☁️ Pricing Matrix Synchronized', 'success');
-                }
+                // Pricing sync is silent — no toast needed
             } else {
                 const errMsg = (cloudMatrix && cloudMatrix._error) ? cloudMatrix._error : 'Cloud Offline';
                 console.log(`ℹ️ [App] Cloud Sync Unavailable (${errMsg}). Using Local Cache.`);
@@ -121,10 +129,23 @@ const app = {
             }
         }
         
-        // Final Safety: If for any reason we are still at 10, FORCE to 15
-        if (this.pricingMatrix.delivery.perKmRate < 15) {
-            console.log("🚨 Safety Override: Forcing rate to 15.");
-            this.pricingMatrix.delivery.perKmRate = 15;
+        // Final Safety: Ensure new tiered fields exist with sane defaults
+        if (!this.pricingMatrix.delivery.perKmShort && this.pricingMatrix.delivery.perKmRate) {
+            console.log("🔄 [Migration] Migrating legacy perKmRate to tiered fields.");
+            this.pricingMatrix.delivery.perKmShort = this.pricingMatrix.delivery.perKmRate;
+            this.pricingMatrix.delivery.perKmLong = Math.round(this.pricingMatrix.delivery.perKmRate * 1.33);
+            localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+            this.updateTotal();
+        }
+
+        // Final Safety: Ensure heavy load fields exist on loaded delivery matrix
+        if (this.pricingMatrix.delivery && this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
+            console.log("🔄 [Migration] Migrating heavy load settings into delivery config.");
+            this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
+            this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
+            this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
+            this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
+            localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
             this.updateTotal();
         }
 
@@ -3353,11 +3374,17 @@ const app = {
             totalWeight += q * weight;
         });
         
+        const deliveryConfig = this.pricingMatrix.delivery || {};
+        const t1Weight = parseFloat(deliveryConfig.heavyLoadT1Weight) || 19;
+        const t1Fee = parseFloat(deliveryConfig.heavyLoadT1Fee) || 10;
+        const t2Weight = parseFloat(deliveryConfig.heavyLoadT2Weight) || 31;
+        const t2Fee = parseFloat(deliveryConfig.heavyLoadT2Fee) || 15;
+        
         let fee = 0;
-        if (totalWeight >= 31) {
-            fee = 15;
-        } else if (totalWeight >= 19) {
-            fee = 10;
+        if (totalWeight >= t2Weight) {
+            fee = t2Fee;
+        } else if (totalWeight >= t1Weight) {
+            fee = t1Fee;
         } else {
             fee = 0;
         }
@@ -3624,15 +3651,57 @@ const app = {
         let zone = '';
         let isManualReview = false;
 
-        // Rate Card logic based on Distance
+        // Rate Card logic based on Distance (tiered) + Time Surcharges
         const calculateMaximFee = (distanceInKm) => {
-            const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmRate: 15, freeThreshold: 0 };
-            const baseFare = delivery.baseFare || 30;
-            // FORCE a minimum of 15 to kill the 70 fee once and for all
-            const perKmRate = Math.max(15, parseFloat(delivery.perKmRate) || 0);
-            
+            const delivery = this.pricingMatrix.delivery || {};
+            const baseFare = delivery.baseFare !== undefined ? parseFloat(delivery.baseFare) : 30;
+            // Tiered per-km rates — fallback to legacy perKmRate if new fields aren't set
+            let perKmShort = delivery.perKmShort !== undefined ? parseFloat(delivery.perKmShort) : (delivery.perKmRate !== undefined ? parseFloat(delivery.perKmRate) : 15);
+            let perKmLong = delivery.perKmLong !== undefined ? parseFloat(delivery.perKmLong) : 20;
+
             if (distanceInKm <= 1) return baseFare;
-            return baseFare + (Math.ceil(distanceInKm - 1) * perKmRate);
+            
+            let distanceFee = 0;
+            const extraKm = distanceInKm - 1; // km beyond the first
+            
+            if (extraKm <= 4) {
+                // 1-5km zone: all extra km at short rate
+                distanceFee = Math.ceil(extraKm) * perKmShort;
+            } else {
+                // First 4 extra km at short rate, remainder at long rate
+                distanceFee = (4 * perKmShort) + (Math.ceil(extraKm - 4) * perKmLong);
+            }
+            
+            return baseFare + distanceFee;
+        };
+
+        // Time-based surcharge calculation
+        const calculateTimeSurcharge = () => {
+            const delivery = this.pricingMatrix.delivery || {};
+            const lateNightFee = parseFloat(delivery.lateNightFee) || 0;
+            const peakHoursFee = parseFloat(delivery.peakHoursFee) || 0;
+            
+            // Determine effective hour: use scheduled time if available, else current time
+            let effectiveHour;
+            if (this.orderData.schedule && this.orderData.schedule.time) {
+                effectiveHour = parseInt(this.orderData.schedule.time.split(':')[0]);
+            } else {
+                effectiveHour = new Date().getHours();
+            }
+            
+            let surcharge = 0;
+            
+            // Peak hours: 5PM–7PM (17, 18, 19)
+            if (effectiveHour >= 17 && effectiveHour <= 19) {
+                surcharge += peakHoursFee;
+            }
+            
+            // Late night: 9 PM onward (21:00+)
+            if (effectiveHour >= 21) {
+                surcharge += lateNightFee;
+            }
+            
+            return surcharge;
         };
 
         if (distanceKm > 15) {
@@ -3653,6 +3722,21 @@ const app = {
                 zone += " (FREE)";
             } else {
                 fee = calculateMaximFee(distanceKm);
+                // Add time-based surcharges
+                const timeSurcharge = calculateTimeSurcharge();
+                if (timeSurcharge > 0) {
+                    fee += timeSurcharge;
+                    
+                    // Expose the reason in the UI
+                    let effectiveHour = this.orderData.schedule && this.orderData.schedule.time ? parseInt(this.orderData.schedule.time.split(':')[0]) : new Date().getHours();
+                    if (effectiveHour >= 17 && effectiveHour <= 19) {
+                        zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
+                    } else if (effectiveHour >= 21) {
+                        zone += ` + ₱${parseFloat(delivery.lateNightFee) || 0} Late`;
+                    }
+                    
+                    console.log(`🕐 [Logistics] Time surcharge applied: +₱${timeSurcharge}`);
+                }
             }
         }
 
@@ -3665,8 +3749,33 @@ const app = {
         this.orderData.deliveryZone = zone;
 
         summaryDiv.style.display = 'block';
-        document.getElementById('summary-subtotal').innerText = `₱${this.orderData.total}`;
+        document.getElementById('summary-subtotal').innerText = `₱${this.orderData.subtotal}`;
         document.getElementById('summary-zone').innerText = zone;
+        
+        // Show/hide discount row
+        const discountRow = document.getElementById('summary-discount-row');
+        if (discountRow) {
+            const discountAmount = parseFloat(this.orderData.discountAmount) || 0;
+            if (discountAmount > 0) {
+                discountRow.style.display = 'flex';
+                const labelEl = document.getElementById('summary-discount-label');
+                if (labelEl) labelEl.innerText = this.orderData.discountLabel || 'Discount:';
+                document.getElementById('summary-discount-amount').innerText = `-₱${discountAmount}`;
+            } else {
+                discountRow.style.display = 'none';
+            }
+        }
+        
+        // Show/hide heavy load surcharge row
+        const priorityRow = document.getElementById('summary-priority-fee-row');
+        if (priorityRow) {
+            if (trafficBonus > 0) {
+                priorityRow.style.display = 'flex';
+                document.getElementById('summary-priority-fee').innerText = `₱${trafficBonus}`;
+            } else {
+                priorityRow.style.display = 'none';
+            }
+        }
         
         let feeText = `₱${fee}`;
         document.getElementById('summary-delivery-fee').innerText = isManualReview ? 'Manual Review' : feeText;
@@ -3840,9 +3949,14 @@ const app = {
                 (this.orderData.isManualReview ? 'TBD' : `₱${(this.orderData.deliveryFee || 0)}`) : '₱0';
         }
 
+        const priorityFee = parseFloat(this.orderData.priorityFee) || 0;
         if (priorityEl && priorityRow) {
-            // Internal only: Hidden from customer summary but DOM updated for potential internal use
-            priorityRow.style.display = 'none';
+            if (priorityFee > 0) {
+                priorityRow.style.display = 'flex';
+                priorityEl.innerText = `₱${priorityFee.toFixed(2)}`;
+            } else {
+                priorityRow.style.display = 'none';
+            }
         }
 
         const totalEl = document.getElementById('payment-total');
@@ -6220,8 +6334,6 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 if (latInput) latInput.value = this.user.savedLat || '';
                 if (lngInput) lngInput.value = this.user.savedLng || '';
                 if (msgInput) msgInput.value = this.user.messengerId || '';
-                const msgInputEditable = document.getElementById('profile-messenger-input');
-                if (msgInputEditable) msgInputEditable.value = this.user.messengerId || '';
                 
                 // Pre-fill Pickup Form (New)
                 const pickEst = document.getElementById('pickup-establishment');
@@ -6448,7 +6560,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     },
 
     updateMessengerStatusUI() {
-        const input = document.getElementById('profile-messenger-input');
+        const input = document.getElementById('profile-messenger-id');
         const badge = document.getElementById('messenger-status-badge');
         
         if (!badge) return;

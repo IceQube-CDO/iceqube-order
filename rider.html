@@ -954,7 +954,7 @@
                 <span id="drawer-deliveries-fee">₱0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--rider-accent); margin-bottom: 8px;">
-                <span>Total Heavy Load Bonuses</span>
+                <span>Total Bulk Weight Fee (Paid by Customer)</span>
                 <span id="drawer-tips-fee">₱0.00</span>
             </div>
             <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; color: white;">
@@ -1191,7 +1191,7 @@
                         <span>₱80.00</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--rider-accent); font-weight: 700;">
-                        <span>Priority Tip:</span>
+                        <span>Bulk Weight Fee:</span>
                         <span>₱20.00</span>
                     </div>
 
@@ -1258,7 +1258,7 @@
                             <span id="active-delivery-fee" style="font-size: 1.1rem;">₱80.00</span>
                         </div>
                         <div id="active-priority-row" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-accent); font-weight: 700;">
-                            <span>Priority Tip (Your Payout):</span>
+                            <span>Bulk Weight Fee (Paid by Customer):</span>
                             <span id="active-priority-fee">₱20.00</span>
                         </div>
                     </div>
@@ -1269,7 +1269,7 @@
                         <div style="color: var(--rider-label); font-size: 0.9rem; font-weight: 600;">AMOUNT TO COLLECT</div>
                         <div style="text-align: right;">
                             <div id="active-to-collect" style="font-size: 1.8rem; font-weight: 800; color: var(--rider-text-main);">₱0.00</div>
-                            <div id="active-to-collect-tip" style="font-size: 0.8rem; color: var(--rider-accent); font-weight: 700; display: none;">+ ₱0.00 Priority Tip</div>
+                            <div id="active-to-collect-tip" style="font-size: 0.8rem; color: var(--rider-accent); font-weight: 700; display: none;">+ ₱0.00 Bulk Weight Fee</div>
                         </div>
                     </div>
                 </div>
@@ -1361,7 +1361,7 @@
                             <span id="advance-delivery-fee" style="font-size: 1.1rem;">₱80.00</span>
                         </div>
                         <div id="advance-priority-row" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--rider-accent); font-weight: 700;">
-                            <span>Priority Tip (Your Payout):</span>
+                            <span>Bulk Weight Fee (Paid by Customer):</span>
                             <span id="advance-priority-fee">₱20.00</span>
                         </div>
                     </div>
@@ -1372,7 +1372,7 @@
                         <div style="color: var(--rider-label); font-size: 0.9rem; font-weight: 600;">AMOUNT TO COLLECT</div>
                         <div style="text-align: right;">
                             <div id="advance-to-collect" style="font-size: 1.8rem; font-weight: 800; color: var(--rider-text-main);">₱0.00</div>
-                            <div id="advance-to-collect-tip" style="font-size: 0.8rem; color: var(--rider-accent); font-weight: 700; display: none;">+ ₱0.00 Priority Tip</div>
+                            <div id="advance-to-collect-tip" style="font-size: 0.8rem; color: var(--rider-accent); font-weight: 700; display: none;">+ ₱0.00 Bulk Weight Fee</div>
                         </div>
                     </div>
                 </div>
@@ -2043,9 +2043,14 @@
             const deliveryFeeEl = document.getElementById('active-delivery-fee');
             const priorityFeeEl = document.getElementById('active-priority-fee');
             
-            if (itemsPriceEl) itemsPriceEl.innerText = `₱${parseFloat(order.total_price || 0).toLocaleString()}`;
-            if (deliveryFeeEl) deliveryFeeEl.innerText = `₱${parseFloat(order.delivery_fee || 0).toLocaleString()}`;
-            if (priorityFeeEl) priorityFeeEl.innerText = `₱${parseFloat(order.priority_fee || 0).toLocaleString()}`;
+            const totalP = parseFloat(order.total_price || 0);
+            const delF = parseFloat(order.delivery_fee || 0);
+            const priF = parseFloat(order.priority_fee || 0);
+            const itemsP = Math.max(0, totalP - delF - priF);
+            
+            if (itemsPriceEl) itemsPriceEl.innerText = `₱${itemsP.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (deliveryFeeEl) deliveryFeeEl.innerText = `₱${delF.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (priorityFeeEl) priorityFeeEl.innerText = `₱${priF.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
             // To Collect
             const collectEl = document.getElementById('active-to-collect');
@@ -2063,14 +2068,12 @@
                 const isCOD = method === 'COD' || method === 'Cash on Delivery';
                 
                 if (isCOD) {
-                    const totalItems = parseFloat(order.total_price || 0);
-                    const deliveryFee = parseFloat(order.delivery_fee || 0);
-                    const totalToCollect = totalItems + deliveryFee + pFee;
+                    const totalToCollect = parseFloat(order.total_price || 0);
                     collectEl.innerText = `₱${totalToCollect.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                     
                     if (collectTipEl) {
                         collectTipEl.style.display = pFee > 0 ? 'block' : 'none';
-                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Heavy Load Bonus`;
+                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Bulk Weight Fee`;
                     }
                 } else {
                     collectEl.innerText = `₱0.00`;
@@ -2795,9 +2798,14 @@
             const priorityFeeEl = document.getElementById('advance-priority-fee');
             const priorityRow = document.getElementById('advance-priority-row');
             
-            if (itemsPriceEl) itemsPriceEl.innerText = `₱${parseFloat(order.total_price || 0).toLocaleString()}`;
-            if (deliveryFeeEl) deliveryFeeEl.innerText = `₱${parseFloat(order.delivery_fee || 0).toLocaleString()}`;
-            if (priorityFeeEl) priorityFeeEl.innerText = `₱${parseFloat(order.priority_fee || 0).toLocaleString()}`;
+            const totalP = parseFloat(order.total_price || 0);
+            const delF = parseFloat(order.delivery_fee || 0);
+            const priF = parseFloat(order.priority_fee || 0);
+            const itemsP = Math.max(0, totalP - delF - priF);
+            
+            if (itemsPriceEl) itemsPriceEl.innerText = `₱${itemsP.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (deliveryFeeEl) deliveryFeeEl.innerText = `₱${delF.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            if (priorityFeeEl) priorityFeeEl.innerText = `₱${priF.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             
             const pFee = parseFloat(order.priority_fee || 0);
             if (priorityRow) priorityRow.style.display = pFee > 0 ? 'flex' : 'none';
@@ -2811,14 +2819,12 @@
                 const isCOD = method === 'COD' || method === 'Cash on Delivery' || method.includes('Cash');
                 
                 if (isCOD) {
-                    const totalItems = parseFloat(order.total_price || 0);
-                    const deliveryFee = parseFloat(order.delivery_fee || 0);
-                    const totalToCollect = totalItems + deliveryFee + pFee;
+                    const totalToCollect = parseFloat(order.total_price || 0);
                     collectEl.innerText = `₱${totalToCollect.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                     
                     if (collectTipEl) {
                         collectTipEl.style.display = pFee > 0 ? 'block' : 'none';
-                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Priority Tip`;
+                        collectTipEl.innerText = `+ ₱${pFee.toLocaleString(undefined, {minimumFractionDigits: 2})} Bulk Weight Fee`;
                     }
                 } else {
                     collectEl.innerText = `₱0.00`;
