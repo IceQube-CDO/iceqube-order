@@ -664,8 +664,7 @@ var admin = {
         
         playBeep();
     },
-
-    stopBuzzer() {
+stopBuzzer() {
         console.log("🔕 [Buzzer] Stopping Alarm.");
         this.buzzerActive = false;
         if (this.buzzerTimeout) {
@@ -677,17 +676,20 @@ var admin = {
 
     async sendMessengerNotification(orderInput) {
         let order = orderInput;
+        let isManual = false;
         
         // If passed an ID, look it up in the cache
         if (typeof orderInput === 'string') {
             order = (this.lastFetchedOrders || []).find(o => o.order_id === orderInput);
+            isManual = true;
         }
 
         if (!order || !order.customer_name || !order.order_id) return;
         
         // --- 1. DE-DUPLICATION CHECK ---
         if (!this.notifiedOrders) this.notifiedOrders = new Set();
-        if (this.notifiedOrders.has(order.order_id)) {
+        const isTestOrder = order.order_id === 'TEST-SYNC' || order.order_id === 'TEST-123';
+        if (!isManual && !isTestOrder && this.notifiedOrders.has(order.order_id)) {
             console.log('⏭️ [Messenger] Already notified for order:', order.order_id);
             return;
         }
@@ -787,143 +789,77 @@ var admin = {
         msg += `Total: ₱${totalGross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n` +
                `Payment: ${order.payment_method || 'Cash'}\n\n` +
                `Thank you for your order!`;
+
+        const sendViaFetch = async (recipientId, text) => {
+            if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                throw new Error("Supabase URL not configured");
+            }
+            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({ recipientId, message: text })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || (data && data.error)) {
+                const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
+                throw new Error(errMsg);
+            }
+            return data;
+        };
  
         try {
-            // THE DEFINITIVE BYPASS: Hidden Form with Correct Endpoint
-            const bridgeContainer = document.getElementById('hidden-bridge');
-            if (bridgeContainer) {
-                const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-                let custDiv = null;
-                let adminReceiptDiv = null;
-                let adminDiv = null;
+            let customerError = null;
 
-                // --- 1. DISPATCH TO CUSTOMER ---
-                // Send only if customer has a valid, non-Admin PSID
-                if (targetId && targetId !== ADMIN_PSID) {
-                    const custFrameName = `msg-frame-cust-${uniqueSeed}`;
-                    custDiv = document.createElement('div');
-                    
-                    const iframe = document.createElement('iframe');
-                    iframe.name = custFrameName;
-                    iframe.style.display = 'none';
-                    custDiv.appendChild(iframe);
-
-                    const form = document.createElement('form');
-                    form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-                    form.method = 'POST';
-                    form.target = custFrameName;
-
-                    const recInput = document.createElement('input');
-                    recInput.type = 'hidden';
-                    recInput.name = 'recipientId';
-                    recInput.value = targetId;
-                    form.appendChild(recInput);
-
-                    const msgInput = document.createElement('input');
-                    msgInput.type = 'hidden';
-                    msgInput.name = 'message';
-                    msgInput.value = msg;
-                    form.appendChild(msgInput);
-
-                    custDiv.appendChild(form);
-                    bridgeContainer.appendChild(custDiv);
-                    form.submit();
-
-                    console.log('📡 [Messenger] Customer Receipt Sent to:', targetId);
-                } else {
-                    console.log('ℹ️ [Messenger] No registered customer PSID found. Skipping direct customer receipt.');
+            // 1. DISPATCH TO CUSTOMER
+            if (targetId && targetId !== ADMIN_PSID) {
+                try {
+                    console.log('📡 [Messenger] Sending customer receipt...');
+                    await sendViaFetch(targetId, msg);
+                    console.log('✅ [Messenger] Customer Receipt Sent successfully.');
+                } catch (e) {
+                    customerError = e.message;
+                    console.error('❌ [Messenger] Customer Receipt dispatch failed:', e);
                 }
- 
-                // --- 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account ---
-                const adminReceiptFrameName = `msg-frame-admin-receipt-${uniqueSeed}`;
-                adminReceiptDiv = document.createElement('div');
+            } else {
+                console.log('ℹ️ [Messenger] No registered customer PSID found. Skipping direct customer receipt.');
+            }
 
-                const arIframe = document.createElement('iframe');
-                arIframe.name = adminReceiptFrameName;
-                arIframe.style.display = 'none';
-                adminReceiptDiv.appendChild(arIframe);
+            // 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account
+            try {
+                console.log('📡 [Messenger] Sending Admin Copy of receipt...');
+                await sendViaFetch(ADMIN_PSID, msg);
+                console.log('✅ [Messenger] Admin Copy of receipt sent successfully.');
+            } catch (e) {
+                console.error('❌ [Messenger] Admin Copy dispatch failed:', e);
+            }
 
-                const arForm = document.createElement('form');
-                arForm.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-                arForm.method = 'POST';
-                arForm.target = adminReceiptFrameName;
-
-                const arRecInput = document.createElement('input');
-                arRecInput.type = 'hidden';
-                arRecInput.name = 'recipientId';
-                arRecInput.value = ADMIN_PSID;
-                arForm.appendChild(arRecInput);
-
-                const arMsgInput = document.createElement('input');
-                arMsgInput.type = 'hidden';
-                arMsgInput.name = 'message';
-                arMsgInput.value = msg;
-                arForm.appendChild(arMsgInput);
-
-                adminReceiptDiv.appendChild(arForm);
-                bridgeContainer.appendChild(adminReceiptDiv);
-
-                setTimeout(() => {
-                    arForm.submit();
-                    console.log('📡 [Messenger] Copy of Receipt Sent to Admin.');
-                }, 400);
- 
-                // --- 3. DISPATCH ADMIN ALERT (🚨 NEW ORDER ALERT!) TO ADMIN ---
-                // ONLY send alert if the customer is NOT the admin themselves
-                if (targetId !== ADMIN_PSID) {
+            // 3. DISPATCH ADMIN ALERT TO ADMIN
+            if (targetId !== ADMIN_PSID) {
+                try {
                     const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
                                      `Deliver to: ${order.customer_name}\n` +
                                      `Item: ${itemsText}\n` +
                                      `Total: ₱${totalGross.toLocaleString()}\n` +
                                      `Payment: ${order.payment_method || 'Cash'}\n\n` +
                                      `Check the Control Room!`;
-                    
-                    const adminFrameName = `msg-frame-admin-${uniqueSeed}`;
-                    adminDiv = document.createElement('div');
-
-                    const aIframe = document.createElement('iframe');
-                    aIframe.name = adminFrameName;
-                    aIframe.style.display = 'none';
-                    adminDiv.appendChild(aIframe);
-
-                    const aForm = document.createElement('form');
-                    aForm.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-                    aForm.method = 'POST';
-                    aForm.target = adminFrameName;
-
-                    const aRecInput = document.createElement('input');
-                    aRecInput.type = 'hidden';
-                    aRecInput.name = 'recipientId';
-                    aRecInput.value = ADMIN_PSID;
-                    aForm.appendChild(aRecInput);
-
-                    const aMsgInput = document.createElement('input');
-                    aMsgInput.type = 'hidden';
-                    aMsgInput.name = 'message';
-                    aMsgInput.value = adminMsg;
-                    aForm.appendChild(aMsgInput);
-
-                    adminDiv.appendChild(aForm);
-                    bridgeContainer.appendChild(adminDiv);
-
-                    setTimeout(() => {
-                        aForm.submit();
-                        console.log('📡 [Messenger] Admin Buzzer Alert Sent.');
-                    }, 800);
+                    console.log('📡 [Messenger] Sending Admin Alert...');
+                    await sendViaFetch(ADMIN_PSID, adminMsg);
+                    console.log('✅ [Messenger] Admin Alert sent successfully.');
+                } catch (e) {
+                    console.error('❌ [Messenger] Admin Alert dispatch failed:', e);
                 }
- 
-                // Clean up elements from DOM after dispatch is complete to prevent memory leaks
-                setTimeout(() => {
-                    try {
-                        if (custDiv && custDiv.parentNode) custDiv.parentNode.removeChild(custDiv);
-                        if (adminReceiptDiv && adminReceiptDiv.parentNode) adminReceiptDiv.parentNode.removeChild(adminReceiptDiv);
-                        if (adminDiv && adminDiv.parentNode) adminDiv.parentNode.removeChild(adminDiv);
-                    } catch (e) {
-                        console.warn('DOM cleanup failed:', e);
-                    }
-                }, 20000);
+            }
 
+            if (customerError) {
+                updateStatus(`Fail: ${customerError}`, '#ef4444');
+            } else if (targetId && targetId !== ADMIN_PSID) {
                 updateStatus(`Notified Successfully`, '#22c55e');
+            } else {
+                updateStatus(`Admin Notified Only`, '#22c55e');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
@@ -1405,50 +1341,24 @@ var admin = {
                     `Check the Control Room complaints ledger!`;
                     
         try {
-            const bridgeContainer = document.getElementById('hidden-bridge');
-            if (bridgeContainer) {
-                const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-                const frameName = `msg-frame-complaint-${uniqueSeed}`;
-                
-                const div = document.createElement('div');
-                
-                const iframe = document.createElement('iframe');
-                iframe.name = frameName;
-                iframe.style.display = 'none';
-                div.appendChild(iframe);
-
-                const form = document.createElement('form');
-                form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-                form.method = 'POST';
-                form.target = frameName;
-
-                const recInput = document.createElement('input');
-                recInput.type = 'hidden';
-                recInput.name = 'recipientId';
-                recInput.value = ADMIN_PSID;
-                form.appendChild(recInput);
-
-                const msgInput = document.createElement('input');
-                msgInput.type = 'hidden';
-                msgInput.name = 'message';
-                msgInput.value = msg;
-                form.appendChild(msgInput);
-
-                div.appendChild(form);
-                bridgeContainer.appendChild(div);
-                form.submit();
-                
-                console.log('📡 [Messenger] Customer Support Notification Sent to Admin.');
-                
-                // Cleanup after 20 seconds
-                setTimeout(() => {
-                    try {
-                        if (div && div.parentNode) div.parentNode.removeChild(div);
-                    } catch (e) {
-                        console.warn('DOM cleanup failed:', e);
-                    }
-                }, 20000);
+            if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                throw new Error("Supabase URL not configured");
             }
+            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({ recipientId: ADMIN_PSID, message: msg })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || (data && data.error)) {
+                const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
+                throw new Error(errMsg);
+            }
+            console.log('📡 [Messenger] Customer Support Notification Sent to Admin.');
         } catch (error) {
             console.error('❌ [Messenger] Support notification failed:', error);
         }
