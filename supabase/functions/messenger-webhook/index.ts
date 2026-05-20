@@ -65,10 +65,65 @@ serve(async (req) => {
   try {
     let recipientId, message, messagingType, tag;
     const contentType = req.headers.get("content-type") || "";
+    const url = new URL(req.url);
+
+    // ── DIAGNOSTIC: Find PSIDs from Facebook Page Conversations ──
+    if (url.searchParams.get("action") === "find_psid") {
+      console.log("[Diagnostic] Fetching Facebook Page conversations to find PSIDs...");
+      try {
+        const convResp = await fetch(
+          `https://graph.facebook.com/v19.0/me/conversations?fields=participants,updated_time&limit=25&access_token=${FB_PAGE_ACCESS_TOKEN}`
+        );
+        const convData = await convResp.json();
+        
+        if (convData.error) {
+          return new Response(JSON.stringify({ error: convData.error }), {
+            headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+            status: 400,
+          });
+        }
+
+        // Extract unique participants with their PSIDs
+        const participants: any[] = [];
+        const seen = new Set();
+        (convData.data || []).forEach((conv: any) => {
+          (conv.participants?.data || []).forEach((p: any) => {
+            if (!seen.has(p.id)) {
+              seen.add(p.id);
+              participants.push({ psid: p.id, name: p.name, last_message: conv.updated_time });
+            }
+          });
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          current_admin_psid: ADMIN_PSID,
+          instructions: "Find YOUR name in the list below. The 'psid' next to your name is the correct ADMIN_PSID.",
+          participants
+        }), {
+          headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+          status: 200,
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "Failed to query Facebook API", details: err.message }), {
+          headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+          status: 500,
+        });
+      }
+    }
+
+    // ── Facebook Webhook Verification (GET with hub.verify_token) ──
+    if (req.method === "GET" && url.searchParams.get("hub.mode") === "subscribe") {
+      const VERIFY_TOKEN = Deno.env.get("FB_VERIFY_TOKEN") || "iceqube_verify_token";
+      if (url.searchParams.get("hub.verify_token") === VERIFY_TOKEN) {
+        console.log("[Webhook] Facebook verification successful");
+        return new Response(url.searchParams.get("hub.challenge") || "", { status: 200 });
+      }
+      return new Response("Forbidden", { status: 403 });
+    }
 
     if (contentType.includes("form") || req.method === "GET") {
       // Handle Form Data or URL Params (Bypass mode)
-      const url = new URL(req.url);
       recipientId = url.searchParams.get("recipientId");
       message = url.searchParams.get("message");
       messagingType = url.searchParams.get("messaging_type");

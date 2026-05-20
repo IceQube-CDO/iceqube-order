@@ -4845,12 +4845,17 @@ const app = {
     },
 
     async sendConfirmation() {
+        // Admin notification is handled server-side by the Supabase database trigger (tr_order_inserted_messenger).
+        // This client-side function only sends a receipt to the CUSTOMER if they have Messenger linked.
         if (!this.user.messengerEnabled) return true;
 
-        const targetId = this.user.messengerId || "26521276764196410";
-        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') return true;
+        const targetId = this.user.messengerId || null;
+        if (!targetId || targetId === 'YOUR_RECIPIENT_PSID_HERE') {
+            console.log('ℹ️ [Messenger] No customer PSID linked. Admin notification handled by DB trigger.');
+            return true;
+        }
 
-        console.log('🔔 [Messenger] Mobile triggering notification for:', targetId);
+        console.log('🔔 [Messenger] Mobile sending customer receipt to:', targetId);
         
         const orderId = document.getElementById('finish-id-new')?.innerText || "NEW-ORDER";
         const total = document.getElementById('finish-total-new')?.innerText || "0.00";
@@ -4888,7 +4893,7 @@ const app = {
                 `;
                 
                 document.getElementById(formId).submit();
-                console.log('📡 [Messenger] Mobile signal sent via Bridge.');
+                console.log('📡 [Messenger] Customer receipt sent via Bridge.');
             }
         } catch (error) {
             console.error('❌ [Messenger] Mobile dispatch failed:', error);

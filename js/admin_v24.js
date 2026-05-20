@@ -1212,10 +1212,11 @@ var admin = {
                     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
                     const isVeryRecent = orderDate > thirtyMinutesAgo;
 
-                    // 1. Always trigger notification for very recent orders (even on initial load)
+                    // 1. Admin notification is now handled by the Supabase database trigger (tr_order_inserted_messenger).
+                    // The client-side call here is disabled to prevent duplicate messages.
                     if (isVeryRecent) {
-                        console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
-                        this.sendMessengerNotification(co);
+                        console.log("🔔 [Messenger] Very recent order detected (handled by DB trigger):", orderId);
+                        // this.sendMessengerNotification(co); // DISABLED: DB trigger sends this automatically
                     }
 
                     // 2. Automated Inventory Deduction (Silent if initial load)

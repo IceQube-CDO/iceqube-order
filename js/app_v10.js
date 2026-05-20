@@ -4919,8 +4919,14 @@ const app = {
     },
 
     async sendConfirmation() {
-        const ADMIN_PSID = "26521276764196410";
+        // Admin notification is handled server-side by the Supabase database trigger (tr_order_inserted_messenger).
+        // This client-side function only sends a receipt to the CUSTOMER if they have Messenger linked.
         const customerTargetId = this.user.messengerId || null;
+
+        if (!this.user.messengerEnabled || !customerTargetId || customerTargetId === 'YOUR_RECIPIENT_PSID_HERE') {
+            console.log('ℹ️ [Messenger] No customer PSID linked. Admin notification handled by DB trigger.');
+            return true;
+        }
 
         const orderId = document.getElementById('finish-id-new')?.innerText || "NEW-ORDER";
         const total = document.getElementById('finish-total-new')?.innerText || "0.00";
@@ -4950,44 +4956,21 @@ const app = {
                 return true;
             }
 
-            // --- 1. ALWAYS send Admin copy (unconditional — this is the critical alert) ---
-            const adminFormId = `msg-form-admin-${Date.now()}`;
-            const adminFrameId = `msg-frame-admin-${Date.now()}`;
+            // Send Customer receipt ONLY (admin copy handled by DB trigger)
+            const custFormId = `msg-form-cust-${Date.now()}`;
+            const custFrameId = `msg-frame-cust-${Date.now()}`;
             
-            const adminDiv = document.createElement('div');
-            adminDiv.innerHTML = `
-                <iframe name="${adminFrameId}" id="${adminFrameId}" style="display:none"></iframe>
-                <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
-                    <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
+            const custDiv = document.createElement('div');
+            custDiv.innerHTML = `
+                <iframe name="${custFrameId}" id="${custFrameId}" style="display:none"></iframe>
+                <form id="${custFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${custFrameId}">
+                    <input type="hidden" name="recipientId" value="${customerTargetId}">
                     <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
                 </form>
             `;
-            bridge.appendChild(adminDiv);
-            document.getElementById(adminFormId).submit();
-            console.log('📡 [Messenger] ✅ Admin alert ALWAYS sent to:', ADMIN_PSID);
-
-            // --- 2. Send Customer copy ONLY if they opted in ---
-            if (this.user.messengerEnabled && customerTargetId && customerTargetId !== 'YOUR_RECIPIENT_PSID_HERE' && customerTargetId !== ADMIN_PSID) {
-                const custFormId = `msg-form-cust-${Date.now()}`;
-                const custFrameId = `msg-frame-cust-${Date.now()}`;
-                
-                const custDiv = document.createElement('div');
-                custDiv.innerHTML = `
-                    <iframe name="${custFrameId}" id="${custFrameId}" style="display:none"></iframe>
-                    <form id="${custFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${custFrameId}">
-                        <input type="hidden" name="recipientId" value="${customerTargetId}">
-                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
-                    </form>
-                `;
-                bridge.appendChild(custDiv);
-                setTimeout(() => {
-                    const frm = document.getElementById(custFormId);
-                    if (frm) frm.submit();
-                    console.log('📡 [Messenger] Customer receipt sent to:', customerTargetId);
-                }, 400);
-            } else {
-                console.log('ℹ️ [Messenger] Customer notification skipped (disabled or no PSID).');
-            }
+            bridge.appendChild(custDiv);
+            document.getElementById(custFormId).submit();
+            console.log('📡 [Messenger] Customer receipt sent to:', customerTargetId);
         } catch (error) {
             console.error('❌ [Messenger] Mobile dispatch failed:', error);
         }
