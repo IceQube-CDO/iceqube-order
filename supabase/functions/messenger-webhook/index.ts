@@ -3,7 +3,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
 const FB_API_URL = "https://graph.facebook.com/v19.0/me/messages"
-const ADMIN_PSID = "26521276764196410"
+// All admin PSIDs — each admin must message the IceQube CDO page once to get their PSID
+const ADMIN_PSIDS = [
+  "26521276764196410",  // Ian Echano
+  "32834231939557699",  // Law Rence Fe
+]
 
 function formatItems(itemsStr: string): string {
   try {
@@ -97,8 +101,8 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({
           success: true,
-          current_admin_psid: ADMIN_PSID,
-          instructions: "Find YOUR name in the list below. The 'psid' next to your name is the correct ADMIN_PSID.",
+          current_admin_psids: ADMIN_PSIDS,
+          instructions: "Find YOUR name in the list below. The 'psid' next to your name is the correct PSID to add to ADMIN_PSIDS.",
           participants
         }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
@@ -173,8 +177,8 @@ serve(async (req) => {
         
         const results: any = {};
         
-        // 1. Send to Customer
-        if (customerId && customerId !== ADMIN_PSID) {
+        // 1. Send to Customer (skip if customer is one of the admins)
+        if (customerId && !ADMIN_PSIDS.includes(customerId)) {
           try {
             results.customer = await sendFBMessage(customerId, msg);
           } catch (err) {
@@ -185,12 +189,15 @@ serve(async (req) => {
           results.customer_skipped = "No valid customer messenger_id";
         }
         
-        // 2. Always Send to Admin
-        try {
-          results.admin = await sendFBMessage(ADMIN_PSID, msg);
-        } catch (err) {
-          results.admin_error = err.message;
-          console.error(`[Webhook] Admin copy send failed:`, err);
+        // 2. Send to ALL Admins
+        results.admins = {};
+        for (const adminPsid of ADMIN_PSIDS) {
+          try {
+            results.admins[adminPsid] = await sendFBMessage(adminPsid, msg);
+          } catch (err) {
+            results.admins[adminPsid] = { error: err.message };
+            console.error(`[Webhook] Admin send failed for ${adminPsid}:`, err);
+          }
         }
         
         return new Response(JSON.stringify({ success: true, results }), {
