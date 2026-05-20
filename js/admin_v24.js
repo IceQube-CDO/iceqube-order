@@ -4301,13 +4301,36 @@ function openCustomerDrawer(customerId) {
         const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const profile = profiles[customer.name] || {};
 
+        // Find if any order has a messenger ID to auto-link
+        let foundMessengerId = '';
+        if (customer.orders && customer.orders.length > 0) {
+            for (let i = customer.orders.length - 1; i >= 0; i--) {
+                const o = customer.orders[i];
+                if (o.messenger_id || o.messengerId) {
+                    foundMessengerId = o.messenger_id || o.messengerId;
+                    break;
+                }
+            }
+        }
+
+        if (foundMessengerId && !profile.messengerId) {
+            profile.messengerId = foundMessengerId;
+            profiles[customer.name] = {
+                ...profile,
+                establishment: customer.name,
+                messengerId: foundMessengerId
+            };
+            localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
+            console.log(`[SYSTEM] Auto-linked Messenger ID ${foundMessengerId} for customer ${customer.name} from order history.`);
+        }
+
         const nameEl = document.getElementById('drawer-customer-name');
         if (nameEl) nameEl.innerText = customer.name || customerId;
 
         const addressVal = profile.address || customer.address || '';
         const contactVal = profile.contactPerson || customer.contactPerson || customer.name || customerId;
         const phoneVal = profile.contactNumber || customer.phone || '';
-        const messengerVal = profile.messengerId || '';
+        const messengerVal = profile.messengerId || foundMessengerId || '';
 
         const addrEl = document.getElementById('drawer-customer-address');
         if (addrEl) addrEl.innerText = addressVal ? `Premium Partner • ${addressVal}` : 'Premium Partner';
