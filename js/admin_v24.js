@@ -2562,7 +2562,7 @@ var admin = {
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${o.delivery_address || 'N/A'}</a>` : `<div style="margin-bottom: 4px;">${o.delivery_address || 'N/A'}</div>`}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.delivery_notes || 'No special notes.'}">
-                        ${o.delivery_notes || 'No special notes.'}
+                        <span>${o.delivery_notes || 'No special notes.'}</span>
                     </td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">
                         ${scheduleDisplay}
@@ -2573,8 +2573,8 @@ var admin = {
                     <td style="font-family: 'JetBrains Mono';">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 100px;">
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 80px;">
                                 ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
                             </select>
                             <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')" style="flex-shrink: 0;">
@@ -2628,7 +2628,7 @@ var admin = {
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.delivery_notes || 'No special notes.'}">
-                        ${o.delivery_notes || 'No special notes.'}
+                        <span>${o.delivery_notes || 'No special notes.'}</span>
                     </td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">
                         ${ledgerScheduleDisplay}

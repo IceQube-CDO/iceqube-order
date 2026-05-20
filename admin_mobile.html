@@ -1254,9 +1254,9 @@
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
             color: white;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            border-radius: 5px;
+            padding: 3px 6px;
+            font-size: 0.6rem;
             cursor: pointer;
             outline: none;
         }
@@ -1269,9 +1269,9 @@
             background: #22c55e;
             color: white;
             border: none;
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-size: 0.75rem;
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 0.6rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -1900,31 +1900,139 @@
                 display: flex !important;
                 justify-content: space-between !important;
                 align-items: center !important;
-                padding: 12px 0 !important;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+                padding: 10px 0 !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
                 border-left: none !important;
                 border-right: none !important;
                 border-top: none !important;
                 white-space: normal !important;
                 text-align: right !important;
-                font-size: 0.9rem !important;
                 border-radius: 0 !important;
                 background: transparent !important;
-            }
-            #orders-view .cashflow-table td:nth-child(4),
-            #orders-view .cashflow-table td:nth-child(5) {
-                max-width: none !important;
-                flex-grow: 1;
-                text-align: right !important;
+                font-family: 'Inter', sans-serif !important;
+                font-size: 0.8rem !important;
+                color: #e2e8f0 !important;
             }
             #orders-view .cashflow-table td:last-child {
                 border-bottom: none !important;
             }
+            /* Dotted underlines for premium interactive links */
+            #orders-view .cashflow-table td b {
+                text-decoration: none !important;
+                border-bottom: 1px dashed rgba(255, 255, 255, 0.25) !important;
+                padding-bottom: 1px !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                transition: all 0.2s ease !important;
+            }
+            #orders-view .cashflow-table td b:hover {
+                color: #38bdf8 !important;
+                border-bottom-color: rgba(56, 189, 248, 0.5) !important;
+            }
+            #orders-view .cashflow-table td a {
+                text-decoration: none !important;
+                color: #38bdf8 !important;
+                border-bottom: 1px dashed rgba(56, 189, 248, 0.35) !important;
+                padding-bottom: 1px !important;
+                transition: all 0.2s ease !important;
+            }
+            #orders-view .cashflow-table td a:hover {
+                color: #7dd3fc !important;
+                border-bottom-color: rgba(125, 211, 252, 0.5) !important;
+            }
+            /* Time column */
+            #orders-view .cashflow-table td:nth-child(1) {
+                font-size: 0.82rem !important;
+                font-weight: 600 !important;
+                color: #e2e8f0 !important;
+            }
+            /* Order ID */
+            #orders-view .cashflow-table td:nth-child(2) {
+                font-family: 'JetBrains Mono', monospace !important;
+                font-weight: 700 !important;
+                color: #38bdf8 !important;
+                font-size: 0.8rem !important;
+            }
+            /* Customer */
+            #orders-view .cashflow-table td:nth-child(3) {
+                font-family: 'Outfit', sans-serif !important;
+                font-size: 0.95rem !important;
+                font-weight: 700 !important;
+            }
+            /* Address & Note (Multi-line fields) */
+            #orders-view .cashflow-table td:nth-child(4),
+            #orders-view .cashflow-table td:nth-child(5) {
+                align-items: flex-start !important;
+                font-size: 0.78rem !important;
+                line-height: 1.35 !important;
+                max-width: none !important;
+                width: 100% !important;
+            }
+            #orders-view .cashflow-table td:nth-child(4) > *,
+            #orders-view .cashflow-table td:nth-child(5) > span {
+                max-width: 62% !important;
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: clip !important;
+                text-align: right !important;
+                display: block !important;
+            }
+            #orders-view .cashflow-table td:nth-child(5) > span {
+                color: #cbd5e1 !important;
+                font-style: italic !important;
+            }
+            /* Schedule */
+            #orders-view .cashflow-table td:nth-child(6) {
+                font-size: 0.78rem !important;
+            }
+            /* Items */
+            #orders-view .cashflow-table td:nth-child(7) {
+                align-items: flex-start !important;
+                font-size: 0.78rem !important;
+                color: #cbd5e1 !important;
+                line-height: 1.35 !important;
+            }
+            #orders-view .cashflow-table td:nth-child(7) {
+                max-width: 100% !important;
+                white-space: normal !important;
+            }
+            /* Custom wrapper for items list content to limit width and right-align */
+            #orders-view .cashflow-table td:nth-child(7) br {
+                display: block;
+                content: "";
+                margin-top: 2px;
+            }
+            /* Payment */
+            #orders-view .cashflow-table td:nth-child(8) {
+                font-size: 0.78rem !important;
+                font-weight: 600 !important;
+                color: #f1f5f9 !important;
+            }
+            /* Financial/Numeric columns */
+            #orders-view .cashflow-table td:nth-child(9),
+            #orders-view .cashflow-table td:nth-child(10),
+            #orders-view .cashflow-table td:nth-child(11) {
+                font-family: 'JetBrains Mono', monospace !important;
+                font-weight: 700 !important;
+                font-size: 0.8rem !important;
+            }
+            #orders-view .cashflow-table td:nth-child(9) {
+                color: #38bdf8 !important;
+                font-size: 0.86rem !important;
+            }
+            #orders-view .cashflow-table td:nth-child(10) {
+                color: #cbd5e1 !important;
+            }
+            #orders-view .cashflow-table td:nth-child(11) {
+                color: #94a3b8 !important;
+            }
             #orders-view .cashflow-table td::before {
-                font-size: 0.75rem;
-                color: #94a3b8;
-                font-weight: 800;
-                text-transform: uppercase;
+                font-family: 'Inter', sans-serif !important;
+                font-style: normal !important;
+                font-size: 0.75rem !important;
+                color: #94a3b8 !important;
+                font-weight: 800 !important;
+                text-transform: uppercase !important;
                 margin-right: 15px;
                 flex-shrink: 0;
                 letter-spacing: 0.05em;
