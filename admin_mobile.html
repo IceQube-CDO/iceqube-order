@@ -1089,12 +1089,21 @@
         .table-container {
             width: 100%;
             overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
             -webkit-overflow-scrolling: touch;
         }
         .table-container::-webkit-scrollbar {
-            display: none;
+            height: 6px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 3px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: rgba(14, 165, 233, 0.25);
+            border-radius: 3px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(14, 165, 233, 0.5);
         }
         .cashflow-table {
             width: 100%;

@@ -916,7 +916,7 @@ var admin = {
             } else if (targetId && targetId !== ADMIN_PSID) {
                 updateStatus(`Notified Successfully`, '#22c55e');
             } else {
-                updateStatus(`Admin Notified Only`, '#22c55e');
+                updateStatus(`Admin Only (Customer ID Missing)`, '#eab308');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
