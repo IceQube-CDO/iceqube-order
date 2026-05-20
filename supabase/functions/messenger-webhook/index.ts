@@ -49,9 +49,10 @@ serve(async (req) => {
       })
     }
 
-    // Default to MESSAGE_TAG and CONFIRMED_ORDER_UPDATE to bypass the 24-hour restriction window
-    if (!messagingType) messagingType = "MESSAGE_TAG";
-    if (!tag) tag = "CONFIRMED_ORDER_UPDATE";
+    // Default to RESPONSE messaging type if not provided (Meta deprecated Message Tags in Feb 2026)
+    if (!messagingType || messagingType === "MESSAGE_TAG") {
+      messagingType = "RESPONSE";
+    }
 
     const payload: any = {
       recipient: { id: recipientId },
@@ -61,7 +62,7 @@ serve(async (req) => {
     if (messagingType) {
       payload.messaging_type = messagingType;
     }
-    if (tag) {
+    if (tag && tag !== "CONFIRMED_ORDER_UPDATE") {
       payload.tag = tag;
     }
 
