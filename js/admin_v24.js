@@ -474,7 +474,8 @@ var admin = {
             }
 
             // --- NEW: AUTOMATIC MESSENGER NOTIFICATION ---
-            this.sendMessengerNotification(order);
+            // Disabled in client because it is now handled reliably by the Supabase database webhook trigger on INSERT.
+            // this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
