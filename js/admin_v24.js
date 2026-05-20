@@ -678,6 +678,56 @@ var admin = {
         this.updateBuzzerUI();
     },
 
+    dispatchViaIframe(recipientId, text) {
+        console.log('📡 [Messenger] falling back to iframe form submission (bypasses CORS).');
+        let bc = document.getElementById('hidden-bridge');
+        if (!bc) {
+            bc = document.createElement('div');
+            bc.id = 'hidden-bridge';
+            bc.style.display = 'none';
+            document.body.appendChild(bc);
+        }
+        
+        const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        const frameName = `msg-frame-${recipientId.slice(-4)}-${uniqueSeed}`;
+        
+        const div = document.createElement('div');
+        
+        const iframe = document.createElement('iframe');
+        iframe.name = frameName;
+        iframe.style.display = 'none';
+        div.appendChild(iframe);
+
+        const form = document.createElement('form');
+        form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+        form.method = 'POST';
+        form.target = frameName;
+
+        const recInput = document.createElement('input');
+        recInput.type = 'hidden';
+        recInput.name = 'recipientId';
+        recInput.value = recipientId;
+        form.appendChild(recInput);
+
+        const msgInput = document.createElement('input');
+        msgInput.type = 'hidden';
+        msgInput.name = 'message';
+        msgInput.value = text;
+        form.appendChild(msgInput);
+
+        div.appendChild(form);
+        bc.appendChild(div);
+        form.submit();
+        
+        // Clean up after 20 seconds
+        setTimeout(() => {
+            try {
+                if (div && div.parentNode) div.parentNode.removeChild(div);
+            } catch (e) {}
+        }, 20000);
+        return { success: true, mode: 'iframe' };
+    },
+
     async dispatchMessengerMessage(recipientId, text) {
         if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             throw new Error("Supabase URL not configured");
@@ -685,71 +735,34 @@ var admin = {
         
         const isFileProtocol = window.location.protocol === 'file:';
         if (isFileProtocol) {
-            console.log('📡 [Messenger] running on file:// protocol. Falling back to iframe form submission (bypasses CORS).');
-            let bc = document.getElementById('hidden-bridge');
-            if (!bc) {
-                bc = document.createElement('div');
-                bc.id = 'hidden-bridge';
-                bc.style.display = 'none';
-                document.body.appendChild(bc);
+            return this.dispatchViaIframe(recipientId, text);
+        }
+
+        try {
+            // Standard Fetch API (CORS friendly on http/https origins)
+            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({ recipientId, message: text })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || (data && data.error)) {
+                const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
+                throw new Error(errMsg);
             }
-            
-            const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-            const frameName = `msg-frame-${recipientId.slice(-4)}-${uniqueSeed}`;
-            
-            const div = document.createElement('div');
-            
-            const iframe = document.createElement('iframe');
-            iframe.name = frameName;
-            iframe.style.display = 'none';
-            div.appendChild(iframe);
-
-            const form = document.createElement('form');
-            form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-            form.method = 'POST';
-            form.target = frameName;
-
-            const recInput = document.createElement('input');
-            recInput.type = 'hidden';
-            recInput.name = 'recipientId';
-            recInput.value = recipientId;
-            form.appendChild(recInput);
-
-            const msgInput = document.createElement('input');
-            msgInput.type = 'hidden';
-            msgInput.name = 'message';
-            msgInput.value = text;
-            form.appendChild(msgInput);
-
-            div.appendChild(form);
-            bc.appendChild(div);
-            form.submit();
-            
-            // Clean up after 20 seconds
-            setTimeout(() => {
-                try {
-                    if (div && div.parentNode) div.parentNode.removeChild(div);
-                } catch (e) {}
-            }, 20000);
-            return { success: true, mode: 'iframe' };
+            return data;
+        } catch (fetchError) {
+            // If fetch failed due to CORS or Network issues (Failed to fetch)
+            if (fetchError.message === 'Failed to fetch' || fetchError.name === 'TypeError') {
+                console.warn('⚠️ [Messenger] Fetch failed (CORS/Network error). Retrying via Iframe form fallback...', fetchError);
+                return this.dispatchViaIframe(recipientId, text);
+            }
+            throw fetchError;
         }
-
-        // Standard Fetch API (CORS friendly on http/https origins)
-        const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-            },
-            body: JSON.stringify({ recipientId, message: text })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || (data && data.error)) {
-            const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
-            throw new Error(errMsg);
-        }
-        return data;
     },
 
     async sendMessengerNotification(orderInput) {
