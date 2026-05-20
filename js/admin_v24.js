@@ -792,43 +792,79 @@ var admin = {
             // THE DEFINITIVE BYPASS: Hidden Form with Correct Endpoint
             const bridgeContainer = document.getElementById('hidden-bridge');
             if (bridgeContainer) {
+                const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+                let custDiv = null;
+                let adminReceiptDiv = null;
+                let adminDiv = null;
+
                 // --- 1. DISPATCH TO CUSTOMER ---
                 // Send only if customer has a valid, non-Admin PSID
                 if (targetId && targetId !== ADMIN_PSID) {
-                    const custFormId = `msg-form-cust-${Date.now()}`;
-                    const custFrameId = `msg-frame-cust-${Date.now()}`;
+                    const custFrameName = `msg-frame-cust-${uniqueSeed}`;
+                    custDiv = document.createElement('div');
                     
-                    const custDiv = document.createElement('div');
-                    custDiv.innerHTML = `
-                        <iframe name="${custFrameId}" id="${custFrameId}"></iframe>
-                        <form id="${custFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${custFrameId}">
-                            <input type="hidden" name="recipientId" value="${targetId}">
-                            <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
-                        </form>
-                    `;
+                    const iframe = document.createElement('iframe');
+                    iframe.name = custFrameName;
+                    iframe.style.display = 'none';
+                    custDiv.appendChild(iframe);
+
+                    const form = document.createElement('form');
+                    form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                    form.method = 'POST';
+                    form.target = custFrameName;
+
+                    const recInput = document.createElement('input');
+                    recInput.type = 'hidden';
+                    recInput.name = 'recipientId';
+                    recInput.value = targetId;
+                    form.appendChild(recInput);
+
+                    const msgInput = document.createElement('input');
+                    msgInput.type = 'hidden';
+                    msgInput.name = 'message';
+                    msgInput.value = msg;
+                    form.appendChild(msgInput);
+
+                    custDiv.appendChild(form);
                     bridgeContainer.appendChild(custDiv);
-                    document.getElementById(custFormId).submit();
+                    form.submit();
+
                     console.log('📡 [Messenger] Customer Receipt Sent to:', targetId);
                 } else {
                     console.log('ℹ️ [Messenger] No registered customer PSID found. Skipping direct customer receipt.');
                 }
  
                 // --- 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account ---
-                const adminReceiptFormId = `msg-form-admin-receipt-${Date.now()}`;
-                const adminReceiptFrameId = `msg-frame-admin-receipt-${Date.now()}`;
-                
-                const adminReceiptDiv = document.createElement('div');
-                adminReceiptDiv.innerHTML = `
-                    <iframe name="${adminReceiptFrameId}" id="${adminReceiptFrameId}"></iframe>
-                    <form id="${adminReceiptFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminReceiptFrameId}">
-                        <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
-                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
-                    </form>
-                `;
+                const adminReceiptFrameName = `msg-frame-admin-receipt-${uniqueSeed}`;
+                adminReceiptDiv = document.createElement('div');
+
+                const arIframe = document.createElement('iframe');
+                arIframe.name = adminReceiptFrameName;
+                arIframe.style.display = 'none';
+                adminReceiptDiv.appendChild(arIframe);
+
+                const arForm = document.createElement('form');
+                arForm.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                arForm.method = 'POST';
+                arForm.target = adminReceiptFrameName;
+
+                const arRecInput = document.createElement('input');
+                arRecInput.type = 'hidden';
+                arRecInput.name = 'recipientId';
+                arRecInput.value = ADMIN_PSID;
+                arForm.appendChild(arRecInput);
+
+                const arMsgInput = document.createElement('input');
+                arMsgInput.type = 'hidden';
+                arMsgInput.name = 'message';
+                arMsgInput.value = msg;
+                arForm.appendChild(arMsgInput);
+
+                adminReceiptDiv.appendChild(arForm);
                 bridgeContainer.appendChild(adminReceiptDiv);
+
                 setTimeout(() => {
-                    const frm = document.getElementById(adminReceiptFormId);
-                    if (frm) frm.submit();
+                    arForm.submit();
                     console.log('📡 [Messenger] Copy of Receipt Sent to Admin.');
                 }, 400);
  
@@ -842,26 +878,51 @@ var admin = {
                                      `Payment: ${order.payment_method || 'Cash'}\n\n` +
                                      `Check the Control Room!`;
                     
-                    const adminFormId = `msg-form-admin-${Date.now()}`;
-                    const adminFrameId = `msg-frame-admin-${Date.now()}`;
-                    
-                    const adminDiv = document.createElement('div');
-                    adminDiv.innerHTML = `
-                        <iframe name="${adminFrameId}" id="${adminFrameId}"></iframe>
-                        <form id="${adminFormId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${adminFrameId}">
-                            <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
-                            <input type="hidden" name="message" value="${adminMsg.replace(/"/g, '&quot;')}">
-                        </form>
-                    `;
-                    
+                    const adminFrameName = `msg-frame-admin-${uniqueSeed}`;
+                    adminDiv = document.createElement('div');
+
+                    const aIframe = document.createElement('iframe');
+                    aIframe.name = adminFrameName;
+                    aIframe.style.display = 'none';
+                    adminDiv.appendChild(aIframe);
+
+                    const aForm = document.createElement('form');
+                    aForm.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                    aForm.method = 'POST';
+                    aForm.target = adminFrameName;
+
+                    const aRecInput = document.createElement('input');
+                    aRecInput.type = 'hidden';
+                    aRecInput.name = 'recipientId';
+                    aRecInput.value = ADMIN_PSID;
+                    aForm.appendChild(aRecInput);
+
+                    const aMsgInput = document.createElement('input');
+                    aMsgInput.type = 'hidden';
+                    aMsgInput.name = 'message';
+                    aMsgInput.value = adminMsg;
+                    aForm.appendChild(aMsgInput);
+
+                    adminDiv.appendChild(aForm);
                     bridgeContainer.appendChild(adminDiv);
+
                     setTimeout(() => {
-                        const frm = document.getElementById(adminFormId);
-                        if (frm) frm.submit();
+                        aForm.submit();
                         console.log('📡 [Messenger] Admin Buzzer Alert Sent.');
                     }, 800);
                 }
  
+                // Clean up elements from DOM after dispatch is complete to prevent memory leaks
+                setTimeout(() => {
+                    try {
+                        if (custDiv && custDiv.parentNode) custDiv.parentNode.removeChild(custDiv);
+                        if (adminReceiptDiv && adminReceiptDiv.parentNode) adminReceiptDiv.parentNode.removeChild(adminReceiptDiv);
+                        if (adminDiv && adminDiv.parentNode) adminDiv.parentNode.removeChild(adminDiv);
+                    } catch (e) {
+                        console.warn('DOM cleanup failed:', e);
+                    }
+                }, 20000);
+
                 updateStatus(`Notified Successfully`, '#22c55e');
             }
         } catch (error) {
@@ -1346,20 +1407,47 @@ var admin = {
         try {
             const bridgeContainer = document.getElementById('hidden-bridge');
             if (bridgeContainer) {
-                const formId = `msg-form-complaint-${Date.now()}`;
-                const frameId = `msg-frame-complaint-${Date.now()}`;
+                const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+                const frameName = `msg-frame-complaint-${uniqueSeed}`;
                 
                 const div = document.createElement('div');
-                div.innerHTML = `
-                    <iframe name="${frameId}" id="${frameId}"></iframe>
-                    <form id="${formId}" action="${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}" method="POST" target="${frameId}">
-                        <input type="hidden" name="recipientId" value="${ADMIN_PSID}">
-                        <input type="hidden" name="message" value="${msg.replace(/"/g, '&quot;')}">
-                    </form>
-                `;
+                
+                const iframe = document.createElement('iframe');
+                iframe.name = frameName;
+                iframe.style.display = 'none';
+                div.appendChild(iframe);
+
+                const form = document.createElement('form');
+                form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                form.method = 'POST';
+                form.target = frameName;
+
+                const recInput = document.createElement('input');
+                recInput.type = 'hidden';
+                recInput.name = 'recipientId';
+                recInput.value = ADMIN_PSID;
+                form.appendChild(recInput);
+
+                const msgInput = document.createElement('input');
+                msgInput.type = 'hidden';
+                msgInput.name = 'message';
+                msgInput.value = msg;
+                form.appendChild(msgInput);
+
+                div.appendChild(form);
                 bridgeContainer.appendChild(div);
-                document.getElementById(formId).submit();
+                form.submit();
+                
                 console.log('📡 [Messenger] Customer Support Notification Sent to Admin.');
+                
+                // Cleanup after 20 seconds
+                setTimeout(() => {
+                    try {
+                        if (div && div.parentNode) div.parentNode.removeChild(div);
+                    } catch (e) {
+                        console.warn('DOM cleanup failed:', e);
+                    }
+                }, 20000);
             }
         } catch (error) {
             console.error('❌ [Messenger] Support notification failed:', error);
