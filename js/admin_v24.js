@@ -2561,6 +2561,9 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${o.delivery_address || 'N/A'}</a>` : `<div style="margin-bottom: 4px;">${o.delivery_address || 'N/A'}</div>`}
                     </td>
+                    <td style="font-size: 0.75rem; color: #cbd5e1; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.delivery_notes || 'No special notes.'}">
+                        ${o.delivery_notes || 'No special notes.'}
+                    </td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">
                         ${scheduleDisplay}
                     </td>
@@ -2623,6 +2626,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
+                    </td>
+                    <td style="font-size: 0.75rem; color: #cbd5e1; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.delivery_notes || 'No special notes.'}">
+                        ${o.delivery_notes || 'No special notes.'}
                     </td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">
                         ${ledgerScheduleDisplay}

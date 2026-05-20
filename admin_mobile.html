@@ -1774,11 +1774,11 @@
                 border: none !important;
                 padding: 4px !important;
             }
-            #pending-dispatch-body tr td:nth-child(12),
-            #orders-view th:nth-child(12) {
+            #pending-dispatch-body tr td:nth-child(13),
+            #orders-view th:nth-child(13) {
                 display: none !important;
             }
-            #pending-dispatch-body tr td:nth-child(11) {
+            #pending-dispatch-body tr td:nth-child(12) {
                 border-bottom: none !important;
             }
             .cc-title h1, .cc-header h1 {
@@ -1911,7 +1911,8 @@
                 border-radius: 0 !important;
                 background: transparent !important;
             }
-            #orders-view .cashflow-table td:nth-child(4) {
+            #orders-view .cashflow-table td:nth-child(4),
+            #orders-view .cashflow-table td:nth-child(5) {
                 max-width: none !important;
                 flex-grow: 1;
                 text-align: right !important;
@@ -1934,29 +1935,31 @@
             #pending-dispatch-body tr td:nth-child(2)::before { content: "ORDER ID"; }
             #pending-dispatch-body tr td:nth-child(3)::before { content: "CUSTOMER"; }
             #pending-dispatch-body tr td:nth-child(4)::before { content: "ADDRESS"; }
-            #pending-dispatch-body tr td:nth-child(5)::before { content: "SCHEDULE"; }
-            #pending-dispatch-body tr td:nth-child(6)::before { content: "ITEMS"; }
-            #pending-dispatch-body tr td:nth-child(7)::before { content: "PAYMENT"; }
-            #pending-dispatch-body tr td:nth-child(8)::before { content: "ITEM TOTAL"; }
-            #pending-dispatch-body tr td:nth-child(9)::before { content: "DELIVERY FEE"; }
-            #pending-dispatch-body tr td:nth-child(10)::before { content: "BULK WEIGHT"; }
-            #pending-dispatch-body tr td:nth-child(11)::before { content: "ASSIGNMENT"; }
-            #pending-dispatch-body tr td:nth-child(12)::before { content: "ACTION"; }
+            #pending-dispatch-body tr td:nth-child(5)::before { content: "NOTE"; }
+            #pending-dispatch-body tr td:nth-child(6)::before { content: "SCHEDULE"; }
+            #pending-dispatch-body tr td:nth-child(7)::before { content: "ITEMS"; }
+            #pending-dispatch-body tr td:nth-child(8)::before { content: "PAYMENT"; }
+            #pending-dispatch-body tr td:nth-child(9)::before { content: "ITEM TOTAL"; }
+            #pending-dispatch-body tr td:nth-child(10)::before { content: "DELIVERY FEE"; }
+            #pending-dispatch-body tr td:nth-child(11)::before { content: "BULK WEIGHT"; }
+            #pending-dispatch-body tr td:nth-child(12)::before { content: "ASSIGNMENT"; }
+            #pending-dispatch-body tr td:nth-child(13)::before { content: "ACTION"; }
 
             /* Labels for Order Ledger Table */
             #order-ledger-body tr td:nth-child(1)::before { content: "TIME"; }
             #order-ledger-body tr td:nth-child(2)::before { content: "ORDER ID"; }
             #order-ledger-body tr td:nth-child(3)::before { content: "CUSTOMER"; }
             #order-ledger-body tr td:nth-child(4)::before { content: "ADDRESS"; }
-            #order-ledger-body tr td:nth-child(5)::before { content: "SCHEDULE"; }
-            #order-ledger-body tr td:nth-child(6)::before { content: "ITEMS"; }
-            #order-ledger-body tr td:nth-child(7)::before { content: "PAYMENT"; }
-            #order-ledger-body tr td:nth-child(8)::before { content: "ITEM TOTAL"; }
-            #order-ledger-body tr td:nth-child(9)::before { content: "DELIVERY FEE"; }
-            #order-ledger-body tr td:nth-child(10)::before { content: "BULK WEIGHT"; }
-            #order-ledger-body tr td:nth-child(11)::before { content: "TYPE"; }
-            #order-ledger-body tr td:nth-child(12)::before { content: "RIDER"; }
-            #order-ledger-body tr td:nth-child(13)::before { content: "STATUS"; }
+            #order-ledger-body tr td:nth-child(5)::before { content: "NOTE"; }
+            #order-ledger-body tr td:nth-child(6)::before { content: "SCHEDULE"; }
+            #order-ledger-body tr td:nth-child(7)::before { content: "ITEMS"; }
+            #order-ledger-body tr td:nth-child(8)::before { content: "PAYMENT"; }
+            #order-ledger-body tr td:nth-child(9)::before { content: "ITEM TOTAL"; }
+            #order-ledger-body tr td:nth-child(10)::before { content: "DELIVERY FEE"; }
+            #order-ledger-body tr td:nth-child(11)::before { content: "BULK WEIGHT"; }
+            #order-ledger-body tr td:nth-child(12)::before { content: "TYPE"; }
+            #order-ledger-body tr td:nth-child(13)::before { content: "RIDER"; }
+            #order-ledger-body tr td:nth-child(14)::before { content: "STATUS"; }
     </style>
 </head>
 <body class="admin-mode">
@@ -2315,6 +2318,7 @@
                                 <th>ORDER ID</th>
                                 <th>CUSTOMER</th>
                                 <th>DELIVERY ADDRESS</th>
+                                <th>NOTE</th>
                                 <th>DELIVERY SCHEDULE</th>
                                 <th>ITEMS</th>
                                 <th>PAYMENT METHOD</th>
@@ -2348,6 +2352,7 @@
                                 <th>ORDER ID</th>
                                 <th>CUSTOMER</th>
                                 <th>DELIVERY ADDRESS</th>
+                                <th>NOTE</th>
                                 <th>DELIVERY SCHEDULE</th>
                                 <th>ITEMS</th>
                                 <th>PAYMENT METHOD</th>
