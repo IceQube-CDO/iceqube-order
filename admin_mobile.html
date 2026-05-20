@@ -1732,8 +1732,15 @@
                 border: none !important;
                 padding: 4px !important;
             }
+            #pending-dispatch-body tr td:nth-child(12),
+            #orders-view th:nth-child(12) {
+                display: none !important;
+            }
+            #pending-dispatch-body tr td:nth-child(11) {
+                border-bottom: none !important;
+            }
             .cc-title h1, .cc-header h1 {
-                font-size: 1.5rem !important;
+                font-size: 1.2rem !important;
             }
             .cc-tabs {
                 display: flex !important;
@@ -2054,7 +2061,7 @@
                     <img src="assets/logo2.png" alt="IceQube" style="height: 39px; filter: drop-shadow(0 0 15px var(--admin-accent)); flex-shrink: 0;">
                     <div style="display: flex; flex-direction: column;">
                         <div style="color: #94a3b8; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.1em; font-family: 'Inter', sans-serif; text-transform: uppercase; margin-bottom: 2px;">IceQube <span style="color: #0ea5e9;">CDO</span></div>
-                        <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 900; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; line-height: 1;">CONTROL ROOM</h1>
+                        <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 900; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; line-height: 1;">CONTROL ROOM</h1>
                     </div>
                 </div>
 
@@ -2895,17 +2902,39 @@
                         <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #22c55e;">Base Routing Fare</h4>
                         <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Standard Base (₱)</label>
                         <input type="number" id="m-del-base" class="matrix-input" value="30" readonly>
-                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Minimum charge for the first 1km.</small>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Flat base charge applied to all deliveries.</small>
                     </div>
 
-                    <div>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
                         <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #22c55e;">Distance Premium</h4>
-                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Rate per KM (₱)</label>
-                        <input type="number" id="m-del-km" class="matrix-input" value="10" readonly>
-                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Added for every km beyond the first.</small>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">1–5 km (₱/km)</label>
+                                <input type="number" id="m-del-km-short" class="matrix-input" value="15" readonly>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">6 km & above (₱/km)</label>
+                                <input type="number" id="m-del-km-long" class="matrix-input" value="20" readonly>
+                            </div>
+                        </div>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Per-km rate beyond base. Higher rate kicks in at 6km+.</small>
                     </div>
 
-                    <div>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #f59e0b;">Late Night Fee</h4>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Surcharge (₱) — 9 PM onward</label>
+                        <input type="number" id="m-del-late" class="matrix-input" value="0" readonly>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Extra fee for orders scheduled or placed after 9 PM.</small>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #f59e0b;">Peak Hours Fee</h4>
+                        <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Surcharge (₱) — 5 PM–7 PM</label>
+                        <input type="number" id="m-del-peak" class="matrix-input" value="0" readonly>
+                        <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Applied during evening rush hour (5PM-7PM).</small>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
                         <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #22c55e;">Free Delivery Threshold</h4>
                         <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Min. Subtotal for Free Delivery (₱)</label>
                         <input type="number" id="m-del-free" class="matrix-input" value="0" readonly>

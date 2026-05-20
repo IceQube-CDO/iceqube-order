@@ -3624,15 +3624,57 @@ const app = {
         let zone = '';
         let isManualReview = false;
 
-        // Rate Card logic based on Distance
+        // Rate Card logic based on Distance (tiered) + Time Surcharges
         const calculateMaximFee = (distanceInKm) => {
-            const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmRate: 15, freeThreshold: 0 };
+            const delivery = this.pricingMatrix.delivery || { baseFare: 30, perKmShort: 15, perKmLong: 20, lateNightFee: 0, peakHoursFee: 0, freeThreshold: 0 };
             const baseFare = delivery.baseFare || 30;
-            // FORCE a minimum of 15 to kill the 70 fee once and for all
-            const perKmRate = Math.max(15, parseFloat(delivery.perKmRate) || 0);
-            
+            // Tiered per-km rates — fallback to legacy perKmRate if new fields aren't set
+            const perKmShort = parseFloat(delivery.perKmShort) || parseFloat(delivery.perKmRate) || 15;
+            const perKmLong = parseFloat(delivery.perKmLong) || 20;
+
             if (distanceInKm <= 1) return baseFare;
-            return baseFare + (Math.ceil(distanceInKm - 1) * perKmRate);
+            
+            let distanceFee = 0;
+            const extraKm = distanceInKm - 1; // km beyond the first
+            
+            if (extraKm <= 4) {
+                // 1-5km zone: all extra km at short rate
+                distanceFee = Math.ceil(extraKm) * perKmShort;
+            } else {
+                // First 4 extra km at short rate, remainder at long rate
+                distanceFee = (4 * perKmShort) + (Math.ceil(extraKm - 4) * perKmLong);
+            }
+            
+            return baseFare + distanceFee;
+        };
+
+        // Time-based surcharge calculation
+        const calculateTimeSurcharge = () => {
+            const delivery = this.pricingMatrix.delivery || {};
+            const lateNightFee = parseFloat(delivery.lateNightFee) || 0;
+            const peakHoursFee = parseFloat(delivery.peakHoursFee) || 0;
+            
+            // Determine effective hour: use scheduled time if available, else current time
+            let effectiveHour;
+            if (this.orderData.schedule && this.orderData.schedule.time) {
+                effectiveHour = parseInt(this.orderData.schedule.time.split(':')[0]);
+            } else {
+                effectiveHour = new Date().getHours();
+            }
+            
+            let surcharge = 0;
+            
+            // Peak hours: 5PM–7PM (17,18)
+            if (effectiveHour >= 17 && effectiveHour < 19) {
+                surcharge += peakHoursFee;
+            }
+            
+            // Late night: 9 PM onward (21:00+)
+            if (effectiveHour >= 21) {
+                surcharge += lateNightFee;
+            }
+            
+            return surcharge;
         };
 
         if (distanceKm > 15) {
@@ -3653,6 +3695,12 @@ const app = {
                 zone += " (FREE)";
             } else {
                 fee = calculateMaximFee(distanceKm);
+                // Add time-based surcharges
+                const timeSurcharge = calculateTimeSurcharge();
+                if (timeSurcharge > 0) {
+                    fee += timeSurcharge;
+                    console.log(`🕐 [Logistics] Time surcharge applied: +₱${timeSurcharge}`);
+                }
             }
         }
 

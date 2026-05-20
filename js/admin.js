@@ -2261,7 +2261,7 @@ var admin = {
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; cursor: pointer; color: #0ea5e9; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
+                                <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
                                 ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
@@ -2278,9 +2278,14 @@ var admin = {
                     <td style="font-family: 'JetBrains Mono';">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
                     <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td>
-                        <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)">
-                            ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
-                        </select>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 100px;">
+                                ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
+                            </select>
+                            <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')" style="flex-shrink: 0;">
+                                ${isAwaiting ? 'Re-Dispatch' : 'Dispatch'}
+                            </button>
+                        </div>
                     </td>
                     <td style="text-align: right; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
@@ -2293,9 +2298,6 @@ var admin = {
                         <button onclick="admin.sendMessengerNotification('${o.order_id}')" 
                                 style="background: rgba(14, 165, 233, 0.1); border: 1px solid #0ea5e9; color: #0ea5e9; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
                             💬 MSG
-                        </button>
-                        <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')">
-                            ${isAwaiting ? 'Re-Dispatch' : 'Dispatch'}
                         </button>
                     </td>
                 </tr>
@@ -2323,7 +2325,7 @@ var admin = {
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; cursor: pointer; color: #0ea5e9; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
+                                <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
                                 ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
@@ -3412,10 +3414,16 @@ var admin = {
 
         // Sync Delivery Inputs
         const delBase = document.getElementById('m-del-base');
-        const delKm = document.getElementById('m-del-km');
+        const delKmShort = document.getElementById('m-del-km-short');
+        const delKmLong = document.getElementById('m-del-km-long');
+        const delLate = document.getElementById('m-del-late');
+        const delPeak = document.getElementById('m-del-peak');
         const delFree = document.getElementById('m-del-free');
         if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare || 30;
-        if (delKm) delKm.value = this.pricingMatrix.delivery.perKmRate || 15;
+        if (delKmShort) delKmShort.value = this.pricingMatrix.delivery.perKmShort || this.pricingMatrix.delivery.perKmRate || 15;
+        if (delKmLong) delKmLong.value = this.pricingMatrix.delivery.perKmLong || 20;
+        if (delLate) delLate.value = this.pricingMatrix.delivery.lateNightFee || 0;
+        if (delPeak) delPeak.value = this.pricingMatrix.delivery.peakHoursFee || 0;
         if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold || 0;
     },
 
@@ -3463,7 +3471,10 @@ var admin = {
             products: products,
             delivery: {
                 baseFare: parseFloat(document.getElementById('m-del-base').value) || 0,
-                perKmRate: parseFloat(document.getElementById('m-del-km').value) || 0,
+                perKmShort: parseFloat(document.getElementById('m-del-km-short').value) || 0,
+                perKmLong: parseFloat(document.getElementById('m-del-km-long').value) || 0,
+                lateNightFee: parseFloat(document.getElementById('m-del-late').value) || 0,
+                peakHoursFee: parseFloat(document.getElementById('m-del-peak').value) || 0,
                 freeThreshold: parseFloat(document.getElementById('m-del-free').value) || 0
             }
         };
