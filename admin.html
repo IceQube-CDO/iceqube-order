@@ -1614,6 +1614,9 @@
                 grid-template-columns: 1fr 0px 1fr !important;
                 gap: 2rem 1rem !important; /* 1rem + 1rem = 2rem total horizontal gap between columns */
             }
+            .drawer-overlay {
+                display: none !important;
+            }
         }
 
         /* Pricing Lock Styles */
@@ -2071,7 +2074,7 @@
                 </div>
             </div>
 
-            <div id="customer-drawer-overlay" class="drawer-overlay" onclick="closeCustomerDrawer()" style="z-index: 99999 !important;"></div>
+            <div id="customer-drawer-overlay" class="drawer-overlay" onclick="closeCustomerDrawer()"></div>
             <!-- Customer Detail Drawer (Integrated into grid for desktop) -->
             <div id="customer-drawer" class="drawer-panel">
                 <div class="drawer-header">

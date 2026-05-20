@@ -838,7 +838,7 @@ var admin = {
                     const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
                                      `Deliver to: ${order.customer_name}\n` +
                                      `Item: ${itemsText}\n` +
-                                     `Total: ₱${customerTotal.toLocaleString()}\n` +
+                                     `Total: ₱${totalGross.toLocaleString()}\n` +
                                      `Payment: ${order.payment_method || 'Cash'}\n\n` +
                                      `Check the Control Room!`;
                     
