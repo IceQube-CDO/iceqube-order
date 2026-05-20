@@ -819,7 +819,7 @@ var admin = {
         const profile = directory[order.customer_name];
         
         const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || null;
-        const ADMIN_PSID = "26521276764196410";
+        const ADMIN_PSID = "712885031918698";
         
         console.log('🔔 [Messenger] Admin triggering notification. Target customer ID:', targetId);
         updateStatus('Sending...', '#0ea5e9', true);
@@ -942,11 +942,11 @@ var admin = {
     },
 
     testMessengerID() {
-        console.log("🧪 Diagnostic: Sending to 26521276764196410");
+        console.log("🧪 Diagnostic: Sending to 712885031918698");
         this.sendMessengerNotification({
             order_id: "TEST-SYNC",
             customer_name: "Admin",
-            messenger_id: "26521276764196410"
+            messenger_id: "712885031918698"
         });
     },
 
@@ -1405,7 +1405,7 @@ var admin = {
     async sendComplaintMessengerNotification(complaint) {
         if (!complaint || !complaint.customerName) return;
         
-        const ADMIN_PSID = "26521276764196410";
+        const ADMIN_PSID = "712885031918698";
         const msg = `🚨 NEW CUSTOMER SUPPORT ISSUE!\n\n` +
                     `Customer: ${complaint.customerName}\n` +
                     `Issue: ${complaint.issueType}\n` +

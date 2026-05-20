@@ -5,7 +5,8 @@ const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
 const FB_API_URL = "https://graph.facebook.com/v19.0/me/messages"
 // All admin PSIDs — each admin must message the IceQube CDO page once to get their PSID
 const ADMIN_PSIDS = [
-  "26521276764196410",  // Ian Echano
+  "712885031918698",    // Ian Echano (New)
+  "26521276764196410",  // Ian Echano (Old)
   "32834231939557699",  // Law Rence Fe
 ]
 
@@ -175,10 +176,17 @@ serve(async (req) => {
                     `Payment: ${record.payment_method || 'Cash'}\n\n` +
                     `Thank you for your order!`;
         
+        const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                         `Deliver to: ${record.customer_name}\n` +
+                         `Item: ${itemsText}\n` +
+                         `Total: ₱${totalGross.toFixed(2)}\n` +
+                         `Payment: ${record.payment_method || 'Cash'}\n\n` +
+                         `Check the Control Room!`;
+
         const results: any = {};
         
-        // 1. Send to Customer (skip if customer is one of the admins)
-        if (customerId && !ADMIN_PSIDS.includes(customerId)) {
+        // 1. Send to Customer (whoever ordered gets the order confirmation message)
+        if (customerId) {
           try {
             results.customer = await sendFBMessage(customerId, msg);
           } catch (err) {
@@ -189,11 +197,15 @@ serve(async (req) => {
           results.customer_skipped = "No valid customer messenger_id";
         }
         
-        // 2. Send to ALL Admins
+        // 2. Send to ALL Admins (except the customer who placed the order to avoid double receipt)
         results.admins = {};
         for (const adminPsid of ADMIN_PSIDS) {
+          if (adminPsid === customerId) {
+            console.log(`[Webhook] Skipping admin alert for customer admin: ${adminPsid}`);
+            continue;
+          }
           try {
-            results.admins[adminPsid] = await sendFBMessage(adminPsid, msg);
+            results.admins[adminPsid] = await sendFBMessage(adminPsid, adminMsg);
           } catch (err) {
             results.admins[adminPsid] = { error: err.message };
             console.error(`[Webhook] Admin send failed for ${adminPsid}:`, err);
