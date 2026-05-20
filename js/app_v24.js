@@ -55,12 +55,16 @@ const app = {
                             { id: 'bag1kg', name: '1kg Ice Cube (Full/Half)', standard: oldProducts.bag1kg?.standard || 15, bulk: oldProducts.bag1kg?.bulk || 14, threshold: oldProducts.bag1kg?.threshold || 40 }
                         ],
                         delivery: {
-                            baseFare: matrix.delivery?.baseFare || 30,
-                            perKmShort: matrix.delivery?.perKmShort || matrix.delivery?.perKmRate || 15,
-                            perKmLong: matrix.delivery?.perKmLong || 20,
-                            lateNightFee: matrix.delivery?.lateNightFee || 0,
-                            peakHoursFee: matrix.delivery?.peakHoursFee || 0,
-                            freeThreshold: matrix.delivery?.freeThreshold || 0
+                            baseFare: matrix.delivery?.baseFare !== undefined ? matrix.delivery.baseFare : 30,
+                            perKmShort: matrix.delivery?.perKmShort !== undefined ? matrix.delivery.perKmShort : (matrix.delivery?.perKmRate !== undefined ? matrix.delivery.perKmRate : 15),
+                            perKmLong: matrix.delivery?.perKmLong !== undefined ? matrix.delivery.perKmLong : 20,
+                            lateNightFee: matrix.delivery?.lateNightFee !== undefined ? matrix.delivery.lateNightFee : 0,
+                            peakHoursFee: matrix.delivery?.peakHoursFee !== undefined ? matrix.delivery.peakHoursFee : 0,
+                            freeThreshold: matrix.delivery?.freeThreshold !== undefined ? matrix.delivery.freeThreshold : 0,
+                            heavyLoadT1Weight: matrix.delivery?.heavyLoadT1Weight !== undefined ? matrix.delivery.heavyLoadT1Weight : 19,
+                            heavyLoadT1Fee: matrix.delivery?.heavyLoadT1Fee !== undefined ? matrix.delivery.heavyLoadT1Fee : 10,
+                            heavyLoadT2Weight: matrix.delivery?.heavyLoadT2Weight !== undefined ? matrix.delivery.heavyLoadT2Weight : 31,
+                            heavyLoadT2Fee: matrix.delivery?.heavyLoadT2Fee !== undefined ? matrix.delivery.heavyLoadT2Fee : 15
                         }
                     };
                 }
@@ -130,10 +134,11 @@ const app = {
         }
         
         // Final Safety: Ensure new tiered fields exist with sane defaults
-        if (!this.pricingMatrix.delivery.perKmShort && this.pricingMatrix.delivery.perKmRate) {
+        if (this.pricingMatrix.delivery.perKmShort === undefined && this.pricingMatrix.delivery.perKmRate !== undefined) {
             console.log("🔄 [Migration] Migrating legacy perKmRate to tiered fields.");
             this.pricingMatrix.delivery.perKmShort = this.pricingMatrix.delivery.perKmRate;
             this.pricingMatrix.delivery.perKmLong = Math.round(this.pricingMatrix.delivery.perKmRate * 1.33);
+            delete this.pricingMatrix.delivery.perKmRate; // Remove legacy field after migration
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
             this.updateTotal();
         }
@@ -3400,10 +3405,10 @@ const app = {
         });
         
         const deliveryConfig = this.pricingMatrix.delivery || {};
-        const t1Weight = parseFloat(deliveryConfig.heavyLoadT1Weight) || 19;
-        const t1Fee = parseFloat(deliveryConfig.heavyLoadT1Fee) || 10;
-        const t2Weight = parseFloat(deliveryConfig.heavyLoadT2Weight) || 31;
-        const t2Fee = parseFloat(deliveryConfig.heavyLoadT2Fee) || 15;
+        const t1Weight = deliveryConfig.heavyLoadT1Weight !== undefined ? parseFloat(deliveryConfig.heavyLoadT1Weight) : 19;
+        const t1Fee = deliveryConfig.heavyLoadT1Fee !== undefined ? parseFloat(deliveryConfig.heavyLoadT1Fee) : 10;
+        const t2Weight = deliveryConfig.heavyLoadT2Weight !== undefined ? parseFloat(deliveryConfig.heavyLoadT2Weight) : 31;
+        const t2Fee = deliveryConfig.heavyLoadT2Fee !== undefined ? parseFloat(deliveryConfig.heavyLoadT2Fee) : 15;
         
         let fee = 0;
         if (totalWeight >= t2Weight) {

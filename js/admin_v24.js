@@ -294,7 +294,10 @@ var admin = {
                 ],
                 delivery: (this.pricingMatrix && this.pricingMatrix.delivery) || {
                     baseFare: 30,
-                    perKmRate: 10,
+                    perKmShort: 15,
+                    perKmLong: 20,
+                    lateNightFee: 0,
+                    peakHoursFee: 0,
                     freeThreshold: 0,
                     heavyLoadT1Weight: 19,
                     heavyLoadT1Fee: 10,
@@ -664,7 +667,8 @@ var admin = {
         
         playBeep();
     },
-stopBuzzer() {
+
+    stopBuzzer() {
         console.log("🔕 [Buzzer] Stopping Alarm.");
         this.buzzerActive = false;
         if (this.buzzerTimeout) {
@@ -672,6 +676,80 @@ stopBuzzer() {
             this.buzzerTimeout = null;
         }
         this.updateBuzzerUI();
+    },
+
+    async dispatchMessengerMessage(recipientId, text) {
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            throw new Error("Supabase URL not configured");
+        }
+        
+        const isFileProtocol = window.location.protocol === 'file:';
+        if (isFileProtocol) {
+            console.log('📡 [Messenger] running on file:// protocol. Falling back to iframe form submission (bypasses CORS).');
+            let bc = document.getElementById('hidden-bridge');
+            if (!bc) {
+                bc = document.createElement('div');
+                bc.id = 'hidden-bridge';
+                bc.style.display = 'none';
+                document.body.appendChild(bc);
+            }
+            
+            const uniqueSeed = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+            const frameName = `msg-frame-${recipientId.slice(-4)}-${uniqueSeed}`;
+            
+            const div = document.createElement('div');
+            
+            const iframe = document.createElement('iframe');
+            iframe.name = frameName;
+            iframe.style.display = 'none';
+            div.appendChild(iframe);
+
+            const form = document.createElement('form');
+            form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            form.method = 'POST';
+            form.target = frameName;
+
+            const recInput = document.createElement('input');
+            recInput.type = 'hidden';
+            recInput.name = 'recipientId';
+            recInput.value = recipientId;
+            form.appendChild(recInput);
+
+            const msgInput = document.createElement('input');
+            msgInput.type = 'hidden';
+            msgInput.name = 'message';
+            msgInput.value = text;
+            form.appendChild(msgInput);
+
+            div.appendChild(form);
+            bc.appendChild(div);
+            form.submit();
+            
+            // Clean up after 20 seconds
+            setTimeout(() => {
+                try {
+                    if (div && div.parentNode) div.parentNode.removeChild(div);
+                } catch (e) {}
+            }, 20000);
+            return { success: true, mode: 'iframe' };
+        }
+
+        // Standard Fetch API (CORS friendly on http/https origins)
+        const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+            },
+            body: JSON.stringify({ recipientId, message: text })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || (data && data.error)) {
+            const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
+            throw new Error(errMsg);
+        }
+        return data;
     },
 
     async sendMessengerNotification(orderInput) {
@@ -708,9 +786,9 @@ stopBuzzer() {
             }
             // SMART VISIBILITY: Hide if idle, show if active/error
             if (statusBadge) {
-                if (text === 'Idle' || text.includes('Success')) {
+                if (text === 'Idle' || text.includes('Success') || text.includes('Notified')) {
                     setTimeout(() => {
-                        if (statusText.innerText.includes('Idle') || statusText.innerText.includes('Success')) {
+                        if (statusText.innerText.includes('Idle') || statusText.innerText.includes('Success') || statusText.innerText.includes('Notified')) {
                             statusBadge.style.opacity = '0';
                             setTimeout(() => statusBadge.style.display = 'none', 500);
                         }
@@ -785,31 +863,10 @@ stopBuzzer() {
         if (heavyLoad > 0) {
             msg += `Bulk Weight Fee: ₱${heavyLoad.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n`;
         }
-
+ 
         msg += `Total: ₱${totalGross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}\n` +
                `Payment: ${order.payment_method || 'Cash'}\n\n` +
                `Thank you for your order!`;
-
-        const sendViaFetch = async (recipientId, text) => {
-            if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
-                throw new Error("Supabase URL not configured");
-            }
-            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                },
-                body: JSON.stringify({ recipientId, message: text })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || (data && data.error)) {
-                const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
-                throw new Error(errMsg);
-            }
-            return data;
-        };
  
         try {
             let customerError = null;
@@ -818,7 +875,7 @@ stopBuzzer() {
             if (targetId && targetId !== ADMIN_PSID) {
                 try {
                     console.log('📡 [Messenger] Sending customer receipt...');
-                    await sendViaFetch(targetId, msg);
+                    await this.dispatchMessengerMessage(targetId, msg);
                     console.log('✅ [Messenger] Customer Receipt Sent successfully.');
                 } catch (e) {
                     customerError = e.message;
@@ -831,7 +888,7 @@ stopBuzzer() {
             // 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account
             try {
                 console.log('📡 [Messenger] Sending Admin Copy of receipt...');
-                await sendViaFetch(ADMIN_PSID, msg);
+                await this.dispatchMessengerMessage(ADMIN_PSID, msg);
                 console.log('✅ [Messenger] Admin Copy of receipt sent successfully.');
             } catch (e) {
                 console.error('❌ [Messenger] Admin Copy dispatch failed:', e);
@@ -847,7 +904,7 @@ stopBuzzer() {
                                      `Payment: ${order.payment_method || 'Cash'}\n\n` +
                                      `Check the Control Room!`;
                     console.log('📡 [Messenger] Sending Admin Alert...');
-                    await sendViaFetch(ADMIN_PSID, adminMsg);
+                    await this.dispatchMessengerMessage(ADMIN_PSID, adminMsg);
                     console.log('✅ [Messenger] Admin Alert sent successfully.');
                 } catch (e) {
                     console.error('❌ [Messenger] Admin Alert dispatch failed:', e);
@@ -1341,23 +1398,7 @@ stopBuzzer() {
                     `Check the Control Room complaints ledger!`;
                     
         try {
-            if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
-                throw new Error("Supabase URL not configured");
-            }
-            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                },
-                body: JSON.stringify({ recipientId: ADMIN_PSID, message: msg })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || (data && data.error)) {
-                const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
-                throw new Error(errMsg);
-            }
+            await this.dispatchMessengerMessage(ADMIN_PSID, msg);
             console.log('📡 [Messenger] Customer Support Notification Sent to Admin.');
         } catch (error) {
             console.error('❌ [Messenger] Support notification failed:', error);
@@ -3949,16 +3990,16 @@ stopBuzzer() {
         const delHeavyT2Weight = document.getElementById('m-del-heavy-t2-weight');
         const delHeavyT2Fee = document.getElementById('m-del-heavy-t2-fee');
         
-        if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare || 30;
-        if (delKmShort) delKmShort.value = this.pricingMatrix.delivery.perKmShort || this.pricingMatrix.delivery.perKmRate || 15;
-        if (delKmLong) delKmLong.value = this.pricingMatrix.delivery.perKmLong || 20;
-        if (delLate) delLate.value = this.pricingMatrix.delivery.lateNightFee || 0;
-        if (delPeak) delPeak.value = this.pricingMatrix.delivery.peakHoursFee || 0;
-        if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold || 0;
-        if (delHeavyT1Weight) delHeavyT1Weight.value = this.pricingMatrix.delivery.heavyLoadT1Weight || 19;
-        if (delHeavyT1Fee) delHeavyT1Fee.value = this.pricingMatrix.delivery.heavyLoadT1Fee || 10;
-        if (delHeavyT2Weight) delHeavyT2Weight.value = this.pricingMatrix.delivery.heavyLoadT2Weight || 31;
-        if (delHeavyT2Fee) delHeavyT2Fee.value = this.pricingMatrix.delivery.heavyLoadT2Fee || 15;
+        if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare !== undefined ? this.pricingMatrix.delivery.baseFare : 30;
+        if (delKmShort) delKmShort.value = this.pricingMatrix.delivery.perKmShort !== undefined ? this.pricingMatrix.delivery.perKmShort : (this.pricingMatrix.delivery.perKmRate !== undefined ? this.pricingMatrix.delivery.perKmRate : 15);
+        if (delKmLong) delKmLong.value = this.pricingMatrix.delivery.perKmLong !== undefined ? this.pricingMatrix.delivery.perKmLong : 20;
+        if (delLate) delLate.value = this.pricingMatrix.delivery.lateNightFee !== undefined ? this.pricingMatrix.delivery.lateNightFee : 0;
+        if (delPeak) delPeak.value = this.pricingMatrix.delivery.peakHoursFee !== undefined ? this.pricingMatrix.delivery.peakHoursFee : 0;
+        if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold !== undefined ? this.pricingMatrix.delivery.freeThreshold : 0;
+        if (delHeavyT1Weight) delHeavyT1Weight.value = this.pricingMatrix.delivery.heavyLoadT1Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Weight : 19;
+        if (delHeavyT1Fee) delHeavyT1Fee.value = this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10;
+        if (delHeavyT2Weight) delHeavyT2Weight.value = this.pricingMatrix.delivery.heavyLoadT2Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Weight : 31;
+        if (delHeavyT2Fee) delHeavyT2Fee.value = this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15;
     },
 
     toggleMatrixLock(cardId, btn) {
@@ -4009,16 +4050,16 @@ stopBuzzer() {
         const newMatrix = {
             products: products,
             delivery: {
-                baseFare: parseFloat(document.getElementById('m-del-base').value) || 0,
-                perKmShort: parseFloat(document.getElementById('m-del-km-short').value) || 0,
-                perKmLong: parseFloat(document.getElementById('m-del-km-long').value) || 0,
-                lateNightFee: parseFloat(document.getElementById('m-del-late').value) || 0,
-                peakHoursFee: parseFloat(document.getElementById('m-del-peak').value) || 0,
-                freeThreshold: parseFloat(document.getElementById('m-del-free').value) || 0,
-                heavyLoadT1Weight: delHeavyT1WeightEl ? parseFloat(delHeavyT1WeightEl.value) : 19,
-                heavyLoadT1Fee: delHeavyT1FeeEl ? parseFloat(delHeavyT1FeeEl.value) : 10,
-                heavyLoadT2Weight: delHeavyT2WeightEl ? parseFloat(delHeavyT2WeightEl.value) : 31,
-                heavyLoadT2Fee: delHeavyT2FeeEl ? parseFloat(delHeavyT2FeeEl.value) : 15
+                baseFare: parseFloat(document.getElementById('m-del-base')?.value) || 30,
+                perKmShort: parseFloat(document.getElementById('m-del-km-short')?.value) || 15,
+                perKmLong: parseFloat(document.getElementById('m-del-km-long')?.value) || 20,
+                lateNightFee: parseFloat(document.getElementById('m-del-late')?.value) || 0,
+                peakHoursFee: parseFloat(document.getElementById('m-del-peak')?.value) || 0,
+                freeThreshold: parseFloat(document.getElementById('m-del-free')?.value) || 0,
+                heavyLoadT1Weight: delHeavyT1WeightEl ? parseFloat(delHeavyT1WeightEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Weight : 19),
+                heavyLoadT1Fee: delHeavyT1FeeEl ? parseFloat(delHeavyT1FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10),
+                heavyLoadT2Weight: delHeavyT2WeightEl ? parseFloat(delHeavyT2WeightEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Weight : 31),
+                heavyLoadT2Fee: delHeavyT2FeeEl ? parseFloat(delHeavyT2FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15)
             }
         };
 
