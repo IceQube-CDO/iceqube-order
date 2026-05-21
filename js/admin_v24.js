@@ -700,7 +700,7 @@ var admin = {
         div.appendChild(iframe);
 
         const form = document.createElement('form');
-        form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+        form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-send?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
         form.method = 'POST';
         form.target = frameName;
 
@@ -741,7 +741,7 @@ var admin = {
 
         try {
             // Standard Fetch API (CORS friendly on http/https origins)
-            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-send?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: {

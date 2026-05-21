@@ -1,4 +1,5 @@
-// Supabase Edge Function: messenger-webhook
+// Supabase Edge Function: messenger-webhook v2.0.0 (2026-05-21)
+// v2: Added /send dedicated path to bypass Facebook platform webhook handler
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
@@ -62,7 +63,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST',
+      'Access-Control-Allow-Methods': 'POST, GET',
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     } })
   }
@@ -71,6 +72,69 @@ serve(async (req) => {
     let recipientId, message, messagingType, tag;
     const contentType = req.headers.get("content-type") || "";
     const url = new URL(req.url);
+    const pathname = url.pathname;
+
+    // ── FACEBOOK PLATFORM INCOMING EVENTS (from Messenger users) ──
+    // When a customer messages the IceQube page, Facebook POSTs here.
+    // Respond with EVENT_RECEIVED to acknowledge. Route to /send for outgoing.
+    if (req.method === "POST" && !pathname.endsWith("/send")) {
+      const bodyText = await req.text();
+      // Check if it's a Facebook platform event (has 'object' field)
+      try {
+        const fbBody = JSON.parse(bodyText);
+        if (fbBody.object === "page" && fbBody.entry) {
+          console.log("[Facebook] Incoming page event received. Entries:", fbBody.entry.length);
+          return new Response("EVENT_RECEIVED", { status: 200 });
+        }
+        // Re-parse for our own use below (not a FB event, it's our own call via /send)
+        // Fall through to existing JSON handling with the parsed body
+        // We can't re-read the stream, so re-attach the body for downstream processing
+        const body = fbBody;
+        
+        // Check if it's a Supabase Database Webhook trigger
+        if (body.type === "INSERT" && body.table === "orders" && body.record) {
+          const record = body.record;
+          if (record.is_real === false) {
+            console.log(`[Webhook] Skipping mock order: ${record.order_id}`);
+            return new Response(JSON.stringify({ success: true, message: "Skipped mock/test order" }), {
+              headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+              status: 200,
+            });
+          }
+          const customerId = record.messenger_id;
+          const itemsText = formatItems(record.items);
+          const totalGross = Number(record.total_price || 0);
+          const deliveryFee = Number(record.delivery_fee || 0);
+          const heavyLoad = Number(record.priority_fee || 0);
+          const subtotal = Math.max(0, totalGross - deliveryFee - heavyLoad);
+          const msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\nDeliver to: ${record.customer_name}\nItem: ${itemsText}\nSubtotal: ₱${subtotal.toFixed(2)}\nDelivery fee: ₱${deliveryFee.toFixed(2)}\n${heavyLoad > 0 ? `Bulk Weight Fee: ₱${heavyLoad.toFixed(2)}\n` : ''}Total: ₱${totalGross.toFixed(2)}\nPayment: ${record.payment_method || 'Cash'}\n\nThank you for your order!`;
+          const adminMsg = `🚨 NEW ORDER ALERT!\n\nDeliver to: ${record.customer_name}\nItem: ${itemsText}\nTotal: ₱${totalGross.toFixed(2)}\nPayment: ${record.payment_method || 'Cash'}\n\nCheck the Control Room!`;
+          const results: any = {};
+          if (customerId) {
+            try { results.customer = await sendFBMessage(customerId, msg); }
+            catch (err) { results.customer_error = err.message; }
+          } else { results.customer_skipped = "No messenger_id"; }
+          results.admins = {};
+          for (const adminPsid of ADMIN_PSIDS) {
+            if (adminPsid === customerId) continue;
+            try { results.admins[adminPsid] = await sendFBMessage(adminPsid, adminMsg); }
+            catch (err) { results.admins[adminPsid] = { error: err.message }; }
+          }
+          return new Response(JSON.stringify({ success: true, results }), {
+            headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+            status: 200,
+          });
+        }
+
+        // Direct send (recipientId + message)
+        recipientId = body.recipientId;
+        message = body.message;
+        messagingType = body.messaging_type;
+        tag = body.tag;
+      } catch (e) {
+        // Not JSON — fall through
+      }
+    }
 
     // ── DIAGNOSTIC: Find PSIDs from Facebook Page Conversations ──
     if (url.searchParams.get("action") === "find_psid") {
