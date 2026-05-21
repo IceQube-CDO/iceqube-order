@@ -7,6 +7,72 @@ if (typeof MESSENGER_CONFIG === 'undefined') {
 }
 
 var admin = {
+    saveState: function(key, data) {
+        localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data));
+        if (window.IceQubeSync && window.IceQubeSync.publishAppState) {
+            window.IceQubeSync.publishAppState(key, data);
+        }
+    },
+    
+    applyCloudStates: function(cloudStates) {
+        let needsUpdate = false;
+        const stateMappings = {
+            'CONFIG_CASHFLOW': { key: 'ice_cashflow', prop: 'manualEntries' },
+            'CONFIG_CONSUMABLES': { key: 'iceqube_consumables', prop: 'consumables', updateFn: 'updateConsumablesUI' },
+            'CONFIG_ASSETS': { key: 'iceqube_assets', prop: 'assets', updateFn: 'updateAssetsUI' },
+            'CONFIG_UTILITIES': { key: 'iceqube_utilities', prop: 'utilities', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_UTILITY_STATUS': { key: 'iceqube_utility_status', prop: 'utilityStatus', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_UTILITY_PAID_DATES': { key: 'iceqube_utility_paid_dates', prop: 'utilityPaidDates', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_MAINTENANCE_LOGS': { key: 'iceqube_maintenance_logs', prop: 'maintenanceLogs', updateFn: 'updateAssetsUI' },
+            'CONFIG_RENTAL': { key: 'iceqube_rental', prop: 'rental', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
+            'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' }
+        };
+
+        for (const [orderId, cloudData] of Object.entries(cloudStates)) {
+            const mapping = stateMappings[orderId];
+            if (!mapping) continue;
+
+            const localString = localStorage.getItem(mapping.key);
+            let localData = null;
+            try {
+                localData = JSON.parse(localString);
+            } catch(e) {
+                localData = localString;
+            }
+
+            const cleanCloud = { ...cloudData };
+            delete cleanCloud._cloudCreatedAt;
+            
+            if (JSON.stringify(cleanCloud) !== JSON.stringify(localData)) {
+                console.log(`☁️ [Admin] State updated from Cloud: ${mapping.key}`);
+                localStorage.setItem(mapping.key, typeof cleanCloud === 'string' ? cleanCloud : JSON.stringify(cleanCloud));
+                if (mapping.prop && this.hasOwnProperty(mapping.prop)) {
+                    this[mapping.prop] = cleanCloud;
+                }
+                
+                if (mapping.updateFn && typeof this[mapping.updateFn] === 'function') {
+                    this[mapping.updateFn]();
+                }
+                
+                if (mapping.special === 'purge' && cleanCloud.purged) {
+                    localStorage.setItem('ice_system_purged', 'true');
+                    if (this.allOrders) {
+                        this.allOrders = [];
+                        this.updateDashboardUI([]);
+                    }
+                }
+                needsUpdate = true;
+            }
+        }
+        
+        if (needsUpdate) {
+            const syncText = document.getElementById('cloud-sync-status-text');
+            if (syncText) syncText.innerText = `☁️ Config Updated: ${new Date().toLocaleTimeString()}`;
+        }
+    },
+    
+    // --- APP STATE ---
     _syncIntervalId: null,
     allOrders: [],
     pin: '',
@@ -96,7 +162,7 @@ var admin = {
 
                     const cashflow = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
                     const realCashflow = cashflow.filter(c => c.is_real !== false);
-                    localStorage.setItem('ice_cashflow', JSON.stringify(realCashflow));
+                    admin.saveState('ice_cashflow', realCashflow);
 
                     localStorage.removeItem('ice_messages');
                     localStorage.setItem('ice_system_purged', 'true');
@@ -265,7 +331,7 @@ var admin = {
                     { id: 'f-uv', name: 'UV Sterilizer Lamp', purchaseDate: '2025-11-10', lifespanMonths: 12, cost: 1200, brand: 'Philips', company: 'Local Shop', link: '' }
                 ]
             };
-            localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+            admin.saveState('iceqube_consumables', this.consumables);
         }
 
 
@@ -519,7 +585,7 @@ var admin = {
         }
 
         if (updated) {
-            localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+            admin.saveState('iceqube_consumables', this.consumables);
             this.updateConsumablesUI();
             console.log(`✅ [Packaging] Supplies updated in LocalStorage.`);
         }
@@ -541,7 +607,7 @@ var admin = {
             msg,
             () => {
                 this.vacationMode = !this.vacationMode;
-                localStorage.setItem('iceqube_vacation_mode', this.vacationMode);
+                admin.saveState('iceqube_vacation_mode', this.vacationMode);
                 
                 if (this.vacationMode) {
                     document.body.classList.add('vacation-active');
@@ -1148,6 +1214,12 @@ var admin = {
                     this.updatePricingUI();
                     const syncText = document.getElementById('cloud-sync-status-text');
                     if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
+                }
+                
+                // Poll for other App States (Consumables, Cashflow, Utilities, Assets, Purge, etc.)
+                if (window.IceQubeSync.fetchCloudAppStates) {
+                    const cloudStates = await window.IceQubeSync.fetchCloudAppStates();
+                    this.applyCloudStates(cloudStates);
                 }
             }
         }, 10000);
@@ -2469,7 +2541,7 @@ var admin = {
     },
 
     saveManualEntries() {
-        localStorage.setItem('ice_cashflow', JSON.stringify(this.manualEntries));
+        admin.saveState('ice_cashflow', this.manualEntries);
     },
 
     exportCashflow() {
@@ -2588,8 +2660,8 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${o.delivery_address || 'N/A'}</a>` : `<div style="margin-bottom: 4px;">${o.delivery_address || 'N/A'}</div>`}
                     </td>
-                    <td style="font-size: 0.75rem; color: #cbd5e1; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.delivery_notes || 'No special notes.'}">
-                        <span>${o.delivery_notes || 'No special notes.'}</span>
+                    <td style="text-align: center; vertical-align: middle;">
+                        ${(o.delivery_notes && o.delivery_notes.trim() !== '' && o.delivery_notes.trim().toLowerCase() !== 'no special notes.') ? `<button onclick="alert('Note for Order ${o.order_id}:\\n\\n' + decodeURIComponent('${encodeURIComponent(o.delivery_notes)}'))" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 6px; cursor: pointer; color: #0ea5e9; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="View Note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>` : `<span style="color: #64748b; font-size: 0.8rem;">-</span>`}
                     </td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">
                         ${scheduleDisplay}
@@ -2656,8 +2728,8 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #94a3b8; max-width: 150px;">
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
                     </td>
-                    <td style="font-size: 0.75rem; color: #cbd5e1; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.delivery_notes || 'No special notes.'}">
-                        <span>${o.delivery_notes || 'No special notes.'}</span>
+                    <td style="text-align: center; vertical-align: middle;">
+                        ${(o.delivery_notes && o.delivery_notes.trim() !== '' && o.delivery_notes.trim().toLowerCase() !== 'no special notes.') ? `<button onclick="alert('Note for Order ${o.order_id}:\\n\\n' + decodeURIComponent('${encodeURIComponent(o.delivery_notes)}'))" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 6px; cursor: pointer; color: #0ea5e9; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="View Note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>` : `<span style="color: #64748b; font-size: 0.8rem;">-</span>`}
                     </td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">
                         ${ledgerScheduleDisplay}
@@ -3127,7 +3199,7 @@ var admin = {
         }
 
         // 2. Save Consumables
-        localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+        admin.saveState('iceqube_consumables', this.consumables);
 
         // 3. Record Cashflow if cost provided
         if (!isNaN(cost) && cost > 0) {
@@ -3174,7 +3246,7 @@ var admin = {
             }
         }
 
-        localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+        admin.saveState('iceqube_consumables', this.consumables);
         this.updateConsumablesUI();
         this.closeRestockModal();
         alert('Item removed successfully.');
@@ -3375,7 +3447,7 @@ var admin = {
             this.consumables.filtration.push(newFilter);
         }
 
-        localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+        admin.saveState('iceqube_consumables', this.consumables);
         this.updateFiltrationUI();
         this.closeFilterModal();
     },
@@ -3386,7 +3458,7 @@ var admin = {
             const item = this.consumables.filtration[idx];
             if (confirm(`Confirm replacement of ${item.name}? This will reset the lifespan countdown to today.`)) {
                 item.purchaseDate = new Date().toISOString().split('T')[0];
-                localStorage.setItem('iceqube_consumables', JSON.stringify(this.consumables));
+                admin.saveState('iceqube_consumables', this.consumables);
                 this.updateFiltrationUI();
             }
         }
@@ -3621,7 +3693,7 @@ var admin = {
 
         // 1. Save Log
         this.maintenanceLogs.push(log);
-        localStorage.setItem('iceqube_maintenance_logs', JSON.stringify(this.maintenanceLogs));
+        admin.saveState('iceqube_maintenance_logs', this.maintenanceLogs);
 
         // 2. Record Cashflow if cost > 0
         if (cost > 0) {
@@ -3707,7 +3779,7 @@ var admin = {
         if (!confirm('Are you sure you want to remove this asset? This will also affect P&L depreciation.')) return;
         
         this.assets = this.assets.filter(a => a.id !== id);
-        localStorage.setItem('iceqube_assets', JSON.stringify(this.assets));
+        admin.saveState('iceqube_assets', this.assets);
         
         this.updateAssetsUI();
         if (document.getElementById('finance-view').style.display !== 'none') {
@@ -3751,7 +3823,7 @@ var admin = {
         };
 
         this.assets.push(newAsset);
-        localStorage.setItem('iceqube_assets', JSON.stringify(this.assets));
+        admin.saveState('iceqube_assets', this.assets);
         
         this.updateAssetsUI();
         this.closeAddAssetModal();
@@ -3809,7 +3881,7 @@ var admin = {
         this.utilities.electricity = cepalco;
         this.utilities.water = cowd;
         this.utilities.internet = pldt;
-        localStorage.setItem('iceqube_utilities', JSON.stringify(this.utilities));
+        admin.saveState('iceqube_utilities', this.utilities);
 
         const total = cepalco + cowd + pldt;
         const el = document.getElementById('total-utilities');
@@ -3864,7 +3936,7 @@ var admin = {
 
             // Record Payment Date
             this.utilityPaidDates[utilityId] = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            localStorage.setItem('iceqube_utility_paid_dates', JSON.stringify(this.utilityPaidDates));
+            admin.saveState('iceqube_utility_paid_dates', this.utilityPaidDates);
             
             this.updateUtilitiesUI();
             this.updateRentalUI();
@@ -3880,13 +3952,13 @@ var admin = {
 
             // Clear Payment Date
             delete this.utilityPaidDates[utilityId];
-            localStorage.setItem('iceqube_utility_paid_dates', JSON.stringify(this.utilityPaidDates));
+            admin.saveState('iceqube_utility_paid_dates', this.utilityPaidDates);
 
             this.updateUtilitiesUI();
             this.updateRentalUI();
         }
         
-        localStorage.setItem('iceqube_utility_status', JSON.stringify(this.utilityStatus));
+        admin.saveState('iceqube_utility_status', this.utilityStatus);
         this.fetchRealStats(); // Triggers UI refresh
     },
 
@@ -3907,9 +3979,9 @@ var admin = {
                 this.utilityStatus = { cepalco: false, cowd: false, pldt: false, rent: false };
                 this.utilityPaidDates = {};
                 
-                localStorage.setItem('iceqube_utilities', JSON.stringify(this.utilities));
-                localStorage.setItem('iceqube_utility_status', JSON.stringify(this.utilityStatus));
-                localStorage.setItem('iceqube_utility_paid_dates', JSON.stringify(this.utilityPaidDates));
+                admin.saveState('iceqube_utilities', this.utilities);
+                admin.saveState('iceqube_utility_status', this.utilityStatus);
+                admin.saveState('iceqube_utility_paid_dates', this.utilityPaidDates);
                 localStorage.setItem('iceqube_last_reset', currentMonth);
                 
                 this.updateUtilitiesUI();
@@ -4196,7 +4268,7 @@ var admin = {
     updateRentDisplay() {
         const val = parseFloat(document.getElementById('bill-rent').value) || 0;
         this.rental = val;
-        localStorage.setItem('iceqube_rental', JSON.stringify(this.rental));
+        admin.saveState('iceqube_rental', this.rental);
 
         // Refresh Finance if open
         if (document.getElementById('finance-view').style.display !== 'none') {
@@ -4220,7 +4292,7 @@ var admin = {
     submitRental() {
         const val = parseFloat(document.getElementById('input-rental-val').value) || 0;
         this.rental = val;
-        localStorage.setItem('iceqube_rental', JSON.stringify(this.rental));
+        admin.saveState('iceqube_rental', this.rental);
 
         this.updateRentalUI();
         this.closeRentalModal();

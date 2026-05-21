@@ -188,8 +188,94 @@ window.IceQubeSync = {
         });
     },
 
+    publishAppState: async function(key, data) {
+        console.log(`📡 [Sync] Publishing App State to Cloud: ${key}`);
+        
+        // 1. Local Sync (Optional redundancy, usually caller sets localStorage first)
+        ordersChannel.postMessage({ type: 'APP_STATE_UPDATED', key: key, payload: data });
+
+        // 2. Cloud Sync
+        if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        order_id: `CONFIG_${key.toUpperCase()}`,
+                        customer_name: 'SYSTEM_CONFIG',
+                        po_number: 'GLOBAL_CONFIG_V2', 
+                        is_real: true, 
+                        items: data
+                    })
+                });
+                if (response.ok) {
+                    console.log(`✅ [Sync] App State (${key}) Synced to Cloud Successfully`);
+                } else {
+                    console.error(`❌ [Sync] App State (${key}) Cloud Sync failed:`, response.status);
+                }
+            } catch (err) {
+                console.error(`❌ [Sync] App State (${key}) Cloud Sync Network Error:`, err);
+            }
+        }
+    },
+
+    fetchCloudAppStates: async function() {
+        if (typeof SUPABASE_CONFIG === 'undefined' || !SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            return {};
+        }
+
+        return new Promise(async (resolve) => {
+            const timeout = setTimeout(() => resolve({}), 5000);
+            try {
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=like.CONFIG_*&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=50&select=order_id,items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+
+                clearTimeout(timeout);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        // Keep only the latest for each config key (data is ordered descending)
+                        const latestConfigs = {};
+                        data.forEach(record => {
+                            if (!latestConfigs[record.order_id] && record.items) {
+                                record.items._cloudCreatedAt = record.created_at;
+                                latestConfigs[record.order_id] = record.items;
+                            }
+                        });
+                        resolve(latestConfigs);
+                    } else {
+                        resolve({});
+                    }
+                } else {
+                    resolve({});
+                }
+            } catch (err) {
+                clearTimeout(timeout);
+                console.error("❌ [Sync] Fetch Cloud App States Network Error:", err);
+                resolve({});
+            }
+        });
+    },
+
     publishPurge: function() {
         console.log("📡 [Sync] Publishing System Purge");
+        this.publishAppState('purge', { purged: true, timestamp: Date.now() });
         ordersChannel.postMessage({ type: 'SYSTEM_PURGE' });
     },
 
