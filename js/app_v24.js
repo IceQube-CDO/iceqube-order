@@ -5443,7 +5443,8 @@ const app = {
         
         // Sync Discount from Control Room (Admin) settings
         const allDiscounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-        const customerPriceSettings = allDiscounts[displayCustomer] || { percent: 0, fixed: 0 };
+        const cleanDisplayCustomer = (displayCustomer || '').trim();
+        const customerPriceSettings = allDiscounts[cleanDisplayCustomer] || allDiscounts[displayCustomer] || { percent: 0, fixed: 0 };
         
         let dynamicDiscountAmount = 0;
         let dynamicDiscountLabel = '';
@@ -6732,7 +6733,8 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         if (!section || !list) return;
 
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-        const d = discounts[this.user.companyName];
+        const cleanCompany = (this.user.companyName || '').trim();
+        const d = discounts[cleanCompany] || discounts[this.user.companyName];
 
         if (d && (d.percent > 0 || d.fixed > 0)) {
             let html = '';

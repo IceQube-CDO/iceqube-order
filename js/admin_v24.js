@@ -815,7 +815,8 @@ var admin = {
 
         // Get customer profile to find their Messenger ID
         const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-        const profile = directory[order.customer_name];
+        const cleanCustName = (order.customer_name || '').trim();
+        const profile = directory[cleanCustName] || directory[order.customer_name] || {};
         
         const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || null;
         const ADMIN_PSIDS = ["26521276764196410", "32834231939557699"];
@@ -1345,7 +1346,8 @@ var admin = {
         const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
 
         feed.innerHTML = orders.slice(0, 5).map(o => {
-            const isElite = eliteList.includes(o.customer_name) || o.account_type === 'Elite';
+            const cleanCustName = (o.customer_name || '').trim();
+            const isElite = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
                 <div class="feed-item" style="${isElite ? 'border-left: 3px solid #eab308;' : ''}">
                     <div class="feed-time">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
@@ -1653,7 +1655,8 @@ var admin = {
             // Customer
             const clientLabel = document.querySelector('#receipt-panel .receipt-customer .section-label');
             const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
-            const isElite = Array.isArray(eliteList) && (eliteList.includes(order.customer_name) || order.account_type === 'Elite');
+            const cleanCustName = (order.customer_name || '').trim();
+            const isElite = Array.isArray(eliteList) && (eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || order.account_type === 'Elite');
             
             if (clientLabel) clientLabel.innerText = isElite ? 'ELITE CLIENT DETAILS' : 'CLIENT DETAILS';
             if (custNameEl) custNameEl.innerText = order.customer_name || 'Customer';
@@ -2247,9 +2250,10 @@ var admin = {
         const customers = {};
         orders.forEach(order => {
             if (!order.customer_name) return;
-            const name = order.customer_name;
+            const name = order.customer_name.trim();
             if (!customers[name]) {
-                const profile = profiles[name] || {};
+                const cleanName = name.trim();
+                const profile = profiles[cleanName] || profiles[name] || {};
                 customers[name] = {
                     name: name,
                     address: profile.address || order.delivery_address || 'No Address Provided',
@@ -2259,7 +2263,7 @@ var admin = {
                     orders: [],
                     firstOrderDate: order.created_at,
                     lastOrderDate: order.created_at,
-                    isElite: eliteList.includes(name)
+                    isElite: eliteList.some(elName => (elName || '').trim().toLowerCase() === name.toLowerCase())
                 };
             }
             customers[name].totalRevenue += parseFloat(order.total_price) || 0;
@@ -2567,6 +2571,8 @@ var admin = {
  
             const scheduleDisplay = parseSchedule(o.delivery_schedule);
 
+            const cleanCustName = (o.customer_name || '').trim();
+            const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
@@ -2575,7 +2581,7 @@ var admin = {
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
-                                ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
+                                ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
                     </td>
@@ -2633,6 +2639,8 @@ var admin = {
 
             const ledgerScheduleDisplay = parseSchedule(o.delivery_schedule);
 
+            const cleanCustName = (o.customer_name || '').trim();
+            const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
                 <tr>
                     <td>${displayTime}</td>
@@ -2641,7 +2649,7 @@ var admin = {
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
-                                ${eliteList.includes(o.customer_name) || o.account_type === 'Elite' ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
+                                ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
                     </td>
@@ -4281,7 +4289,8 @@ function openCustomerDrawer(customerId) {
         }
 
         const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-        const profile = profiles[customer.name] || {};
+        const cleanName = (customer.name || customerId || '').trim();
+        const profile = profiles[cleanName] || profiles[customer.name] || profiles[customerId] || {};
 
         // Find if any order has a messenger ID to auto-link
         let foundMessengerId = '';
@@ -4297,17 +4306,17 @@ function openCustomerDrawer(customerId) {
 
         if (foundMessengerId && !profile.messengerId) {
             profile.messengerId = foundMessengerId;
-            profiles[customer.name] = {
+            profiles[cleanName] = {
                 ...profile,
-                establishment: customer.name,
+                establishment: cleanName,
                 messengerId: foundMessengerId
             };
             localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
-            console.log(`[SYSTEM] Auto-linked Messenger ID ${foundMessengerId} for customer ${customer.name} from order history.`);
+            console.log(`[SYSTEM] Auto-linked Messenger ID ${foundMessengerId} for customer ${cleanName} from order history.`);
         }
 
         const nameEl = document.getElementById('drawer-customer-name');
-        if (nameEl) nameEl.innerText = customer.name || customerId;
+        if (nameEl) nameEl.innerText = cleanName || customer.name || customerId;
 
         const addressVal = profile.address || customer.address || '';
         const contactVal = profile.contactPerson || customer.contactPerson || customer.name || customerId;
@@ -4347,7 +4356,7 @@ function openCustomerDrawer(customerId) {
         
         // Load Discounts & Tier
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-        const custPricing = discounts[customer.name] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard' };
+        const custPricing = discounts[cleanName] || discounts[customer.name] || discounts[customerId] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard' };
         
         // Set Tier Selection
         const tierSelect = document.getElementById('elite-tier-select');
@@ -4488,7 +4497,7 @@ function togglePricingEdit(isEditing) {
 // Tiered Elite Logic
 function handleTierChange() {
     const tier = document.getElementById('elite-tier-select').value;
-    const customerName = document.getElementById('drawer-customer-name').innerText;
+    const customerName = document.getElementById('drawer-customer-name').innerText.trim();
     
     updateTierVisuals(tier);
     
@@ -4499,7 +4508,7 @@ function handleTierChange() {
 
     // Update Elite status in memory if available
     if (admin.customerData) {
-        const customer = admin.customerData.find(c => c.name === customerName);
+        const customer = admin.customerData.find(c => c.name === customerName) || admin.customerData.find(c => c.name.trim().toLowerCase() === customerName.toLowerCase());
         if (customer) {
             customer.isElite = (tier !== 'Standard');
             customer.tier = tier;
