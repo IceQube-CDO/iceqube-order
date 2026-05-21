@@ -3452,6 +3452,22 @@ const app = {
     },
 
     selectSchedule(type, element) {
+        if (type === 'Deliver Now') {
+            const now = new Date();
+            const hour = now.getHours();
+            const min = now.getMinutes();
+            // Rest hour is 9:30 PM (21:30) to 8:00 AM (08:00)
+            const isRestHour = hour < 8 || (hour === 21 && min >= 30) || hour >= 22;
+            if (isRestHour) {
+                if (typeof this.showToast === 'function') {
+                    this.showToast('Deliver Now is only available from 8:00 AM to 9:30 PM. Please schedule a Date & Time.', 'error');
+                } else {
+                    alert('Deliver Now is only available from 8:00 AM to 9:30 PM. Please schedule a Date & Time.');
+                }
+                return;
+            }
+        }
+
         this.orderData.schedule.type = type;
 
         // Highlight the selected card
@@ -3496,7 +3512,24 @@ const app = {
         // Re-show both cards, clear any selection highlight
         const deliverNowCard = document.getElementById('card-deliver-now');
         const scheduleCard  = document.getElementById('card-schedule-date');
-        if (deliverNowCard) deliverNowCard.style.display = '';
+        
+        if (deliverNowCard) {
+            deliverNowCard.style.display = '';
+            
+            const now = new Date();
+            const hour = now.getHours();
+            const min = now.getMinutes();
+            const isRestHour = hour < 8 || (hour === 21 && min >= 30) || hour >= 22;
+            
+            if (isRestHour) {
+                deliverNowCard.style.opacity = '0.5';
+                deliverNowCard.style.cursor = 'not-allowed';
+            } else {
+                deliverNowCard.style.opacity = '1';
+                deliverNowCard.style.cursor = 'pointer';
+            }
+        }
+        
         [deliverNowCard, scheduleCard].forEach(c => c && c.classList.remove('selected'));
 
         // Hide pickers and reset their values
