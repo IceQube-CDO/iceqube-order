@@ -57,9 +57,31 @@ var admin = {
                 
                 if (mapping.special === 'purge' && cleanCloud.purged) {
                     localStorage.setItem('ice_system_purged', 'true');
+                    
+                    // 1. Purge Local Orders
+                    const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                    const realOrders = orders.filter(o => o.is_real !== false && o.po_number !== 'SYSTEM-GENERATED' && o.poNumber !== 'SYSTEM-GENERATED');
+                    localStorage.setItem('ice_orders', JSON.stringify(realOrders));
+                    
+                    // 2. Purge Deliveries
+                    const deliveries = JSON.parse(localStorage.getItem('ice_deliveries') || '[]');
+                    const realDeliveries = deliveries.filter(d => d.is_real !== false);
+                    localStorage.setItem('ice_deliveries', JSON.stringify(realDeliveries));
+
+                    // 3. Purge Cashflow
+                    const cashflow = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
+                    const realCashflow = cashflow.filter(c => c.is_real !== false);
+                    admin.saveState('ice_cashflow', realCashflow);
+                    
+                    // 4. Clean Messages
+                    localStorage.removeItem('ice_messages');
+
                     if (this.allOrders) {
-                        this.allOrders = [];
-                        this.updateDashboardUI([]);
+                        this.allOrders = realOrders;
+                        this.updateDashboardUI(realOrders);
+                    }
+                    if (typeof this.updateCashflowUI === 'function') {
+                        this.updateCashflowUI();
                     }
                 }
                 needsUpdate = true;
