@@ -36,6 +36,52 @@ serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+
+    // ── DIAGNOSTIC: Find PSIDs from Facebook Page Conversations ──
+    if (url.searchParams.get("action") === "find_psid") {
+      console.log("[messenger-send] Fetching Facebook Page conversations to find PSIDs...");
+      try {
+        const convResp = await fetch(
+          `https://graph.facebook.com/v19.0/me/conversations?fields=participants,updated_time&limit=25&access_token=${FB_PAGE_ACCESS_TOKEN}`
+        );
+        const convData = await convResp.json();
+        
+        if (convData.error) {
+          return new Response(JSON.stringify({ error: convData.error }), {
+            headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+            status: 400,
+          });
+        }
+
+        // Extract unique participants with their PSIDs
+        const participants: any[] = [];
+        const seen = new Set();
+        (convData.data || []).forEach((conv: any) => {
+          (conv.participants?.data || []).forEach((p: any) => {
+            if (!seen.has(p.id)) {
+              seen.add(p.id);
+              participants.push({ psid: p.id, name: p.name, last_message: conv.updated_time });
+            }
+          });
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          instructions: "Find YOUR name in the list below. The 'psid' next to your name is the correct PSID to add to ADMIN_PSIDS.",
+          participants
+        }), {
+          headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+          status: 200,
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "Failed to query Facebook API", details: err.message }), {
+          headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+          status: 500,
+        });
+      }
+    }
+
     const body = await req.json().catch(() => ({}));
     const { recipientId, message } = body;
 

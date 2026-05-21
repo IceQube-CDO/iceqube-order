@@ -969,15 +969,29 @@ const app = {
 
         const myOrders = this.getProcessedOrders();
 
-        // Only consider orders that haven't been completed or cancelled
-        const activeOrders = myOrders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
+        // Only consider orders that haven't been completed or cancelled (or completed within 24h)
+        const activeOrders = myOrders.filter(o => {
+            const status = o.delivery_status || o.status;
+            if (['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(status)) {
+                return true;
+            }
+            if (['Delivered', 'Served'].includes(status)) {
+                if (o.created_at) {
+                    const orderDate = new Date(o.created_at);
+                    const now = new Date();
+                    const hoursDiff = (now - orderDate) / (1000 * 60 * 60);
+                    return hoursDiff <= 24;
+                }
+            }
+            return false;
+        });
         const hasActiveOrders = activeOrders.length > 0;
 
         console.log('📦 Dispatch Logic Check:', { hasActiveOrders, count: activeOrders.length });
 
         if (!hasActiveOrders) {
             if (dispatchDot) dispatchDot.style.background = '#64748b';
-            if (dispatchTitle) dispatchTitle.innerText = 'No Dispatch Scheduled';
+            if (dispatchTitle) dispatchTitle.innerText = 'No incoming delivery';
             if (dispatchTime) dispatchTime.innerText = 'Need more ice?';
             if (dispatchDetails) dispatchDetails.innerText = 'Schedule your next delivery below.';
             if (dispatchBtn) {
@@ -6200,7 +6214,21 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         if (!listContainer) return;
 
         const myOrders = this.getProcessedOrders();
-        const activeOrders = myOrders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
+        const activeOrders = myOrders.filter(o => {
+            const status = o.delivery_status || o.status;
+            if (['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(status)) {
+                return true;
+            }
+            if (['Delivered', 'Served'].includes(status)) {
+                if (o.created_at) {
+                    const orderDate = new Date(o.created_at);
+                    const now = new Date();
+                    const hoursDiff = (now - orderDate) / (1000 * 60 * 60);
+                    return hoursDiff <= 24;
+                }
+            }
+            return false;
+        });
 
         if (activeCountElem) {
             activeCountElem.innerText = activeOrders.length > 0 ? activeOrders.length : 'None';
