@@ -1258,7 +1258,7 @@ var admin = {
             }
             let orders = await response.json();
             // Filter out system configuration records from real business stats
-            orders = (orders || []).filter(o => o.order_id !== 'CONFIG_PRICING_MATRIX');
+            orders = (orders || []).filter(o => o.order_id && !o.order_id.startsWith('CONFIG_'));
             console.log(`✅ Received ${orders.length} business orders from Supabase.`);
             
             if (badge) {
@@ -1269,8 +1269,8 @@ var admin = {
             }
 
             // Merge cloud data with local data
-            const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-            const cloudOrders = (orders || []).filter(o => o.order_id && o.order_id !== 'CONFIG_PRICING_MATRIX');
+            const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]').filter(o => o.order_id && !o.order_id.startsWith('CONFIG_'));
+            const cloudOrders = (orders || []).filter(o => o.order_id && !o.order_id.startsWith('CONFIG_'));
             
             // --- SESSION-BASED CLOUD DETECTION ---
             cloudOrders.forEach(co => {
