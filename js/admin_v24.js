@@ -473,9 +473,9 @@ var admin = {
                 }, 2000);
             }
 
-            // --- NEW: AUTOMATIC MESSENGER NOTIFICATION ---
-            // Disabled in client because it is now handled reliably by the Supabase database webhook trigger on INSERT.
-            // this.sendMessengerNotification(order);
+            // --- AUTOMATIC MESSENGER NOTIFICATION ---
+            // Re-enabled: DB webhook trigger is not reliably firing.
+            this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
@@ -1212,11 +1212,10 @@ var admin = {
                     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
                     const isVeryRecent = orderDate > thirtyMinutesAgo;
 
-                    // 1. Admin notification is now handled by the Supabase database trigger (tr_order_inserted_messenger).
-                    // The client-side call here is disabled to prevent duplicate messages.
+                    // 1. Client-side notification (DB webhook trigger not reliably firing)
                     if (isVeryRecent) {
-                        console.log("🔔 [Messenger] Very recent order detected (handled by DB trigger):", orderId);
-                        // this.sendMessengerNotification(co); // DISABLED: DB trigger sends this automatically
+                        console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
+                        this.sendMessengerNotification(co);
                     }
 
                     // 2. Automated Inventory Deduction (Silent if initial load)
