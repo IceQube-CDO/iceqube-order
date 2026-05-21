@@ -5050,9 +5050,54 @@ const app = {
     },
 
     async sendConfirmation() {
-        // Antigravity: Disabled redundant mobile dispatch to prevent "Double Messages".
-        // The Admin Dashboard (Laptop) sends the definitive detailed receipt via Sync.
-        console.log('📡 [Messenger] Mobile hand-off to Admin Sync (Preventing double-msg).');
+        const customerId = this.user.messengerId || MESSENGER_CONFIG.RECIPIENT_ID;
+        
+        const totalGross = Number(this.orderData.total || 0);
+        const deliveryFee = Number(this.orderData.deliveryFee || 0);
+        const subtotal = Math.max(0, totalGross - deliveryFee);
+        
+        let itemsText = [];
+        this.pricingMatrix.products.forEach(p => {
+            const fd = this.orderData.qty.fullDice[p.id] || 0;
+            const hd = this.orderData.qty.halfDice[p.id] || 0;
+            if (fd > 0) itemsText.push(`${fd}x ${p.name.split(' ')[0]} Full Dice`);
+            if (hd > 0) itemsText.push(`${hd}x ${p.name.split(' ')[0]} Half-Dice`);
+        });
+
+        const msg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
+                    `Deliver to: ${this.user.companyName}\n` +
+                    `Item: ${itemsText.join(', ')}\n` +
+                    `Subtotal: ₱${subtotal.toFixed(2)}\n` +
+                    `Delivery fee: ₱${deliveryFee.toFixed(2)}\n` +
+                    `Total: ₱${totalGross.toFixed(2)}\n` +
+                    `Payment: ${this.orderData.payment || 'Cash'}\n\n` +
+                    `Thank you for your order!`;
+        
+        const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                         `Deliver to: ${this.user.companyName}\n` +
+                         `Item: ${itemsText.join(', ')}\n` +
+                         `Total: ₱${totalGross.toFixed(2)}\n` +
+                         `Payment: ${this.orderData.payment || 'Cash'}\n\n` +
+                         `Check the Control Room!`;
+
+        const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`;
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+        };
+
+        // 1. Send to Customer
+        if (customerId && customerId.length > 5 && customerId !== '61557321703652') {
+            fetch(url, { method: 'POST', headers, body: JSON.stringify({ recipientId: customerId, message: msg }) }).catch(e => console.error(e));
+        }
+
+        // 2. Send to Admins
+        const adminPsids = ["26521276764196410", "32834231939557699"]; // Ian Echano & Law Rence Fe
+        for (const admin of adminPsids) {
+            if (admin === customerId) continue; // Don't send double if admin ordered
+            fetch(url, { method: 'POST', headers, body: JSON.stringify({ recipientId: admin, message: adminMsg }) }).catch(e => console.error(e));
+        }
+
         return true;
     },
 

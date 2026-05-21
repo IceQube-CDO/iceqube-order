@@ -700,7 +700,7 @@ var admin = {
         div.appendChild(iframe);
 
         const form = document.createElement('form');
-        form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-send?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+        form.action = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
         form.method = 'POST';
         form.target = frameName;
 
@@ -740,8 +740,7 @@ var admin = {
         }
 
         try {
-            // Standard Fetch API (CORS friendly on http/https origins)
-            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-send?apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`;
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -819,7 +818,7 @@ var admin = {
         const profile = directory[order.customer_name];
         
         const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || null;
-        const ADMIN_PSID = "712885031918698";
+        const ADMIN_PSIDS = ["26521276764196410", "32834231939557699"];
         
         console.log('🔔 [Messenger] Admin triggering notification. Target customer ID:', targetId);
         updateStatus('Sending...', '#0ea5e9', true);
@@ -886,7 +885,7 @@ var admin = {
             let customerError = null;
 
             // 1. DISPATCH TO CUSTOMER
-            if (targetId && targetId !== ADMIN_PSID) {
+            if (targetId && !ADMIN_PSIDS.includes(targetId)) {
                 try {
                     console.log('📡 [Messenger] Sending customer receipt...');
                     await this.dispatchMessengerMessage(targetId, msg);
@@ -900,37 +899,43 @@ var admin = {
             }
 
             // 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account
-            try {
-                console.log('📡 [Messenger] Sending Admin Copy of receipt...');
-                await this.dispatchMessengerMessage(ADMIN_PSID, msg);
-                console.log('✅ [Messenger] Admin Copy of receipt sent successfully.');
-            } catch (e) {
-                console.error('❌ [Messenger] Admin Copy dispatch failed:', e);
+            for (const admin of ADMIN_PSIDS) {
+                try {
+                    console.log(`📡 [Messenger] Sending Admin Copy of receipt to ${admin}...`);
+                    await this.dispatchMessengerMessage(admin, msg);
+                } catch (e) {
+                    console.error(`❌ [Messenger] Admin Copy dispatch failed for ${admin}:`, e);
+                }
             }
 
             // 3. DISPATCH ADMIN ALERT TO ADMIN
-            if (targetId !== ADMIN_PSID) {
-                try {
-                    const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
-                                     `Deliver to: ${order.customer_name}\n` +
-                                     `Item: ${itemsText}\n` +
-                                     `Total: ₱${totalGross.toLocaleString()}\n` +
-                                     `Payment: ${order.payment_method || 'Cash'}\n\n` +
-                                     `Check the Control Room!`;
-                    console.log('📡 [Messenger] Sending Admin Alert...');
-                    await this.dispatchMessengerMessage(ADMIN_PSID, adminMsg);
-                    console.log('✅ [Messenger] Admin Alert sent successfully.');
-                } catch (e) {
-                    console.error('❌ [Messenger] Admin Alert dispatch failed:', e);
+            if (!ADMIN_PSIDS.includes(targetId)) {
+                const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                                 `Deliver to: ${order.customer_name}\n` +
+                                 `Item: ${itemsText}\n` +
+                                 `Total: ₱${totalGross.toLocaleString()}\n` +
+                                 `Payment: ${order.payment_method || 'Cash'}\n\n` +
+                                 `Check the Control Room!`;
+                for (const admin of ADMIN_PSIDS) {
+                    try {
+                        console.log(`📡 [Messenger] Sending Admin Alert to ${admin}...`);
+                        await this.dispatchMessengerMessage(admin, adminMsg);
+                    } catch (e) {
+                        console.error(`❌ [Messenger] Admin Alert dispatch failed for ${admin}:`, e);
+                    }
                 }
             }
 
             if (customerError) {
-                updateStatus(`Fail: ${customerError}`, '#ef4444');
-            } else if (targetId && targetId !== ADMIN_PSID) {
+                if (customerError.includes('(#100)') || customerError.includes('Parameter error')) {
+                    updateStatus(`Customer ID is un-reachable (Logged in as Page). Notification skipped.`, '#eab308');
+                } else {
+                    updateStatus(`Fail: ${customerError}`, '#ef4444');
+                }
+            } else if (targetId && !ADMIN_PSIDS.includes(targetId)) {
                 updateStatus(`Notified Successfully`, '#22c55e');
             } else {
-                updateStatus(`Admin Only (Customer ID Missing)`, '#eab308');
+                updateStatus(`Admins Notified Successfully`, '#22c55e');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
@@ -1404,18 +1409,20 @@ var admin = {
     async sendComplaintMessengerNotification(complaint) {
         if (!complaint || !complaint.customerName) return;
         
-        const ADMIN_PSID = "712885031918698";
+        const ADMIN_PSIDS = ["26521276764196410", "32834231939557699"];
         const msg = `🚨 NEW CUSTOMER SUPPORT ISSUE!\n\n` +
                     `Customer: ${complaint.customerName}\n` +
                     `Issue: ${complaint.issueType}\n` +
                     `Details: ${complaint.description || 'No description provided.'}\n\n` +
                     `Check the Control Room complaints ledger!`;
                     
-        try {
-            await this.dispatchMessengerMessage(ADMIN_PSID, msg);
-            console.log('📡 [Messenger] Customer Support Notification Sent to Admin.');
-        } catch (error) {
-            console.error('❌ [Messenger] Support notification failed:', error);
+        for (const admin of ADMIN_PSIDS) {
+            try {
+                await this.dispatchMessengerMessage(admin, msg);
+                console.log(`📡 [Messenger] Customer Support Notification Sent to Admin ${admin}.`);
+            } catch (error) {
+                console.error(`❌ [Messenger] Support notification failed for ${admin}:`, error);
+            }
         }
     },
 
