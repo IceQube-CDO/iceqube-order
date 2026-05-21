@@ -1669,10 +1669,10 @@
 
         /* Pricing Lock Styles */
         .locked-price-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px; transition: all 0.3s ease; }
-        .matrix-input { width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1rem; transition: all 0.2s ease; }
+        .matrix-input { width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1rem; transition: all 0.2s ease; }
         .matrix-input:focus { border-color: #0ea5e9; background: rgba(14, 165, 233, 0.05); outline: none; box-shadow: 0 0 15px rgba(14, 165, 233, 0.2); }
         .matrix-input[readonly] { pointer-events: none; opacity: 0.5; cursor: not-allowed; }
-        .locked-value { font-size: 1.1rem; font-weight: 800; color: white; font-family: 'JetBrains Mono', monospace; }
+        .locked-value { font-size: 1.1rem; font-weight: 800; color: white; font-family: 'Inter', sans-serif; }
         
         /* Tier Specific Styles */
         .tier-card-standard { border-color: rgba(59, 130, 246, 0.3) !important; background: rgba(59, 130, 246, 0.05) !important; }
@@ -1960,7 +1960,7 @@
             }
             /* Order ID */
             #orders-view .cashflow-table td:nth-child(2) {
-                font-family: 'JetBrains Mono', monospace !important;
+                font-family: 'Inter', sans-serif !important;
                 font-weight: 700 !important;
                 color: #38bdf8 !important;
                 font-size: 0.8rem !important;
@@ -2024,7 +2024,7 @@
             #orders-view .cashflow-table td:nth-child(9),
             #orders-view .cashflow-table td:nth-child(10),
             #orders-view .cashflow-table td:nth-child(11) {
-                font-family: 'JetBrains Mono', monospace !important;
+                font-family: 'Inter', sans-serif !important;
                 font-weight: 700 !important;
                 font-size: 0.8rem !important;
             }
@@ -3542,80 +3542,91 @@
         </div>
 
         <!-- CASHFLOW VIEW -->
-            <div class="cc-grid" id="cashflow-view" style="display: none;">
+            <div class="cc-grid" id="cashflow-view" style="display: none; gap: 8px;">
 
             <!-- Summary Row -->
-            <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem;">
-                <div class="cc-card">
-                    <div class="metric-label">Total Inflow</div>
-                    <div class="metric-value" style="color: #22c55e;" id="cashflow-in">₱0.00</div>
+            <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 0.15rem;">
+                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 8px 4px; text-align: center;">
+                    <div style="font-size: 0.55rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Total Inflow</div>
+                    <div style="color: #22c55e; font-size: 0.85rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-in">₱0.00</div>
                 </div>
-                <div class="cc-card">
-                    <div class="metric-label">Total Outflow</div>
-                    <div class="metric-value" style="color: #ef4444;" id="cashflow-out">₱0.00</div>
+                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 8px 4px; text-align: center;">
+                    <div style="font-size: 0.55rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Total Outflow</div>
+                    <div style="color: #ef4444; font-size: 0.85rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-out">₱0.00</div>
                 </div>
-                <div class="cc-card">
-                    <div class="metric-label" id="cashflow-net-label">Net Cashflow (Today)</div>
-                    <div class="metric-value" id="cashflow-net">₱0.00</div>
+                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 8px 4px; text-align: center;">
+                    <div id="cashflow-net-label" style="font-size: 0.55rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Net (Today)</div>
+                    <div style="font-size: 0.85rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-net">₱0.00</div>
                 </div>
             </div>
 
-            <!-- Spreadsheet Table -->
-            <div class="cc-card full-width">
-                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Cashflow Spreadsheet
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <div class="time-filters" style="display: flex; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); margin-right: 5px;">
-                            <button class="filter-btn active" id="filter-daily" onclick="admin.setCashflowFilter('daily')">Daily</button>
-                            <button class="filter-btn" id="filter-monthly" onclick="admin.setCashflowFilter('monthly')">Monthly</button>
-                            <button class="filter-btn" id="filter-ytd" onclick="admin.setCashflowFilter('ytd')">YTD</button>
-                        </div>
-                        <button class="status-badge" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="admin.exportCashflow()">Export CSV</button>
-                    </div>
+            <!-- Spreadsheet Actions -->
+            <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.15rem; flex-wrap: nowrap; gap: 6px;">
+                <div class="time-filters" style="display: flex; background: rgba(0,0,0,0.3); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <button class="filter-btn active" id="filter-daily" style="padding: 4px 8px; font-size: 0.7rem;" onclick="admin.setCashflowFilter('daily')">Daily</button>
+                    <button class="filter-btn" id="filter-monthly" style="padding: 4px 8px; font-size: 0.7rem;" onclick="admin.setCashflowFilter('monthly')">Monthly</button>
+                    <button class="filter-btn" id="filter-ytd" style="padding: 4px 8px; font-size: 0.7rem;" onclick="admin.setCashflowFilter('ytd')">YTD</button>
                 </div>
-                
-                <div class="table-container">
-                    <table class="cashflow-table">
-                        <thead>
-                            <tr>
-                                <th>Date/Time</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Type</th>
-                                <th style="text-align: right;">Amount</th>
-                                <th style="text-align: center;">Source</th>
-                                <th style="text-align: right;">DATA MGMT</th>
-                            </tr>
-                            <tr class="cashflow-input-row">
-                                <td><input type="text" id="manual-date" class="cashflow-input" placeholder="Just now" disabled></td>
-                                <td>
-                                    <select id="manual-category" class="cashflow-input" onchange="admin.handleCategoryChange()">
-                                        <option value="Sales">Sales</option>
-                                        <option value="Salary">Salary & Wages</option>
-                                        <option value="Rider Payout">Rider Payout</option>
-                                        <option value="Utilities">Utilities (Power/Water)</option>
-                                        <option value="Packaging">Packaging & Supplies</option>
-                                        <option value="Maintenance">Maintenance & Repair</option>
-                                        <option value="Fuel">Fuel & Logistics</option>
-                                        <option value="Marketing">Marketing & Promo</option>
-                                        <option value="Refund">Refund/Adjustment</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </td>
-                                <td><input type="text" id="manual-desc" class="cashflow-input" placeholder="Enter description..."></td>
-                                <td>
-                                    <select id="manual-type" class="cashflow-input">
-                                        <option value="IN">IN</option>
-                                        <option value="OUT">OUT</option>
-                                    </select>
-                                </td>
-                                <td><input type="number" id="manual-amount" class="cashflow-input" placeholder="0.00" style="text-align: right;" inputmode="decimal" onkeydown="if(['e', 'E', '+', '-'].includes(event.key)) event.preventDefault();"></td>
-                                <td style="text-align: center;"><span class="source-manual">MANUAL</span></td>
-                                <td><button class="btn-add-row" onclick="admin.addManualEntry()">ADD</button></td>
-                            </tr>
-                        </thead>
-                        <tbody id="cashflow-body">
-                            <!-- Rows will be injected by JS -->
+                <div style="display: flex; gap: 6px;">
+                    <button style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 4px 8px; border-radius: 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;" onclick="admin.exportCashflow()">Export</button>
+                    <button class="btn-dispatch" style="padding: 4px 8px; font-size: 0.7rem; border-radius: 8px;" onclick="admin.openCashflowModal()">+ Add Entry</button>
+                </div>
+            </div>
+
+            <!-- List Container -->
+            <div id="cashflow-list" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px;">
+                <!-- Cards injected by JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- CASHFLOW MODAL -->
+    <div id="cashflow-modal" class="qr-payout-modal" style="z-index: 20000; display: none;">
+        <div class="qr-card" style="text-align: left; position: relative; pointer-events: auto;">
+            <h2 style="margin-top: 0; font-size: 1.5rem;">Add Cashflow Entry</h2>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">Record a manual cash-in or cash-out transaction.</p>
+            
+            <!-- Category (now on top) -->
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Category</label>
+                <select id="manual-category" onchange="admin.updateManualType()" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    <option value="Sales">Sales</option>
+                    <option value="Salary">Salary & Wages</option>
+                    <option value="Rider Payout">Rider Payout</option>
+                    <option value="Utilities">Utilities (Power/Water)</option>
+                    <option value="Packaging">Packaging & Supplies</option>
+                    <option value="Maintenance">Maintenance & Repair</option>
+                    <option value="Fuel">Fuel & Logistics</option>
+                    <option value="Marketing">Marketing & Promo</option>
+                    <option value="Refund">Refund/Adjustment</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div>
+                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Type</label>
+                    <div id="manual-type-badge" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 0.9rem;">
+                        IN (Income)
+                    </div>
+                    <input type="hidden" id="manual-type" value="IN">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Amount (₱)</label>
+                    <input type="number" id="manual-amount" placeholder="0.00" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; font-family: 'Inter', sans-serif; font-weight: bold; text-align: right;" inputmode="decimal">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Description</label>
+                <textarea id="manual-desc" placeholder="Enter description..." style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; resize: none; height: 80px;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="admin.closeCashflowModal()" style="flex: 1; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">Cancel</button>
+                <button onclick="admin.addManualEntry()" style="flex: 2; padding: 12px; border-radius: 12px; background: var(--admin-accent); color: white; border: none; cursor: pointer; font-weight: 800; box-shadow: 0 0 20px var(--admin-glow);">Save Entry</button>
+            </div>
+        </div>                        <!-- Rows will be injected by JS -->
                         </tbody>
                     </table>
                 </div>

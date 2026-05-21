@@ -2396,7 +2396,8 @@ var admin = {
 
     updateCashflowView(orders) {
         const tbody = document.getElementById('cashflow-body');
-        if (!tbody) return;
+        const listBody = document.getElementById('cashflow-list');
+        if (!tbody && !listBody) return;
 
         // 1. Process Automatic Entries from Orders
         const autoEntries = orders.map(o => {
@@ -2434,43 +2435,90 @@ var admin = {
         // 5. Calculate Totals
         let totalIn = 0;
         let totalOut = 0;
-        
-        // 6. Render Rows
-        tbody.innerHTML = filteredEntries.map(entry => {
+        filteredEntries.forEach(entry => {
             const amount = entry.amount || 0;
             if (entry.type === 'IN') totalIn += amount;
             else totalOut += amount;
+        });
+        
+        // 6. Render Rows (Desktop)
+        if (tbody) {
+            tbody.innerHTML = filteredEntries.map(entry => {
+                const amount = entry.amount || 0;
+                const timeStr = new Date(entry.timestamp).toLocaleString([], { 
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                });
 
-            const timeStr = new Date(entry.timestamp).toLocaleString([], { 
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-            });
+                return `
+                    <tr>
+                        <td>${timeStr}</td>
+                        <td>${entry.category}</td>
+                        <td>${entry.description}</td>
+                        <td><span class="type-badge ${entry.type === 'IN' ? 'type-in' : 'type-out'}">${entry.type}</span></td>
+                        <td style="text-align: right; font-family: 'Inter', sans-serif; font-weight: 700;">₱${amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td style="text-align: center;">
+                            <span class="source-${entry.source.toLowerCase()}">${entry.source}</span>
+                        </td>
+                        <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                            <button onclick="admin.toggleRealStatus('cashflow', '${entry.timestamp}')" 
+                                    style="background: ${entry.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                           border: 1px solid ${entry.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                           color: ${entry.is_real !== false ? '#22c55e' : '#64748b'}; 
+                                           padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
+                                ${entry.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
+                            </button>
+                            ${entry.source === 'MANUAL' ? `<button onclick="admin.deleteManualEntry('${entry.timestamp}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
 
-            return `
-                <tr>
-                    <td>${timeStr}</td>
-                    <td>${entry.category}</td>
-                    <td>${entry.description}</td>
-                    <td><span class="type-badge ${entry.type === 'IN' ? 'type-in' : 'type-out'}">${entry.type}</span></td>
-                    <td style="text-align: right; font-family: 'JetBrains Mono'; font-weight: 700;">₱${amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td style="text-align: center;">
-                        <span class="source-${entry.source.toLowerCase()}">${entry.source}</span>
-                    </td>
-                    <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                        <button onclick="admin.toggleRealStatus('cashflow', '${entry.timestamp}')" 
-                                style="background: ${entry.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
-                                       border: 1px solid ${entry.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
-                                       color: ${entry.is_real !== false ? '#22c55e' : '#64748b'}; 
-                                       padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
-                            ${entry.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
-                        </button>
-                        ${entry.source === 'MANUAL' ? `<button onclick="admin.deleteManualEntry('${entry.timestamp}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">✕</button>` : ''}
-                    </td>
-                </tr>
-            `;
-        }).join('');
+            if (filteredEntries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">No entries found for this ${this.cashflowFilter} period.</td></tr>`;
+            }
+        }
 
-        if (filteredEntries.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">No entries found for this ${this.cashflowFilter} period.</td></tr>`;
+        // 6b. Render Cards (Mobile)
+        if (listBody) {
+            listBody.innerHTML = filteredEntries.map(entry => {
+                const amount = entry.amount || 0;
+                const isOut = entry.type === 'OUT';
+                const timeStr = new Date(entry.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const descHtml = entry.description ? `
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px; padding-left: 12px; word-break: break-word;">
+                        ${entry.description}
+                    </div>
+                ` : '';
+
+                return `
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1;">
+                                <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${isOut ? '#ef4444' : '#22c55e'}; flex-shrink: 0;"></span>
+                                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                    <span style="font-weight: 700; font-size: 0.8rem; color: #f1f5f9; line-height: 1.2;">${entry.category}</span>
+                                    <span style="font-size: 0.65rem; color: #64748b; line-height: 1.2;">${timeStr} &bull; ${entry.source}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.85rem; color: ${isOut ? '#ef4444' : '#22c55e'};">
+                                    ${isOut ? '-' : '+'}₱${amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                </span>
+                                ${entry.source === 'MANUAL' ? `
+                                    <button onclick="admin.deleteManualEntry('${entry.timestamp}')" 
+                                            style="background: rgba(239,68,68,0.15); border: none; color: #ef4444; border-radius: 4px; cursor: pointer; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800;" 
+                                            title="Delete">✕</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ${descHtml}
+                    </div>
+                `;
+            }).join('');
+
+            if (filteredEntries.length === 0) {
+                listBody.innerHTML = `<div style="text-align: center; padding: 24px; color: #64748b; font-size: 0.8rem;">No entries found.</div>`;
+            }
         }
 
         // 7. Update Summary Bar
@@ -2484,8 +2532,11 @@ var admin = {
         // Update Summary Label
         const labelEl = document.getElementById('cashflow-net-label');
         if (labelEl) {
-            const labels = { daily: 'Today', monthly: 'This Month', ytd: 'Year to Date' };
-            labelEl.innerText = `Net Cashflow (${labels[this.cashflowFilter]})`;
+            const isMobile = !!listBody;
+            const labels = isMobile 
+                ? { daily: 'Net (Today)', monthly: 'Net (Month)', ytd: 'Net (YTD)' }
+                : { daily: 'Net Cashflow (Today)', monthly: 'Net Cashflow (This Month)', ytd: 'Net Cashflow (Year to Date)' };
+            labelEl.innerText = labels[this.cashflowFilter];
         }
     },
 
@@ -2529,8 +2580,47 @@ var admin = {
         document.getElementById('manual-desc').value = '';
         document.getElementById('manual-amount').value = '';
         
+        // Close modal if mobile
+        this.closeCashflowModal();
+        
         // Refresh view (re-fetch orders or just use current ones if possible)
         this.fetchRealStats(); 
+    },
+
+    openCashflowModal() {
+        const modal = document.getElementById('cashflow-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            this.updateManualType();
+        }
+    },
+
+    closeCashflowModal() {
+        const modal = document.getElementById('cashflow-modal');
+        if (modal) modal.style.display = 'none';
+    },
+
+    updateManualType() {
+        const category = document.getElementById('manual-category')?.value;
+        const typeInput = document.getElementById('manual-type');
+        const badge = document.getElementById('manual-type-badge');
+        if (!category || !typeInput || !badge) return;
+
+        // Sales is IN. All other manual categories are OUT (Expense)
+        const type = (category === 'Sales') ? 'IN' : 'OUT';
+        typeInput.value = type;
+
+        if (type === 'IN') {
+            badge.innerText = 'IN (Income)';
+            badge.style.background = 'rgba(34,197,94,0.1)';
+            badge.style.border = '1px solid rgba(34,197,94,0.3)';
+            badge.style.color = '#22c55e';
+        } else {
+            badge.innerText = 'OUT (Expense)';
+            badge.style.background = 'rgba(239,68,68,0.1)';
+            badge.style.border = '1px solid rgba(239,68,68,0.3)';
+            badge.style.color = '#ef4444';
+        }
     },
 
     deleteManualEntry(timestamp) {
@@ -2648,7 +2738,7 @@ var admin = {
             return `
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
+                    <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
@@ -2668,9 +2758,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono';">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td>
                         <div style="display: flex; gap: 6px; align-items: center;">
                             <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 80px;">
@@ -2716,7 +2806,7 @@ var admin = {
             return `
                 <tr>
                     <td>${displayTime}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
+                    <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                     <td>
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
@@ -2736,9 +2826,9 @@ var admin = {
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
-                    <td style="font-family: 'JetBrains Mono'; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono'; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'JetBrains Mono'; color: #64748b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif; color: #64748b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
                     <td style="text-align: center;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
                                 style="background: ${o.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
@@ -3741,7 +3831,7 @@ var admin = {
                     <td>${dateStr}</td>
                     <td><b>${log.asset}</b></td>
                     <td><span class="status-badge" style="background: rgba(255,255,255,0.05); color: #f8fafc; border: 1px solid rgba(255,255,255,0.1);">${log.task}</span></td>
-                    <td style="font-family: 'JetBrains Mono';">₱${log.cost.toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif;">₱${log.cost.toLocaleString()}</td>
                     <td style="color: #94a3b8; font-size: 0.85rem;">${log.nextDate !== 'TBD' ? new Date(log.nextDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'TBD'}</td>
                 </tr>
             `;
