@@ -967,19 +967,7 @@ const app = {
         const dispatchRef = document.getElementById('dispatch-payment-ref');
         const dispatchStatus = document.getElementById('dispatch-subscription-status');
 
-        let orders = [];
-        try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
-        
-        const currentName = (this.user.companyName || "").trim().toLowerCase();
-
-        // Filter orders for THIS user (Robust Matching)
-        const myOrders = orders.filter(o => {
-            if (currentName && currentName !== 'guest customer') {
-                const orderName = (o.customer_name || "").trim().toLowerCase();
-                return orderName === currentName || orderName.includes(currentName) || currentName.includes(orderName);
-            }
-            return true; // Fallback for guests
-        });
+        const myOrders = this.getProcessedOrders();
 
         // Only consider orders that haven't been completed or cancelled
         const activeOrders = myOrders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
@@ -6178,16 +6166,143 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         this.togglePanel('limit', true);
     },
 
+    getProcessedOrders() {
+        let orders = [];
+        try { orders = JSON.parse(localStorage.getItem('ice_orders') || '[]'); } catch(e) {}
+        
+        const currentName = (this.user.companyName || "").trim().toLowerCase();
+
+        return orders.filter(o => {
+            if (currentName && currentName !== 'guest customer') {
+                const orderName = (o.customer_name || "").trim().toLowerCase();
+                return orderName === currentName || orderName.includes(currentName) || currentName.includes(orderName);
+            }
+            return true;
+        }).map(o => {
+            if (o.rider_name && o.rider_geotag && (o.delivery_status !== 'Delivered' && o.status !== 'Delivered')) {
+                o.delivery_status = 'Delivered';
+                o.status = 'Delivered';
+            }
+            
+            const isPickup = o.delivery_address === 'Store Pickup' || o.logisticsState === 'pickup' || o.delivery_type === 'pickup' || (o.deliveryDetails && o.deliveryDetails.location === 'Store Pickup');
+            if (isPickup && (o.delivery_status === 'Delivered' || o.delivery_status === 'Completed' || o.status === 'Completed' || o.status === 'Delivered' || o.delivery_status === 'done' || o.status === 'done')) {
+                o.delivery_status = 'Served';
+                o.status = 'Served';
+            }
+            return o;
+        });
+    },
+
+    renderScheduledDeliveries() {
+        const listContainer = document.querySelector('.deliveries-list');
+        const emptyState = document.querySelector('.deliveries-empty-state');
+        const activeCountElem = document.querySelector('.info-list .status-value');
+        if (!listContainer) return;
+
+        const myOrders = this.getProcessedOrders();
+        const activeOrders = myOrders.filter(o => ['Pending', 'Processing', 'Dispatched', 'Awaiting Acceptance', 'In Transit'].includes(o.delivery_status || o.status));
+
+        if (activeCountElem) {
+            activeCountElem.innerText = activeOrders.length > 0 ? activeOrders.length : 'None';
+        }
+
+        if (activeOrders.length === 0) {
+            listContainer.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        listContainer.innerHTML = activeOrders.map(order => {
+            let totalBags = 0;
+            let types = [];
+            let items = order.items;
+            if (typeof items === 'string') {
+                try { items = JSON.parse(items); } catch(e) {}
+            }
+            if (items) {
+                ['fullDice', 'halfDice'].forEach(iceType => {
+                    if (items[iceType]) {
+                        const count = (items[iceType]['bag3kg'] || items[iceType]['3kg'] || 0) + (items[iceType]['bag1kg'] || items[iceType]['1kg'] || 0);
+                        if (count > 0) {
+                            totalBags += count;
+                            const typeName = iceType === 'fullDice' ? 'Full Dice' : 'Half-Dice';
+                            if (!types.includes(typeName)) types.push(typeName);
+                        }
+                    }
+                });
+            }
+            
+            const typeStr = types.join(' & ');
+            const itemsStr = totalBags > 0 ? `${totalBags} ${totalBags === 1 ? 'Bag' : 'Bags'} • ${typeStr}` : 'No items found';
+            
+            const scheduleTime = (order.delivery_schedule === 'Immediate' || !order.delivery_schedule) ? 'Arriving Soon' : order.delivery_schedule;
+            const address = order.delivery_address || (order.deliveryDetails && order.deliveryDetails.location) || 'Store Pickup';
+            const statusLabel = order.delivery_status || order.status || 'Pending';
+
+            return `
+                <div class="delivery-card active">
+                    <div class="delivery-card-header">
+                        <div class="status-indicator">
+                            <span class="status-dot pulsing"></span>
+                            <span class="status-label">${statusLabel}</span>
+                        </div>
+                        <span class="delivery-id">${order.order_id || '#IQ-New'}</span>
+                    </div>
+                    
+                    <div class="delivery-card-body">
+                        <div class="delivery-time-info">
+                            <h3>${scheduleTime}</h3>
+                            <p>${itemsStr}</p>
+                        </div>
+                        <div class="delivery-location-info">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span>${address}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="delivery-card-footer">
+                        <button class="manage-order-btn" onclick="app.showOrderOptions(this)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Edit Order
+                        </button>
+                        <div class="order-management-group" style="display: none;">
+                            <button class="btn-management reschedule" onclick="app.rescheduleOrder()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                Reschedule
+                            </button>
+                            <button class="btn-management cancel" onclick="app.confirmCancelOrder('${order.order_id}')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
     // --- Active Order Management ---
     openDeliveriesPanel() {
+        this.renderScheduledDeliveries();
         this.togglePanel('deliveries', true);
     },
 
-    showOrderOptions() {
-        const editBtn = document.getElementById('btn-edit-order');
-        const optionsGroup = document.getElementById('order-options-group');
-        if (editBtn) editBtn.style.display = 'none';
-        if (optionsGroup) optionsGroup.style.display = 'flex';
+    showOrderOptions(btnElement) {
+        if (!btnElement) {
+            const editBtn = document.getElementById('btn-edit-order');
+            const optionsGroup = document.getElementById('order-options-group');
+            if (editBtn) editBtn.style.display = 'none';
+            if (optionsGroup) optionsGroup.style.display = 'flex';
+            return;
+        }
+        const footer = btnElement.closest('.delivery-card-footer');
+        if (footer) {
+            btnElement.style.display = 'none';
+            const optionsGroup = footer.querySelector('.order-management-group');
+            if (optionsGroup) optionsGroup.style.display = 'flex';
+        }
     },
 
     rescheduleOrder() {
@@ -6227,6 +6342,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             halfDice: { '1kg': 0, '3kg': 0 }
         };
         this.updateTotal();
+        this.updateCreditUI(); // Refresh dispatch panel immediately
     },
 
     // --- Staff Management ---
