@@ -1699,6 +1699,14 @@
 
         .btn-pricing-action { padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
         .btn-pricing-action:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
+
+        /* Team status toggle styling */
+        .status-toggle { position: relative; display: inline-block; width: 34px; height: 18px; margin-left: auto; }
+        .status-toggle input { opacity: 0; width: 0; height: 0; }
+        .status-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .3s; border-radius: 18px; }
+        .status-slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        .status-toggle input:checked + .status-slider { background-color: #22c55e; }
+        .status-toggle input:checked + .status-slider:before { transform: translateX(16px); }
     </style>
 </head>
 <body class="admin-mode">

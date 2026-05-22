@@ -4894,12 +4894,12 @@ admin.renderTeamCards = function() {
                 <div class="rider-avatar" style="background: ${isActive ? '#3b82f6' : '#64748b'};">${member.avatar}</div>
                 <div class="rider-info">
                     <h4 style="margin: 0; font-size: 1rem;">${member.nickname || member.name.split(' ')[0]}</h4>
-                    <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">📞 ${member.phone}</p>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="color: ${statusColor}; font-size: 0.8rem; font-weight: bold;">● ${member.status}</span>
-                    </div>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">💼 ${member.designation || member.role}</p>
                 </div>
-                <button class="status-badge" style="margin-left: auto; background: rgba(255,255,255,0.05); color: white;" onclick="event.stopPropagation(); admin.toggleMemberStatus('${member.name}')">${toggleBtnLabel}</button>
+                <label class="status-toggle" onclick="event.stopPropagation();">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="admin.toggleMemberStatus('${member.name}', this)">
+                    <span class="status-slider"></span>
+                </label>
             </div>
         `;
 
@@ -4954,11 +4954,21 @@ admin.showAddTeamMemberOverlay = function(roleCategory) {
     }
 };
 
-admin.toggleMemberStatus = function(name) {
+admin.toggleMemberStatus = function(name, checkboxEl) {
     const member = admin.teamMembersData.find(m => m.name === name);
     if (member) {
-        member.status = member.status === 'Active' ? 'Inactive' : 'Active';
-        admin.renderTeamCards();
+        const action = member.status === 'Active' ? 'deactivate' : 'activate';
+        if (confirm(`Are you sure you want to ${action} ${member.nickname || member.name.split(' ')[0]}?`)) {
+            member.status = member.status === 'Active' ? 'Inactive' : 'Active';
+            admin.renderTeamCards();
+            if (typeof admin.showToast === 'function') {
+                admin.showToast(`${member.nickname || member.name.split(' ')[0]} has been ${member.status.toLowerCase()}d.`, 'success');
+            }
+        } else {
+            if (checkboxEl) {
+                checkboxEl.checked = !checkboxEl.checked;
+            }
+        }
     }
 };
 
