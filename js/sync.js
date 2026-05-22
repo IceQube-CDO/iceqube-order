@@ -155,10 +155,18 @@ window.IceQubeSync = {
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.length > 0) {
-                        console.log("✅ [Sync] Pricing Matrix retrieved from Cloud:", data[0].items);
-                        if (data[0].items) {
-                            data[0].items._cloudCreatedAt = data[0].created_at;
-                            resolve(data[0].items);
+                        let parsedItems = data[0].items;
+                        if (typeof parsedItems === 'string') {
+                            try {
+                                parsedItems = JSON.parse(parsedItems);
+                            } catch (e) {
+                                console.error("❌ [Sync] Failed to parse pricing items from string", e);
+                            }
+                        }
+                        console.log("✅ [Sync] Pricing Matrix retrieved from Cloud:", parsedItems);
+                        if (parsedItems) {
+                            parsedItems._cloudCreatedAt = data[0].created_at;
+                            resolve(parsedItems);
                         } else {
                             resolve({ _error: 'Empty items in record' });
                         }
