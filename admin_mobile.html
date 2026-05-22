@@ -2343,10 +2343,9 @@
             <div class="cc-tab" onclick="admin.switchView('matrix')">Pricing & Matrix</div>
         </div>
 
-        <div class="cc-grid" id="ops-view">
-
-            <!-- Top Metrics Row -->
-            <div class="metrics-row">
+        <div id="ops-view" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- 1st row: #1 & #2 (Revenue & Kg Sold) -->
+            <div style="display: flex; gap: 15px; width: 100%;">
                 <!-- Revenue Metric -->
                 <div class="cc-card" style="flex: 1;">
                     <div class="metric-label">Today's Revenue</div>
@@ -2360,36 +2359,129 @@
                     <div class="metric-value" id="ops-bags">0</div>
                     <div class="metric-trend">Operating at 85% capacity</div>
                 </div>
+            </div>
 
-                <!-- Weather & Demand Predictor -->
-                <div class="cc-card" style="flex: 1;">
-                    <div class="metric-label">Weather & Demand Forecast</div>
-                    <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 15px;">
-                        <div style="font-size: 2.5rem;" id="live-weather-icon">☀️</div>
-                        <div>
-                            <div style="font-size: 1.4rem; font-weight: 800;" id="live-weather-temp">--°C</div>
-                            <div style="color: #94a3b8; font-size: 0.75rem;">Cagayan de Oro</div>
-                        </div>
+            <!-- 2nd row: #3 (Weather & Forecast) -->
+            <div class="cc-card">
+                <div class="metric-label">Weather & Demand Forecast</div>
+                <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size: 2.5rem;" id="live-weather-icon">☀️</div>
+                    <div>
+                        <div style="font-size: 1.4rem; font-weight: 800;" id="live-weather-temp">--°C</div>
+                        <div style="color: #94a3b8; font-size: 0.75rem;">Cagayan de Oro</div>
                     </div>
-                    <div id="live-demand-box" style="margin-top: 1rem; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                        <div style="display: flex; align-items: center; color: #ef4444; font-weight: bold; font-size: 0.75rem;" id="live-demand-text">
-                            <span class="demand-pulse"></span>
-                            LOADING...
-                        </div>
+                </div>
+                <div id="live-demand-box" style="margin-top: 1rem; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    <div style="display: flex; align-items: center; color: #ef4444; font-weight: bold; font-size: 0.75rem;" id="live-demand-text">
+                        <span class="demand-pulse"></span>
+                        LOADING...
                     </div>
-                    <div id="hourly-forecast-container" style="margin-top: 1rem; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none;">
-                        <!-- Hourly forecast items injected here -->
-                    </div>
-                    <style>
-                        #hourly-forecast-container::-webkit-scrollbar { display: none; }
-                        .hourly-item { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; min-width: 50px; }
-                        .hourly-item .h-time { font-size: 0.65rem; color: #94a3b8; margin-bottom: 4px; font-weight: 700; }
-                        .hourly-item .h-icon { font-size: 1.2rem; margin-bottom: 4px; }
-                        .hourly-item .h-temp { font-size: 0.8rem; font-weight: 800; color: white; }
-                    </style>
+                </div>
+                <div id="hourly-forecast-container" style="margin-top: 1rem; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none;">
+                    <!-- Hourly forecast items injected here -->
+                </div>
+                <style>
+                    #hourly-forecast-container::-webkit-scrollbar { display: none; }
+                    .hourly-item { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; min-width: 50px; }
+                    .hourly-item .h-time { font-size: 0.65rem; color: #94a3b8; margin-bottom: 4px; font-weight: 700; }
+                    .hourly-item .h-icon { font-size: 1.2rem; margin-bottom: 4px; }
+                    .hourly-item .h-temp { font-size: 0.8rem; font-weight: 800; color: white; }
+                </style>
+            </div>
+
+            <!-- 3. Online Payment Verification -->
+            <div class="cc-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="metric-label">Online Payment Verification</div>
+                    <a href="#" onclick="admin.openFlaggedArchive(); return false;" style="font-size: 0.75rem; color: #3b82f6; text-decoration: none;">View Flagged</a>
+                </div>
+                <div id="receipt-list" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;">
+                    <div style="text-align: center; color: #64748b; padding: 10px; font-size: 0.7rem;">Queue is empty</div>
                 </div>
             </div>
 
+            <!-- 8. Staff On Duty Today -->
+            <div class="cc-card">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Staff On Duty Today
+                    <div style="display: flex; gap: 8px;">
+                        <button class="status-badge" style="background: rgba(255,255,255,0.1); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showRiderAppQR()">
+                            <span style="font-size: 1rem;">📲</span> App Access
+                        </button>
+                        <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Rider')">
+                            <span>+</span> Add
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div>
+                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Admin Officers</h4>
+                        <div id="admin-officers-list" style="display: grid; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading admin officers...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Hub Staff</h4>
+                        <div id="hub-staff-list" style="display: grid; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading hub staff...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Riders</h4>
+                        <div id="riders-list" style="display: grid; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading riders...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Inventory Monitoring -->
+            <div class="cc-card">
+                <div class="metric-label">Inventory Monitoring</div>
+                <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 15px;">
+                    <div id="dash-inv-packaging">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-size: 0.8rem;" id="dash-inv-p1-name">Packaging</span>
+                            <span style="font-weight: bold;" id="dash-inv-p1-val">---</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div id="dash-inv-p1-bar" style="width: 0%; height: 100%; background: var(--admin-accent); box-shadow: 0 0 10px var(--admin-accent);"></div>
+                        </div>
+                    </div>
+                    <div id="dash-inv-cleaning">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-size: 0.8rem;" id="dash-inv-c1-name">Cleaning</span>
+                            <span style="font-weight: bold;" id="dash-inv-c1-val">---</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                            <div id="dash-inv-c1-bar" style="width: 0%; height: 100%; background: #ef4444; box-shadow: 0 0 10px #ef4444;"></div>
+                        </div>
+                        <p id="dash-inv-warn" style="font-size: 0.65rem; color: #ef4444; margin: 4px 0 0 0; display: none;">⚠️ Low stock</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Complaints and Resolution -->
+            <div class="cc-card">
+                <div class="metric-label" style="display: flex; justify-content: space-between;">
+                    Complaints & Resolutions
+                    <span id="active-complaints-badge" style="color: #ef4444; font-size: 0.7rem;">● 0 Active Issues</span>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;" id="complaints-list">
+                    <div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">No active complaints</div>
+                </div>
+            </div>
+
+            <!-- 6. Live Operation Feed -->
+            <div class="cc-card">
+                <div class="metric-label">Live Operation Feed</div>
+                <div id="operation-feed" style="margin-top: 1rem; font-family: 'Inter', sans-serif; font-size: 0.75rem;">
+                    <div style="text-align: center; color: #64748b; padding: 10px;">System Online. No recent activity.</div>
+                </div>
+            </div>
+
+            <!-- 7. Live Logistics Map -->
             <div class="cc-card wide" style="display: flex; flex-direction: column;">
                 <div class="metric-label" style="display: flex; justify-content: space-between;">
                     Live Logistics Map (CDO)
@@ -2406,53 +2498,7 @@
                 </div>
             </div>
 
-            <!-- Sidebar with Stacked Metrics (Inventory, Verification, Feed) -->
-            <div class="ops-sidebar" style="display: flex; flex-direction: column; gap: 1.2rem;">
-                <!-- Inventory Monitoring -->
-                <div class="cc-card">
-                    <div class="metric-label">Inventory Monitoring</div>
-                    <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 15px;">
-                        <div id="dash-inv-packaging">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span style="font-size: 0.8rem;" id="dash-inv-p1-name">Packaging</span>
-                                <span style="font-weight: bold;" id="dash-inv-p1-val">---</span>
-                            </div>
-                            <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
-                                <div id="dash-inv-p1-bar" style="width: 0%; height: 100%; background: var(--admin-accent); box-shadow: 0 0 10px var(--admin-accent);"></div>
-                            </div>
-                        </div>
-                        <div id="dash-inv-cleaning">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span style="font-size: 0.8rem;" id="dash-inv-c1-name">Cleaning</span>
-                                <span style="font-weight: bold;" id="dash-inv-c1-val">---</span>
-                            </div>
-                            <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
-                                <div id="dash-inv-c1-bar" style="width: 0%; height: 100%; background: #ef4444; box-shadow: 0 0 10px #ef4444;"></div>
-                            </div>
-                            <p id="dash-inv-warn" style="font-size: 0.65rem; color: #ef4444; margin: 4px 0 0 0; display: none;">⚠️ Low stock</p>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Verification Queue -->
-                <div class="cc-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div class="metric-label">Online Payment Verification</div>
-                        <a href="#" onclick="admin.openFlaggedArchive(); return false;" style="font-size: 0.75rem; color: #3b82f6; text-decoration: none;">View Flagged</a>
-                    </div>
-                    <div id="receipt-list" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;">
-                        <div style="text-align: center; color: #64748b; padding: 10px; font-size: 0.7rem;">Queue is empty</div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity Feed -->
-                <div class="cc-card">
-                    <div class="metric-label">Live Operation Feed</div>
-                    <div id="operation-feed" style="margin-top: 1rem; font-family: 'Inter', sans-serif; font-size: 0.75rem;">
-                        <div style="text-align: center; color: #64748b; padding: 10px;">System Online. No recent activity.</div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- ORDER QUEUE VIEW (UPDATED: SPLIT TABLES) -->
@@ -2807,16 +2853,7 @@
                     </div>
                 </div>
 
-                <!-- Complaints & Resolutions -->
-                <div class="cc-card">
-                    <div class="metric-label" style="display: flex; justify-content: space-between;">
-                        Complaints & Resolutions
-                        <span id="active-complaints-badge" style="color: #ef4444; font-size: 0.7rem;">● 0 Active Issues</span>
-                    </div>
-                    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 12px;" id="complaints-list">
-                        <div style="text-align: center; color: #64748b; padding: 20px; font-size: 0.8rem;">No active complaints</div>
-                    </div>
-                </div>
+
             </div>
         </div>
 
@@ -2824,52 +2861,7 @@
         <!-- TEAM & PAYROLL VIEW -->
             <div class="cc-grid" id="team-view" style="display: none;">
 
-            <!-- Admin Officers Card -->
-            <div class="cc-card full-width">
-                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Admin Officers
-                    <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Admin Officer')">
-                        <span>+</span> Add Member
-                    </button>
-                </div>
-                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr; gap: 1rem;" id="admin-officers-list">
-                    <!-- Dynamic Data -->
-                    <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px;">Loading admin officers...</div>
-                </div>
-            </div>
 
-            <!-- Hub Staff Card -->
-            <div class="cc-card full-width">
-                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Hub Staff
-                    <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Hub Staff')">
-                        <span>+</span> Add Member
-                    </button>
-                </div>
-                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr; gap: 1rem;" id="hub-staff-list">
-                    <!-- Dynamic Data -->
-                    <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px;">Loading hub staff...</div>
-                </div>
-            </div>
-
-            <!-- Riders Card -->
-            <div class="cc-card full-width">
-                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Riders
-                    <div style="display: flex; gap: 8px;">
-                        <button class="status-badge" style="background: rgba(255,255,255,0.1); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showRiderAppQR()">
-                            <span style="font-size: 1rem;">📲</span> App Access
-                        </button>
-                        <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Rider')">
-                            <span>+</span> Add Member
-                        </button>
-                    </div>
-                </div>
-                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr; gap: 1rem;" id="riders-list">
-                    <!-- Dynamic Data -->
-                    <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px;">Loading riders...</div>
-                </div>
-            </div>
 
             <div id="team-drawer-overlay" class="drawer-overlay" onclick="closeTeamDrawer()"></div>
             <div id="team-drawer" class="drawer-panel" style="position: fixed; top: 0; right: -100vw; width: 100vw; max-width: 400px; height: 100vh; max-height: 100vh; z-index: 1001; opacity: 1; pointer-events: auto; border-radius: 0; display: flex; flex-direction: column; background: #0f172a; border-left: 1px solid #1e293b; box-shadow: -10px 0 30px rgba(0,0,0,0.5); transition: right 0.3s ease;">
