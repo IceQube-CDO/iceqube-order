@@ -71,8 +71,10 @@ serve(async (req) => {
     // ── FACEBOOK PLATFORM INCOMING EVENTS (from Messenger users) ──
     // When a customer messages the IceQube page, Facebook POSTs here.
     // Respond with EVENT_RECEIVED to acknowledge. Route to /send for outgoing.
+    console.log(`[Webhook] Request received. Method: ${req.method}, Pathname: ${pathname}`);
     if (req.method === "POST" && !pathname.endsWith("/send")) {
       const bodyText = await req.text();
+      console.log(`[Webhook] Path does not end with /send. Body start: ${bodyText.substring(0, 50)}`);
       // Check if it's a Facebook platform event (has 'object' field)
       try {
         const fbBody = JSON.parse(bodyText);
@@ -266,8 +268,12 @@ serve(async (req) => {
             });
             if (res.ok) {
               const data = await res.json();
-              if (data && data.length > 0 && Array.isArray(data[0].items)) {
-                activeAdmins = data[0].items
+              let itemsData = data[0].items;
+              if (typeof itemsData === 'string') {
+                try { itemsData = JSON.parse(itemsData); } catch (e) {}
+              }
+              if (Array.isArray(itemsData)) {
+                activeAdmins = itemsData
                   .filter((m: any) => m.status === 'Active' && 
                                 (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
                                 m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&
@@ -315,8 +321,12 @@ serve(async (req) => {
             });
             if (res.ok) {
               const data = await res.json();
-              if (data && data.length > 0 && Array.isArray(data[0].items)) {
-                activeAdmins = data[0].items
+              let itemsData = data[0].items;
+              if (typeof itemsData === 'string') {
+                try { itemsData = JSON.parse(itemsData); } catch (e) {}
+              }
+              if (Array.isArray(itemsData)) {
+                activeAdmins = itemsData
                   .filter((m: any) => m.status === 'Active' && 
                                 (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
                                 m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&

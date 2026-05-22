@@ -5116,7 +5116,8 @@ const app = {
         const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook/send`;
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+            'apikey': SUPABASE_CONFIG.ANON_KEY
         };
 
         // 1. Send to Customer
