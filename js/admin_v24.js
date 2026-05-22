@@ -4943,21 +4943,25 @@ admin.renderTeamCards = function() {
     let ridersHtml = '';
 
     admin.teamMembersData.forEach(member => {
+        if (!member || typeof member !== 'object') return; // Skip strings or nulls
+        if (!member.name) member.name = 'Unknown Member'; // Bulletproof
         if (member.status === 'Archived') return;
 
         const isActive = member.status === 'Active';
         const statusColor = isActive ? '#22c55e' : '#ef4444';
         const toggleBtnLabel = isActive ? 'Deactivate' : 'Activate';
+        const safeName = member.name.replace(/'/g, "\\'");
+        const displayNickname = member.nickname || member.name.split(' ')[0] || 'Unknown';
 
         const cardHtml = `
-            <div class="rider-card" onclick="openTeamDrawer('${member.name}')" style="cursor: pointer; opacity: ${isActive ? '1' : '0.6'};">
-                <div class="rider-avatar" style="background: ${isActive ? '#3b82f6' : '#64748b'};">${member.avatar}</div>
+            <div class="rider-card" onclick="openTeamDrawer('${safeName}')" style="cursor: pointer; opacity: ${isActive ? '1' : '0.6'};">
+                <div class="rider-avatar" style="background: ${isActive ? '#3b82f6' : '#64748b'};">${member.avatar || '?'}</div>
                 <div class="rider-info">
-                    <h4 style="margin: 0; font-size: 1rem;">${member.nickname || member.name.split(' ')[0]}</h4>
-                    <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">💼 ${member.designation || member.role}</p>
+                    <h4 style="margin: 0; font-size: 1rem;">${displayNickname}</h4>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">💼 ${member.designation || member.role || 'Staff'}</p>
                 </div>
                 <label class="status-toggle" onclick="event.stopPropagation();">
-                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="admin.toggleMemberStatus('${member.name}', this)">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="admin.toggleMemberStatus('${safeName}', this)">
                     <span class="status-slider"></span>
                 </label>
             </div>
@@ -4966,6 +4970,7 @@ admin.renderTeamCards = function() {
         if (member.roleCategory === 'Admin Officer') adminHtml += cardHtml;
         else if (member.roleCategory === 'Hub Staff') hubHtml += cardHtml;
         else if (member.roleCategory === 'Rider') ridersHtml += cardHtml;
+        else adminHtml += cardHtml; // Fallback
     });
 
     adminList.innerHTML = adminHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active admin officers.</div>';
