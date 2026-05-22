@@ -854,6 +854,39 @@ var admin = {
         }
     },
 
+    async broadcastToAdmins(text, customerId = '') {
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            throw new Error("Supabase URL not configured");
+        }
+        
+        const isFileProtocol = window.location.protocol === 'file:';
+        if (isFileProtocol) {
+            console.log('⚠️ [Messenger] Running locally, skipping broadcast fetch. Message:', text);
+            return { success: true, mode: 'local_bypass' };
+        }
+
+        try {
+            const endpoint = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook/send`;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({ action: 'broadcast_to_admins', message: text, customerId: customerId })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || (data && data.error)) {
+                const errMsg = (data && data.error && (data.error.message || data.error)) || `HTTP ${res.status}`;
+                throw new Error(errMsg);
+            }
+            return data;
+        } catch (fetchError) {
+            console.warn('⚠️ [Messenger] Broadcast fetch failed.', fetchError);
+            throw fetchError;
+        }
+    },
+
     async sendMessengerNotification(orderInput) {
         let order = orderInput;
         let isManual = false;
@@ -908,7 +941,6 @@ var admin = {
         const profile = directory[cleanCustName] || directory[order.customer_name] || {};
         
         const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || null;
-        const ADMIN_PSIDS = ["26521276764196410", "32834231939557699"];
         
         console.log('🔔 [Messenger] Admin triggering notification. Target customer ID:', targetId);
         updateStatus('Sending...', '#0ea5e9', true);
@@ -974,8 +1006,14 @@ var admin = {
         try {
             let customerError = null;
 
-            // 1. DISPATCH TO CUSTOMER
-            if (targetId && !ADMIN_PSIDS.includes(targetId)) {
+            // Determine if the target is an admin
+            let isAdmin = false;
+            if (targetId && this.teamMembersData) {
+                isAdmin = this.teamMembersData.some(m => m.messenger === targetId && ['Admin Officer', 'Admin', 'Hub Staff'].includes(m.roleCategory) && m.status === 'Active');
+            }
+
+            // 1. DISPATCH TO CUSTOMER (Skip if they are an admin, as they will get the Admin Alert instead)
+            if (targetId && !isAdmin) {
                 try {
                     console.log('📡 [Messenger] Sending customer receipt...');
                     await this.dispatchMessengerMessage(targetId, msg);
@@ -984,36 +1022,32 @@ var admin = {
                     customerError = e.message;
                     console.error('❌ [Messenger] Customer Receipt dispatch failed:', e);
                 }
+            } else if (isAdmin) {
+                console.log('ℹ️ [Messenger] Customer is an Admin. Skipping direct customer receipt to avoid duplicates.');
             } else {
                 console.log('ℹ️ [Messenger] No registered customer PSID found. Skipping direct customer receipt.');
             }
 
             // 2. ALWAYS DISPATCH COPY of receipt to Admin/Business account
-            for (const admin of ADMIN_PSIDS) {
-                try {
-                    console.log(`📡 [Messenger] Sending Admin Copy of receipt to ${admin}...`);
-                    await this.dispatchMessengerMessage(admin, msg);
-                } catch (e) {
-                    console.error(`❌ [Messenger] Admin Copy dispatch failed for ${admin}:`, e);
-                }
+            try {
+                console.log(`📡 [Messenger] Sending Admin Copy of receipt...`);
+                await this.broadcastToAdmins(msg, targetId);
+            } catch (e) {
+                console.error(`❌ [Messenger] Admin Copy broadcast failed:`, e);
             }
 
             // 3. DISPATCH ADMIN ALERT TO ADMIN
-            if (!ADMIN_PSIDS.includes(targetId)) {
-                const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
-                                 `Deliver to: ${order.customer_name}\n` +
-                                 `Item: ${itemsText}\n` +
-                                 `Total: ₱${totalGross.toLocaleString()}\n` +
-                                 `Payment: ${order.payment_method || 'Cash'}\n\n` +
-                                 `Check the Control Room!`;
-                for (const admin of ADMIN_PSIDS) {
-                    try {
-                        console.log(`📡 [Messenger] Sending Admin Alert to ${admin}...`);
-                        await this.dispatchMessengerMessage(admin, adminMsg);
-                    } catch (e) {
-                        console.error(`❌ [Messenger] Admin Alert dispatch failed for ${admin}:`, e);
-                    }
-                }
+            const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                             `Deliver to: ${order.customer_name}\n` +
+                             `Item: ${itemsText}\n` +
+                             `Total: ₱${totalGross.toLocaleString()}\n` +
+                             `Payment: ${order.payment_method || 'Cash'}\n\n` +
+                             `Check the Control Room!`;
+            try {
+                console.log(`📡 [Messenger] Sending Admin Alert...`);
+                await this.broadcastToAdmins(adminMsg, targetId);
+            } catch (e) {
+                console.error(`❌ [Messenger] Admin Alert broadcast failed:`, e);
             }
 
             if (customerError) {
@@ -1022,10 +1056,8 @@ var admin = {
                 } else {
                     updateStatus(`Fail: ${customerError}`, '#ef4444');
                 }
-            } else if (targetId && !ADMIN_PSIDS.includes(targetId)) {
-                updateStatus(`Notified Successfully`, '#22c55e');
             } else {
-                updateStatus(`Admins Notified Successfully`, '#22c55e');
+                updateStatus(`Notified Successfully`, '#22c55e');
             }
         } catch (error) {
             console.error('❌ [Messenger] Admin dispatch failed:', error);
@@ -1506,20 +1538,17 @@ var admin = {
     async sendComplaintMessengerNotification(complaint) {
         if (!complaint || !complaint.customerName) return;
         
-        const ADMIN_PSIDS = ["26521276764196410", "32834231939557699"];
         const msg = `🚨 NEW CUSTOMER SUPPORT ISSUE!\n\n` +
                     `Customer: ${complaint.customerName}\n` +
                     `Issue: ${complaint.issueType}\n` +
                     `Details: ${complaint.description || 'No description provided.'}\n\n` +
                     `Check the Control Room complaints ledger!`;
                     
-        for (const admin of ADMIN_PSIDS) {
-            try {
-                await this.dispatchMessengerMessage(admin, msg);
-                console.log(`📡 [Messenger] Customer Support Notification Sent to Admin ${admin}.`);
-            } catch (error) {
-                console.error(`❌ [Messenger] Support notification failed for ${admin}:`, error);
-            }
+        try {
+            await this.broadcastToAdmins(msg);
+            console.log(`📡 [Messenger] Customer Support Notification Broadcasted to Admins.`);
+        } catch (error) {
+            console.error(`❌ [Messenger] Support notification broadcast failed:`, error);
         }
     },
 
@@ -3313,6 +3342,12 @@ var admin = {
 
         // 2. Save Consumables
         admin.saveState('iceqube_consumables', this.consumables);
+
+        // --- Trigger Messenger Broadcast ---
+        try {
+            const msg = `📦 CONSUMABLES UPDATE:\n\n${itemName} was ${isAdjustment ? 'adjusted to' : 'restocked with'} ${qty} ${targetItem && targetItem.unit ? targetItem.unit : 'units'}.`;
+            admin.broadcastToAdmins(msg);
+        } catch(e) {}
 
         // 3. Record Cashflow if cost provided
         if (!isNaN(cost) && cost > 0) {
