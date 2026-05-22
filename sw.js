@@ -1,12 +1,14 @@
-const CACHE_NAME = 'iceqube-cache-v10.7.3';
+const CACHE_NAME = 'iceqube-cache-v10.7.4';
 const ASSETS = [
   './',
   './index.html',
   './admin.html',
+  './admin_mobile.html',
   './rider.html',
   './css/style_v10.css',
   './manifest.json',
   './manifest_admin.json',
+  './manifest_admin_mobile.json',
   './assets/logo-192.png',
   './assets/logo-512.png',
   './assets/logo2.png',
