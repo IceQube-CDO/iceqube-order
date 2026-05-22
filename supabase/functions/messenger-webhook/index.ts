@@ -4,12 +4,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
 const FB_API_URL = "https://graph.facebook.com/v19.0/me/messages"
-// All admin PSIDs — each admin must message the IceQube CDO page once to get their PSID
-const ADMIN_PSIDS = [
-  "712885031918698",    // Ian Echano (New)
-  "26521276764196410",  // Ian Echano (Old)
-  "32834231939557699",  // Law Rence Fe
-]
 
 function formatItems(itemsStr: string): string {
   try {
@@ -261,18 +255,91 @@ serve(async (req) => {
           results.customer_skipped = "No valid customer messenger_id";
         }
         
+        let activeAdmins: string[] = [];
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        
+        if (supabaseUrl && supabaseAnonKey) {
+          try {
+            const res = await fetch(`${supabaseUrl}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_TEAM_MEMBERS&select=items`, {
+              headers: { 'apikey': supabaseAnonKey, 'Authorization': `Bearer ${supabaseAnonKey}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0 && Array.isArray(data[0].items)) {
+                activeAdmins = data[0].items
+                  .filter((m: any) => m.status === 'Active' && 
+                                (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
+                                m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&
+                                m.messenger !== customerId)
+                  .map((m: any) => m.messenger);
+              }
+            }
+          } catch (err) {
+            console.warn("Failed to fetch team members from cloud:", err);
+          }
+        }
+        
+        if (activeAdmins.length === 0) {
+          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => id !== customerId);
+        }
+
         // 2. Send to ALL Admins (except the customer who placed the order to avoid double receipt)
         results.admins = {};
-        for (const adminPsid of ADMIN_PSIDS) {
-          if (adminPsid === customerId) {
-            console.log(`[Webhook] Skipping admin alert for customer admin: ${adminPsid}`);
-            continue;
-          }
+        for (const adminPsid of activeAdmins) {
           try {
             results.admins[adminPsid] = await sendFBMessage(adminPsid, adminMsg);
           } catch (err) {
             results.admins[adminPsid] = { error: err.message };
             console.error(`[Webhook] Admin send failed for ${adminPsid}:`, err);
+          }
+        }
+        
+        return new Response(JSON.stringify({ success: true, results }), {
+          headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+          status: 200,
+        });
+      }
+      if (body.action === 'broadcast_to_admins') {
+        const customerId = body.customerId || '';
+        const msgText = body.message || '🚨 NEW ORDER ALERT!';
+        let activeAdmins: string[] = [];
+        
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        
+        if (supabaseUrl && supabaseAnonKey) {
+          try {
+            const res = await fetch(`${supabaseUrl}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_TEAM_MEMBERS&select=items`, {
+              headers: { 'apikey': supabaseAnonKey, 'Authorization': `Bearer ${supabaseAnonKey}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0 && Array.isArray(data[0].items)) {
+                activeAdmins = data[0].items
+                  .filter((m: any) => m.status === 'Active' && 
+                                (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
+                                m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&
+                                m.messenger !== customerId)
+                  .map((m: any) => m.messenger);
+              }
+            }
+          } catch (err) {
+            console.warn("Failed to fetch team members from cloud:", err);
+          }
+        }
+        
+        // Fallback to hardcoded list if fetch fails or no admins configured
+        if (activeAdmins.length === 0) {
+          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => id !== customerId);
+        }
+        
+        const results: any = {};
+        for (const adminPsid of activeAdmins) {
+          try {
+            results[adminPsid] = await sendFBMessage(adminPsid, msgText);
+          } catch (err) {
+            results[adminPsid] = { error: err.message };
           }
         }
         

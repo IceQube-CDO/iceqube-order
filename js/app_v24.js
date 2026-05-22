@@ -5124,12 +5124,16 @@ const app = {
             fetch(url, { method: 'POST', headers, body: JSON.stringify({ recipientId: customerId, message: msg }) }).catch(e => console.error(e));
         }
 
-        // 2. Send to Admins
-        const adminPsids = ["26521276764196410", "32834231939557699"]; // Ian Echano & Law Rence Fe
-        for (const admin of adminPsids) {
-            if (admin === customerId) continue; // Don't send double if admin ordered
-            fetch(url, { method: 'POST', headers, body: JSON.stringify({ recipientId: admin, message: adminMsg }) }).catch(e => console.error(e));
-        }
+        // 2. Send to Admins dynamically via Edge Function
+        fetch(url, { 
+            method: 'POST', 
+            headers, 
+            body: JSON.stringify({ 
+                action: 'broadcast_to_admins', 
+                message: adminMsg,
+                customerId: customerId
+            }) 
+        }).catch(e => console.error('Failed to notify admins:', e));
 
         return true;
     },

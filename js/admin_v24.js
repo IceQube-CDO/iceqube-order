@@ -26,7 +26,8 @@ var admin = {
             'CONFIG_MAINTENANCE_LOGS': { key: 'iceqube_maintenance_logs', prop: 'maintenanceLogs', updateFn: 'updateAssetsUI' },
             'CONFIG_RENTAL': { key: 'iceqube_rental', prop: 'rental', updateFn: 'updateUtilitiesUI' },
             'CONFIG_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
-            'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' }
+            'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' },
+            'CONFIG_ICEQUBE_TEAM_MEMBERS': { key: 'iceqube_team_members', prop: 'teamMembersData', updateFn: 'renderTeamCards' }
         };
 
         for (const [orderId, cloudData] of Object.entries(cloudStates)) {
@@ -4872,7 +4873,7 @@ admin.teamMembersData = JSON.parse(localStorage.getItem('iceqube_team_members'))
 ];
 
 admin.saveTeamMembers = function() {
-    localStorage.setItem('iceqube_team_members', JSON.stringify(admin.teamMembersData));
+    admin.saveState('iceqube_team_members', admin.teamMembersData);
 };
 
 admin.renderTeamCards = function() {
