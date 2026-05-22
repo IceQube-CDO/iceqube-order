@@ -5113,7 +5113,7 @@ const app = {
                          `Payment: ${this.orderData.payment || 'Cash'}\n\n` +
                          `Check the Control Room!`;
 
-        const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`;
+        const url = `${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook/send`;
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
