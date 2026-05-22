@@ -202,7 +202,26 @@ const app = {
 
         // --- Messenger Context Detection ---
         const urlParams = new URLSearchParams(window.location.search);
-        const psid = urlParams.get('psid') || urlParams.get('extid');
+        
+        // Check hash parameters since some platforms pass variables in the hash
+        let hashString = window.location.hash;
+        if (hashString.includes('?')) {
+            hashString = hashString.substring(hashString.indexOf('?') + 1);
+        } else if (hashString.startsWith('#')) {
+            hashString = hashString.substring(1);
+        }
+        const hashParams = new URLSearchParams(hashString);
+        
+        const psid = urlParams.get('psid') || urlParams.get('extid') || 
+                     urlParams.get('messenger_uid') || urlParams.get('user_id') || 
+                     urlParams.get('userid') || urlParams.get('uid') || 
+                     urlParams.get('subscriber_id') || urlParams.get('chat_id') || 
+                     urlParams.get('sender_id') ||
+                     hashParams.get('psid') || hashParams.get('extid') || 
+                     hashParams.get('messenger_uid') || hashParams.get('user_id') ||
+                     hashParams.get('userid') || hashParams.get('uid') ||
+                     hashParams.get('subscriber_id') || hashParams.get('chat_id') || 
+                     hashParams.get('sender_id');
         if (psid) {
             console.log('Detected Messenger PSID:', psid);
             MESSENGER_CONFIG.RECIPIENT_ID = psid;
