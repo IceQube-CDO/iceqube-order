@@ -2356,7 +2356,7 @@
 
                 <!-- Metric Card: Bags Sold -->
                 <div class="cc-card" style="flex: 1;">
-                    <div class="metric-label">Bags Sold (Today)</div>
+                    <div class="metric-label">Kg. Sold Today</div>
                     <div class="metric-value" id="ops-bags">0</div>
                     <div class="metric-trend">Operating at 85% capacity</div>
                 </div>
@@ -3845,7 +3845,7 @@
 
     <script src="js/app_header.js?v=2.4.0"></script>
     <script src="js/sync.js?v=2.4.0"></script>
-    <script src="js/admin_v24.js?v=2.4.6"></script>
+    <script src="js/admin_v24.js?v=2.5.1"></script>
 
 
     <!-- PWA Install Prompt -->
@@ -4057,29 +4057,40 @@
         </div>
     </div>
 
-    <!-- Photo Preview Modal -->
+    <!-- Photo / Verification Preview Modal -->
     <div id="modal-photo-preview" class="modal-overlay" style="z-index: 30000;">
-        <div class="modal-content" style="max-width: 600px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); padding: 1rem; border-radius: 24px; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
+        <div class="modal-content" style="max-width: 900px; width: 95%; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 24px; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 id="photo-preview-title" style="margin: 0; color: white; font-size: 1.25rem;">Verification Evidence</h3>
                 <button onclick="admin.closePhotoModal()" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             
-            <div id="photo-preview-container" style="width: 100%; min-height: 300px; background: #020617; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-                <div id="photo-loading-text" style="position: absolute; color: #64748b; font-size: 0.8rem; font-weight: 600; animation: pulse 2s infinite;">Loading High-Res Evidence...</div>
-                <img id="preview-img" src="" alt="Complaint Evidence" style="max-width: 100%; max-height: 80vh; object-fit: contain; z-index: 5; opacity: 0; transition: opacity 0.3s ease;" 
-                     onload="document.getElementById('photo-loading-text').style.display='none'; this.style.opacity='1';"
-                     onerror="document.getElementById('photo-loading-text').style.display='none'; this.style.opacity='1'; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwZWE1ZTkiIHN0cm9rZS13aWR0aD0iMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxwYXRoIGQ9Ik03IDdoMTB2MTBINyIvPjx0ZXh0IHg9IjUiIHk9IjE1IiBmaWxsPSIjMGVhNWU5IiBzdHlsZT0iZm9udC1zaXplOiAycHg7IGZvbnQtZmFtaWx5OiBzYW5zLXNlcmlmOyI+SU5TUEVDVElPTjwvdGV4dD48L3N2Zz4=';">
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+                <!-- Digital Receipt Pane -->
+                <div id="verification-receipt-pane" style="flex: 1; min-width: 300px; background: #020617; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); overflow-y: auto; max-height: 60vh; display: none;">
+                    <!-- Injected by JS -->
+                </div>
+
+                <!-- Photo Pane -->
+                <div id="photo-preview-container" style="flex: 1.5; min-width: 300px; min-height: 300px; background: #020617; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.05);">
+                    <div id="photo-loading-text" style="position: absolute; color: #64748b; font-size: 0.8rem; font-weight: 600; animation: pulse 2s infinite;">Loading High-Res Evidence...</div>
+                    <img id="preview-img" src="" alt="Evidence" style="max-width: 100%; max-height: 60vh; object-fit: contain; z-index: 5; opacity: 0; transition: opacity 0.3s ease;" 
+                         onload="document.getElementById('photo-loading-text').style.display='none'; this.style.opacity='1';"
+                         onerror="document.getElementById('photo-loading-text').style.display='none'; this.style.opacity='1'; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwZWE1ZTkiIHN0cm9rZS13aWR0aD0iMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxwYXRoIGQ9Ik03IDdoMTB2MTBINyIvPjx0ZXh0IHg9IjUiIHk9IjE1IiBmaWxsPSIjMGVhNWU5IiBzdHlsZT0iZm9udC1zaXplOiAycHg7IGZvbnQtZmFtaWx5OiBzYW5zLXNlcmlmOyI+SU5TUEVDVElPTjwvdGV4dD48L3N2Zz4=';">
+                </div>
             </div>
             
-            <div style="margin-top: 1rem; padding: 0.5rem;">
-                <div id="photo-preview-meta" style="font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
-                    <span id="photo-preview-id">Case ID: QC-XXXX</span>
-                    <span style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 4px 8px; border-radius: 6px; font-weight: 800; font-size: 0.65rem;">SECURE CLOUD STORAGE</span>
+            <div style="margin-top: 1rem; padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <span id="photo-preview-id" style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">Case ID: XXXX</span>
+                <div id="verification-actions" style="display: none; gap: 10px;">
+                    <button id="btn-verify-modal" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-weight: 800;">VERIFY PAYMENT</button>
+                    <button id="btn-flag-modal" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-weight: 800;">FLAG PAYMENT</button>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
 
