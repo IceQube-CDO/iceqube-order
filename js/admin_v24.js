@@ -4863,13 +4863,17 @@ function saveCustomerProfile() {
 
 // --- TEAM & PAYROLL REDESIGN LOGIC ---
 
-admin.teamMembersData = [
+admin.teamMembersData = JSON.parse(localStorage.getItem('iceqube_team_members')) || [
     { name: 'Juan Bautista', nickname: 'Juan', role: 'Rider', designation: 'Rider', phone: '0917 123 4567', messenger: 'jb_rider_123', address: 'Carmen, CDO', tin: '123-456-789-000', sss: '33-1234567-8', philhealth: '12-345678901-2', pagibig: '1211-3333-4444', rate: '₱500/day', currentWeekTotal: '₱3,000', currentMonthTotal: '₱12,000', status: 'Active', avatar: 'JB', deliveries: 48, roleCategory: 'Rider' },
     { name: 'Ricky Mercado', nickname: 'Ricky', role: 'Rider', designation: 'Rider', phone: '0918 999 8888', messenger: 'ricky_m88', address: 'Macasandig, CDO', tin: '987-654-321-000', sss: '33-7654321-8', philhealth: '12-098765432-1', pagibig: '1211-4444-5555', rate: '₱500/day', currentWeekTotal: '₱2,500', currentMonthTotal: '₱10,000', status: 'Inactive', avatar: 'RM', deliveries: 32, roleCategory: 'Rider' },
     { name: 'Dindo Lopez', nickname: 'Dindo', role: 'Plant Op', designation: 'Hub Staff', phone: '0915 444 3322', messenger: 'dindo_plant_op', address: 'Bulua, CDO', tin: '111-222-333-000', sss: '33-1122334-8', philhealth: '12-112233445-1', pagibig: '1211-1111-2222', rate: '₱600/day', currentWeekTotal: '₱3,600', currentMonthTotal: '₱14,400', status: 'Active', avatar: 'DL', deliveries: 0, roleCategory: 'Hub Staff' },
     { name: 'Maria Santos', nickname: 'Maria', role: 'Admin', designation: 'Admin Officer', phone: '0919 111 2222', messenger: 'maria_admin', address: 'Gusa, CDO', tin: '444-555-666-000', sss: '33-4455667-8', philhealth: '12-445566778-1', pagibig: '1211-6666-7777', rate: '₱800/day', currentWeekTotal: '₱4,800', currentMonthTotal: '₱19,200', status: 'Active', avatar: 'MS', deliveries: 0, roleCategory: 'Admin Officer' },
     { name: 'Lawrence Fernandez', nickname: 'Lawrence', role: 'Admin', designation: 'Admin Officer', phone: 'N/A', messenger: 'lawrence_admin', address: 'Lapasan, CDO', tin: 'N/A', sss: 'N/A', philhealth: 'N/A', pagibig: 'N/A', rate: '₱800/day', currentWeekTotal: '₱4,800', currentMonthTotal: '₱19,200', status: 'Active', avatar: 'LA', deliveries: 0, roleCategory: 'Admin Officer' }
 ];
+
+admin.saveTeamMembers = function() {
+    localStorage.setItem('iceqube_team_members', JSON.stringify(admin.teamMembersData));
+};
 
 admin.renderTeamCards = function() {
     const adminList = document.getElementById('admin-officers-list');
@@ -4949,6 +4953,7 @@ admin.showAddTeamMemberOverlay = function(roleCategory) {
             deliveries: 0,
             roleCategory: roleCategory
         });
+        admin.saveTeamMembers();
         admin.renderTeamCards();
         if (typeof admin.showToast === 'function') admin.showToast('Member added successfully!', 'success');
     }
@@ -4960,6 +4965,7 @@ admin.toggleMemberStatus = function(name, checkboxEl) {
         const action = member.status === 'Active' ? 'deactivate' : 'activate';
         if (confirm(`Are you sure you want to ${action} ${member.nickname || member.name.split(' ')[0]}?`)) {
             member.status = member.status === 'Active' ? 'Inactive' : 'Active';
+            admin.saveTeamMembers();
             admin.renderTeamCards();
             if (typeof admin.showToast === 'function') {
                 admin.showToast(`${member.nickname || member.name.split(' ')[0]} has been ${member.status.toLowerCase()}d.`, 'success');
@@ -4978,6 +4984,7 @@ admin.archiveTeamMember = function() {
         const member = admin.teamMembersData.find(m => m.name === name);
         if (member) {
             member.status = 'Archived';
+            admin.saveTeamMembers();
             admin.renderTeamCards();
             closeTeamDrawer();
             if (typeof admin.showToast === 'function') admin.showToast(`${name} has been archived.`, 'info');
@@ -5061,6 +5068,19 @@ function openTeamDrawer(name) {
     document.getElementById('team-drawer-overlay').style.display = 'block';
     setTimeout(() => {
         document.getElementById('team-drawer').style.right = '0';
+        
+        // Initialize Map
+        if (!admin.teamMap) {
+            admin.teamMap = L.map('drawer-team-map', { zoomControl: false }).setView([8.4822, 124.6469], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            }).addTo(admin.teamMap);
+            admin.teamMapMarker = L.marker([8.4822, 124.6469]).addTo(admin.teamMap);
+        }
+        
+        setTimeout(() => {
+            if(admin.teamMap) admin.teamMap.invalidateSize();
+        }, 350); // wait for drawer animation to finish
     }, 10);
 }
 
@@ -5155,6 +5175,7 @@ admin.toggleEditTeamMember = function() {
             
             // If name changed, we need to update the drawer's state reference
             admin.currentDrawerMemberName = currentName;
+            admin.saveTeamMembers();
             admin.renderTeamCards();
         }
     }
