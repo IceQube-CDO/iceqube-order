@@ -262,8 +262,14 @@ window.IceQubeSync = {
                         const latestConfigs = {};
                         data.forEach(record => {
                             if (!latestConfigs[record.order_id] && record.items) {
-                                record.items._cloudCreatedAt = record.created_at;
-                                latestConfigs[record.order_id] = record.items;
+                                let parsedItems = record.items;
+                                if (typeof parsedItems === 'string') {
+                                    try { parsedItems = JSON.parse(parsedItems); } catch(e) {}
+                                }
+                                if (typeof parsedItems === 'object' && parsedItems !== null) {
+                                    parsedItems._cloudCreatedAt = record.created_at;
+                                }
+                                latestConfigs[record.order_id] = parsedItems;
                             }
                         });
                         resolve(latestConfigs);

@@ -42,8 +42,17 @@ var admin = {
                 localData = localString;
             }
 
-            const cleanCloud = { ...cloudData };
-            delete cleanCloud._cloudCreatedAt;
+            let cleanCloud;
+            if (Array.isArray(cloudData)) {
+                cleanCloud = [...cloudData];
+                // Arrays might have _cloudCreatedAt set as a property, which isn't part of the array elements
+                // It won't be serialized by JSON.stringify anyway.
+            } else if (typeof cloudData === 'object' && cloudData !== null) {
+                cleanCloud = { ...cloudData };
+                delete cleanCloud._cloudCreatedAt;
+            } else {
+                cleanCloud = cloudData;
+            }
             
             if (JSON.stringify(cleanCloud) !== JSON.stringify(localData)) {
                 console.log(`☁️ [Admin] State updated from Cloud: ${mapping.key}`);
