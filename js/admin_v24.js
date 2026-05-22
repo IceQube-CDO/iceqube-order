@@ -4927,6 +4927,17 @@ admin.renderTeamCards = function() {
     
     if (!adminList || !hubList || !ridersList) return;
 
+    // AUTO-HEAL: If previous bug corrupted Array into an Object (e.g. { "0": {...}, "1": {...} }), fix it.
+    if (!Array.isArray(admin.teamMembersData)) {
+        if (typeof admin.teamMembersData === 'object' && admin.teamMembersData !== null) {
+            console.log("🩹 [Auto-Heal] Converting corrupted teamMembersData object back to Array.");
+            admin.teamMembersData = Object.values(admin.teamMembersData);
+            admin.saveTeamMembers(); // Save fixed array to local and cloud
+        } else {
+            admin.teamMembersData = [];
+        }
+    }
+
     let adminHtml = '';
     let hubHtml = '';
     let ridersHtml = '';
