@@ -4860,3 +4860,292 @@ function saveCustomerProfile() {
         admin.loadCustomers();
     }
 }
+
+// --- TEAM & PAYROLL REDESIGN LOGIC ---
+
+admin.teamMembersData = [
+    { name: 'Juan Bautista', nickname: 'Juan', role: 'Rider', designation: 'Rider', phone: '0917 123 4567', messenger: 'jb_rider_123', address: 'Carmen, CDO', tin: '123-456-789-000', sss: '33-1234567-8', philhealth: '12-345678901-2', pagibig: '1211-3333-4444', rate: '₱500/day', currentWeekTotal: '₱3,000', currentMonthTotal: '₱12,000', status: 'Active', avatar: 'JB', deliveries: 48, roleCategory: 'Rider' },
+    { name: 'Ricky Mercado', nickname: 'Ricky', role: 'Rider', designation: 'Rider', phone: '0918 999 8888', messenger: 'ricky_m88', address: 'Macasandig, CDO', tin: '987-654-321-000', sss: '33-7654321-8', philhealth: '12-098765432-1', pagibig: '1211-4444-5555', rate: '₱500/day', currentWeekTotal: '₱2,500', currentMonthTotal: '₱10,000', status: 'Inactive', avatar: 'RM', deliveries: 32, roleCategory: 'Rider' },
+    { name: 'Dindo Lopez', nickname: 'Dindo', role: 'Plant Op', designation: 'Hub Staff', phone: '0915 444 3322', messenger: 'dindo_plant_op', address: 'Bulua, CDO', tin: '111-222-333-000', sss: '33-1122334-8', philhealth: '12-112233445-1', pagibig: '1211-1111-2222', rate: '₱600/day', currentWeekTotal: '₱3,600', currentMonthTotal: '₱14,400', status: 'Active', avatar: 'DL', deliveries: 0, roleCategory: 'Hub Staff' },
+    { name: 'Maria Santos', nickname: 'Maria', role: 'Admin', designation: 'Admin Officer', phone: '0919 111 2222', messenger: 'maria_admin', address: 'Gusa, CDO', tin: '444-555-666-000', sss: '33-4455667-8', philhealth: '12-445566778-1', pagibig: '1211-6666-7777', rate: '₱800/day', currentWeekTotal: '₱4,800', currentMonthTotal: '₱19,200', status: 'Active', avatar: 'MS', deliveries: 0, roleCategory: 'Admin Officer' },
+    { name: 'Lawrence Fernandez', nickname: 'Lawrence', role: 'Admin', designation: 'Admin Officer', phone: 'N/A', messenger: 'lawrence_admin', address: 'Lapasan, CDO', tin: 'N/A', sss: 'N/A', philhealth: 'N/A', pagibig: 'N/A', rate: '₱800/day', currentWeekTotal: '₱4,800', currentMonthTotal: '₱19,200', status: 'Active', avatar: 'LA', deliveries: 0, roleCategory: 'Admin Officer' }
+];
+
+admin.renderTeamCards = function() {
+    const adminList = document.getElementById('admin-officers-list');
+    const hubList = document.getElementById('hub-staff-list');
+    const ridersList = document.getElementById('riders-list');
+    
+    if (!adminList || !hubList || !ridersList) return;
+
+    let adminHtml = '';
+    let hubHtml = '';
+    let ridersHtml = '';
+
+    admin.teamMembersData.forEach(member => {
+        if (member.status === 'Archived') return;
+
+        const isActive = member.status === 'Active';
+        const statusColor = isActive ? '#22c55e' : '#ef4444';
+        const toggleBtnLabel = isActive ? 'Deactivate' : 'Activate';
+
+        const cardHtml = `
+            <div class="rider-card" onclick="openTeamDrawer('${member.name}')" style="cursor: pointer; opacity: ${isActive ? '1' : '0.6'};">
+                <div class="rider-avatar" style="background: ${isActive ? '#3b82f6' : '#64748b'};">${member.avatar}</div>
+                <div class="rider-info">
+                    <h4 style="margin: 0; font-size: 1rem;">${member.nickname || member.name.split(' ')[0]}</h4>
+                    <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">📞 ${member.phone}</p>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: ${statusColor}; font-size: 0.8rem; font-weight: bold;">● ${member.status}</span>
+                    </div>
+                </div>
+                <button class="status-badge" style="margin-left: auto; background: rgba(255,255,255,0.05); color: white;" onclick="event.stopPropagation(); admin.toggleMemberStatus('${member.name}')">${toggleBtnLabel}</button>
+            </div>
+        `;
+
+        if (member.roleCategory === 'Admin Officer') adminHtml += cardHtml;
+        else if (member.roleCategory === 'Hub Staff') hubHtml += cardHtml;
+        else if (member.roleCategory === 'Rider') ridersHtml += cardHtml;
+    });
+
+    adminList.innerHTML = adminHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active admin officers.</div>';
+    hubList.innerHTML = hubHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active hub staff.</div>';
+    ridersList.innerHTML = ridersHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active riders.</div>';
+    
+    // Update Vault List too
+    const vaultList = document.getElementById('payroll-vault-list');
+    if (vaultList) {
+        vaultList.innerHTML = admin.teamMembersData.map(m => {
+            if (m.status === 'Archived') return '';
+            return `
+            <div class="order-row">
+                <div style="flex: 1;">${m.name}</div>
+                <div style="flex: 1; text-align: center;">${m.roleCategory}</div>
+                <div style="flex: 1; text-align: right; color: #22c55e;">${m.currentWeekTotal}</div>
+            </div>`;
+        }).join('');
+    }
+};
+
+admin.showAddTeamMemberOverlay = function(roleCategory) {
+    const name = prompt(`Enter name for new ${roleCategory}:`);
+    if (name) {
+        admin.teamMembersData.push({
+            name: name,
+            role: roleCategory,
+            designation: roleCategory,
+            phone: 'N/A',
+            messenger: 'N/A',
+            address: 'N/A',
+            tin: 'N/A',
+            sss: 'N/A',
+            philhealth: 'N/A',
+            pagibig: 'N/A',
+            rate: 'TBD',
+            currentWeekTotal: '₱0',
+            currentMonthTotal: '₱0',
+            status: 'Active',
+            avatar: name.substring(0, 2).toUpperCase(),
+            deliveries: 0,
+            roleCategory: roleCategory
+        });
+        admin.renderTeamCards();
+        if (typeof admin.showToast === 'function') admin.showToast('Member added successfully!', 'success');
+    }
+};
+
+admin.toggleMemberStatus = function(name) {
+    const member = admin.teamMembersData.find(m => m.name === name);
+    if (member) {
+        member.status = member.status === 'Active' ? 'Inactive' : 'Active';
+        admin.renderTeamCards();
+    }
+};
+
+admin.archiveTeamMember = function() {
+    const name = document.getElementById('drawer-team-name').innerText;
+    if (confirm(`Are you sure you want to archive ${name}?`)) {
+        const member = admin.teamMembersData.find(m => m.name === name);
+        if (member) {
+            member.status = 'Archived';
+            admin.renderTeamCards();
+            closeTeamDrawer();
+            if (typeof admin.showToast === 'function') admin.showToast(`${name} has been archived.`, 'info');
+        }
+    }
+};
+
+admin.showTeamMemberQR = function() {
+    const name = document.getElementById('drawer-team-name').innerText;
+    admin.showRiderQR(name, 'QR Codes for ' + name);
+};
+
+admin.updateAttendanceSummary = function(filterType) {
+    const presentBar = document.getElementById('attendance-present-bar');
+    const absentBar = document.getElementById('attendance-absent-bar');
+    const presentStat = document.getElementById('attendance-present-stat');
+    const absentStat = document.getElementById('attendance-absent-stat');
+    
+    if (filterType === 'daily') {
+        presentBar.style.width = '100%'; absentBar.style.width = '0%';
+        presentStat.innerText = '3/3 (100%)'; absentStat.innerText = '0';
+    } else if (filterType === 'weekly') {
+        presentBar.style.width = '90%'; absentBar.style.width = '10%';
+        presentStat.innerText = '18/20 (90%)'; absentStat.innerText = '2';
+    } else if (filterType === 'monthly') {
+        presentBar.style.width = '85%'; absentBar.style.width = '15%';
+        presentStat.innerText = '72/85 (85%)'; absentStat.innerText = '13';
+    }
+};
+
+function openTeamDrawer(name) {
+    const member = admin.teamMembersData.find(m => m.name === name);
+    if (!member) return;
+
+    admin.currentDrawerMemberName = member.name;
+    admin.isEditingTeamMember = false; // Reset edit state
+    
+    // Reset edit button visually just in case
+    const editBtn = document.getElementById('edit-team-btn');
+    if (editBtn) {
+        editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit`;
+        editBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+        editBtn.style.color = '#e2e8f0';
+        editBtn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        
+        ['drawer-team-name', 'drawer-team-nickname', 'drawer-team-designation', 'drawer-team-phone', 'drawer-team-messenger', 'drawer-team-address', 'drawer-team-tin', 'drawer-team-sss', 'drawer-team-philhealth', 'drawer-team-pagibig', 'drawer-team-rate'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) { el.contentEditable = "false"; el.style.borderBottom = "none"; el.style.padding = "0"; }
+        });
+    }
+
+    document.getElementById('drawer-team-name').innerText = member.name;
+    document.getElementById('drawer-team-nickname').innerText = member.nickname || member.name.split(' ')[0];
+    document.getElementById('drawer-team-designation').innerText = member.designation;
+    document.getElementById('drawer-team-photo').innerText = member.avatar;
+    
+    const statusColor = member.status === 'Active' ? '#22c55e' : (member.status === 'Inactive' ? '#ef4444' : '#64748b');
+    document.getElementById('drawer-team-status').innerHTML = `<span style="color: ${statusColor};">● ${member.status}</span>`;
+
+    document.getElementById('drawer-team-phone').innerText = member.phone;
+    document.getElementById('drawer-team-messenger').innerText = member.messenger;
+    document.getElementById('drawer-team-address').innerText = member.address;
+    
+    document.getElementById('drawer-team-tin').innerText = member.tin;
+    document.getElementById('drawer-team-sss').innerText = member.sss;
+    document.getElementById('drawer-team-philhealth').innerText = member.philhealth;
+    document.getElementById('drawer-team-pagibig').innerText = member.pagibig;
+    
+    document.getElementById('drawer-team-rate').innerText = member.rate;
+    document.getElementById('drawer-team-week-pay').innerText = member.currentWeekTotal;
+    document.getElementById('drawer-team-month-pay').innerText = member.currentMonthTotal;
+
+    // Mock attendance history specific to drawer
+    const attendanceHtml = `
+        <div class="history-row"><span>Today</span><span>08:00 AM</span><span>05:00 PM</span><span style="color:#22c55e">Present</span></div>
+        <div class="history-row"><span>Yesterday</span><span>08:15 AM</span><span>05:30 PM</span><span style="color:#eab308">Late</span></div>
+        <div class="history-row"><span>2 days ago</span><span>08:00 AM</span><span>05:00 PM</span><span style="color:#22c55e">Present</span></div>
+    `;
+    document.getElementById('drawer-team-attendance').innerHTML = attendanceHtml;
+
+    document.getElementById('team-drawer-overlay').style.display = 'block';
+    setTimeout(() => {
+        document.getElementById('team-drawer').style.right = '0';
+    }, 10);
+}
+
+function closeTeamDrawer() {
+    document.getElementById('team-drawer').style.right = '-450px';
+    setTimeout(() => {
+        document.getElementById('team-drawer-overlay').style.display = 'none';
+    }, 300);
+}
+
+// Ensure cards are rendered on initial load if we switch to team tab
+document.addEventListener('DOMContentLoaded', () => {
+    // Initial Render of Team Cards
+    setTimeout(() => admin.renderTeamCards(), 1000); // Give admin init some time
+});
+
+// Intercept admin.switchView to render team cards specifically when viewing team tab
+const originalSwitchView = admin.switchView;
+if (originalSwitchView) {
+    admin.switchView = function(viewId) {
+        originalSwitchView.call(admin, viewId);
+        if (viewId === 'team') {
+            admin.renderTeamCards();
+        }
+    };
+}
+
+admin.isEditingTeamMember = false;
+admin.currentDrawerMemberName = '';
+
+admin.toggleEditTeamMember = function() {
+    admin.isEditingTeamMember = !admin.isEditingTeamMember;
+    const editableFields = ['drawer-team-nickname', 'drawer-team-designation', 'drawer-team-phone', 'drawer-team-messenger', 'drawer-team-address', 'drawer-team-tin', 'drawer-team-sss', 'drawer-team-philhealth', 'drawer-team-pagibig', 'drawer-team-rate'];
+    
+    const editBtn = document.getElementById('edit-team-btn');
+    const nameEl = document.getElementById('drawer-team-name');
+    
+    if (admin.isEditingTeamMember) {
+        // Switch to input mode
+        editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Save`;
+        editBtn.style.background = 'rgba(34, 197, 94, 0.1)';
+        editBtn.style.color = '#22c55e';
+        editBtn.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+        
+        nameEl.contentEditable = "true";
+        nameEl.style.borderBottom = "1px solid #3b82f6";
+        nameEl.style.outline = "none";
+        
+        editableFields.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.contentEditable = "true";
+                el.style.borderBottom = "1px solid #3b82f6";
+                el.style.outline = "none";
+                el.style.padding = "2px 4px";
+            }
+        });
+    } else {
+        // Save mode
+        editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit`;
+        editBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+        editBtn.style.color = '#e2e8f0';
+        editBtn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        
+        nameEl.contentEditable = "false";
+        nameEl.style.borderBottom = "none";
+        
+        editableFields.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.contentEditable = "false";
+                el.style.borderBottom = "none";
+                el.style.padding = "0";
+            }
+        });
+        
+        // Save changes
+        const currentName = nameEl.innerText.trim();
+        const member = admin.teamMembersData.find(m => m.name === admin.currentDrawerMemberName);
+        if (member) {
+            member.name = currentName;
+            member.nickname = document.getElementById('drawer-team-nickname').innerText.trim();
+            member.designation = document.getElementById('drawer-team-designation').innerText.trim();
+            member.phone = document.getElementById('drawer-team-phone').innerText.trim();
+            member.messenger = document.getElementById('drawer-team-messenger').innerText.trim();
+            member.address = document.getElementById('drawer-team-address').innerText.trim();
+            member.tin = document.getElementById('drawer-team-tin').innerText.trim();
+            member.sss = document.getElementById('drawer-team-sss').innerText.trim();
+            member.philhealth = document.getElementById('drawer-team-philhealth').innerText.trim();
+            member.pagibig = document.getElementById('drawer-team-pagibig').innerText.trim();
+            member.rate = document.getElementById('drawer-team-rate').innerText.trim();
+            
+            // If name changed, we need to update the drawer's state reference
+            admin.currentDrawerMemberName = currentName;
+            admin.renderTeamCards();
+        }
+    }
+}
