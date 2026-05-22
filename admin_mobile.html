@@ -2365,18 +2365,28 @@
                 <div class="cc-card" style="flex: 1;">
                     <div class="metric-label">Weather & Demand Forecast</div>
                     <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 15px;">
-                        <div style="font-size: 2.5rem;">☀️</div>
+                        <div style="font-size: 2.5rem;" id="live-weather-icon">☀️</div>
                         <div>
-                            <div style="font-size: 1.4rem; font-weight: 800;">34°C</div>
+                            <div style="font-size: 1.4rem; font-weight: 800;" id="live-weather-temp">--°C</div>
                             <div style="color: #94a3b8; font-size: 0.75rem;">Cagayan de Oro</div>
                         </div>
                     </div>
-                    <div style="margin-top: 1rem; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                        <div style="display: flex; align-items: center; color: #ef4444; font-weight: bold; font-size: 0.75rem;">
+                    <div id="live-demand-box" style="margin-top: 1rem; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <div style="display: flex; align-items: center; color: #ef4444; font-weight: bold; font-size: 0.75rem;" id="live-demand-text">
                             <span class="demand-pulse"></span>
-                            HIGH DEMAND
+                            LOADING...
                         </div>
                     </div>
+                    <div id="hourly-forecast-container" style="margin-top: 1rem; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none;">
+                        <!-- Hourly forecast items injected here -->
+                    </div>
+                    <style>
+                        #hourly-forecast-container::-webkit-scrollbar { display: none; }
+                        .hourly-item { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; min-width: 50px; }
+                        .hourly-item .h-time { font-size: 0.65rem; color: #94a3b8; margin-bottom: 4px; font-weight: 700; }
+                        .hourly-item .h-icon { font-size: 1.2rem; margin-bottom: 4px; }
+                        .hourly-item .h-temp { font-size: 0.8rem; font-weight: 800; color: white; }
+                    </style>
                 </div>
             </div>
 
@@ -2426,8 +2436,11 @@
 
                 <!-- Verification Queue -->
                 <div class="cc-card">
-                    <div class="metric-label">Verification Queue</div>
-                    <div id="receipt-list" style="margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="metric-label">Online Payment Verification</div>
+                        <a href="#" onclick="admin.openFlaggedArchive(); return false;" style="font-size: 0.75rem; color: #3b82f6; text-decoration: none;">View Flagged</a>
+                    </div>
+                    <div id="receipt-list" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;">
                         <div style="text-align: center; color: #64748b; padding: 10px; font-size: 0.7rem;">Queue is empty</div>
                     </div>
                 </div>
@@ -3832,7 +3845,7 @@
 
     <script src="js/app_header.js?v=2.4.0"></script>
     <script src="js/sync.js?v=2.4.0"></script>
-    <script src="js/admin_v24.js?v=2.4.5"></script>
+    <script src="js/admin_v24.js?v=2.4.6"></script>
 
 
     <!-- PWA Install Prompt -->
@@ -4068,6 +4081,23 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Flagged Archive Modal -->
+    <div id="modal-flagged-archive" class="modal-overlay" style="z-index: 25000;">
+        <div class="modal-content" style="max-width: 600px; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: white; font-size: 1.25rem;">🚩 Flagged Payment Archive</h3>
+                <button onclick="document.getElementById('modal-flagged-archive').classList.remove('active');" style="background: transparent; border: none; color: #94a3b8; cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div id="flagged-archive-list" style="max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                <div style="text-align: center; color: #64748b; padding: 10px;">Archive is empty</div>
+            </div>
+        </div>
+    </div>
+    
     <div id="hidden-bridge" style="display:none;"></div>
 </body>
 </html>

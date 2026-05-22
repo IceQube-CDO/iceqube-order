@@ -1459,6 +1459,7 @@ var admin = {
         this.updateCustomerDirectory(orders);
         this.updateAlertCenter(orders);
         this.updateComplaintsUI();
+        this.renderPaymentVerification(orders);
 
         // 6. Vacation Mode Auto-Dispatch (On-Load Check)
         if (this.vacationMode) {
@@ -4505,10 +4506,116 @@ document.head.appendChild(style);
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await admin.init();
+        admin.initWeather();
     } catch (e) {
         console.error('Fatal Initialization Error:', e);
     }
 });
+
+admin.initWeather = async function() {
+    try {
+        // Cagayan de Oro coordinates
+        const lat = 8.4822;
+        const lon = 124.6472;
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode&timezone=Asia%2FManila`);
+        if (!res.ok) throw new Error('Failed to fetch weather');
+        const data = await res.json();
+        const current = data.current_weather;
+        
+        const getWeatherIcon = (code) => {
+            if (code >= 1 && code <= 3) return '⛅';
+            if (code >= 45 && code <= 48) return '🌫️';
+            if (code >= 51 && code <= 67) return '🌧️';
+            if (code >= 71 && code <= 77) return '❄️';
+            if (code >= 80 && code <= 82) return '🌦️';
+            if (code >= 95) return '⛈️';
+            return '☀️'; // default clear
+        };
+        
+        if (current) {
+            const temp = Math.round(current.temperature);
+            const icon = getWeatherIcon(current.weathercode);
+            
+            const tempEl = document.getElementById('live-weather-temp');
+            const iconEl = document.getElementById('live-weather-icon');
+            const demandBox = document.getElementById('live-demand-box');
+            const demandText = document.getElementById('live-demand-text');
+            
+            if (tempEl) tempEl.innerText = `${temp}°C`;
+            if (iconEl) iconEl.innerText = icon;
+            
+            // Demand Logic based on temperature (Ice demand is higher when hot)
+            if (temp >= 32) {
+                if (demandBox) {
+                    demandBox.style.background = 'rgba(239, 68, 68, 0.1)';
+                    demandBox.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                }
+                if (demandText) {
+                    demandText.style.color = '#ef4444';
+                    demandText.innerHTML = '<span class="demand-pulse"></span>HIGH DEMAND';
+                }
+            } else if (temp >= 28) {
+                if (demandBox) {
+                    demandBox.style.background = 'rgba(245, 158, 11, 0.1)';
+                    demandBox.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+                }
+                if (demandText) {
+                    demandText.style.color = '#f59e0b';
+                    demandText.innerHTML = '<span class="demand-pulse" style="background: #f59e0b;"></span>MODERATE DEMAND';
+                }
+            } else {
+                if (demandBox) {
+                    demandBox.style.background = 'rgba(59, 130, 246, 0.1)';
+                    demandBox.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                }
+                if (demandText) {
+                    demandText.style.color = '#3b82f6';
+                    demandText.innerHTML = '<span class="demand-pulse" style="background: #3b82f6;"></span>LOW DEMAND';
+                }
+            }
+        }
+        
+        // Render Hourly Forecast (next 6 hours)
+        const hourlyContainer = document.getElementById('hourly-forecast-container');
+        if (hourlyContainer && data.hourly) {
+            const now = new Date();
+            let currentIndex = data.hourly.time.findIndex(t => new Date(t) > now);
+            if (currentIndex === -1 || currentIndex === 0) currentIndex = 1; 
+            
+            let html = '';
+            for (let i = currentIndex; i < currentIndex + 6; i++) {
+                if (i >= data.hourly.time.length) break;
+                
+                const timeStr = data.hourly.time[i];
+                const tempH = Math.round(data.hourly.temperature_2m[i]);
+                const codeH = data.hourly.weathercode[i];
+                const iconH = getWeatherIcon(codeH);
+                
+                const dateObj = new Date(timeStr);
+                let hour = dateObj.getHours();
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                hour = hour % 12;
+                hour = hour ? hour : 12; 
+                
+                html += `
+                    <div class="hourly-item">
+                        <span class="h-time">${hour} ${ampm}</span>
+                        <span class="h-icon">${iconH}</span>
+                        <span class="h-temp">${tempH}°</span>
+                    </div>
+                `;
+            }
+            hourlyContainer.innerHTML = html;
+        }
+        
+        // Auto refresh every 30 minutes
+        setTimeout(admin.initWeather, 30 * 60 * 1000);
+    } catch (err) {
+        console.error('Weather fetch error:', err);
+        const demandText = document.getElementById('live-demand-text');
+        if (demandText) demandText.innerHTML = 'OFFLINE';
+    }
+};
 
 // Drawer Controls
 let previousActiveTab = null;
@@ -5293,3 +5400,120 @@ admin.toggleEditTeamMember = function() {
         }
     }
 }
+
+admin.renderPaymentVerification = function(orders) {
+    const listEl = document.getElementById('receipt-list');
+    if (!listEl) return;
+    
+    const pendingOrders = orders.filter(o => {
+        const method = (o.payment || '').toLowerCase();
+        const isOnline = method.includes('gcash') || method.includes('online') || method.includes('bank') || method.includes('po') || method.includes('purchase order') || method.includes('wallet') || method.includes('topup');
+        const isPending = o.verification_status !== 'verified' && o.verification_status !== 'flagged';
+        return isOnline && o.payment_screenshot && isPending;
+    });
+    
+    if (pendingOrders.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 10px; font-size: 0.7rem;">Queue is empty</div>';
+        return;
+    }
+    
+    listEl.innerHTML = pendingOrders.map(o => `
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <img src="${o.payment_screenshot}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" onclick="admin.openPhotoModal('${o.payment_screenshot}', '${o.order_id}')" alt="Screenshot">
+                <div>
+                    <div style="font-size: 0.8rem; font-weight: 700; color: white;">${o.order_id}</div>
+                    <div style="font-size: 0.7rem; color: #94a3b8;">${o.customer_name || 'Customer'} - ₱${o.total_price}</div>
+                    <div style="font-size: 0.6rem; color: #3b82f6; text-transform: uppercase;">${o.payment}</div>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <button onclick="admin.verifyPayment('${o.order_id}')" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 4px 8px; border-radius: 6px; font-size: 0.65rem; cursor: pointer; font-weight: 600;">VERIFY</button>
+                <button onclick="admin.flagPayment('${o.order_id}')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 8px; border-radius: 6px; font-size: 0.65rem; cursor: pointer; font-weight: 600;">FLAG</button>
+            </div>
+        </div>
+    `).join('');
+};
+
+admin.verifyPayment = function(orderId) {
+    if (!confirm('Mark payment as verified?')) return;
+    
+    const order = admin.allOrders.find(o => o.order_id === orderId);
+    if (order) {
+        order.verification_status = 'verified';
+        
+        // Update in localStorage
+        const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const idx = localOrders.findIndex(o => o.order_id === orderId);
+        if (idx !== -1) {
+            localOrders[idx].verification_status = 'verified';
+            localStorage.setItem('ice_orders', JSON.stringify(localOrders));
+        }
+        
+        // Force sync if cloud sync exists
+        if (window.IceQubeSync) {
+            window.IceQubeSync.syncLocalToCloud(localOrders);
+        }
+        
+        // Re-render
+        admin.updateDashboardUI(admin.allOrders);
+    }
+};
+
+admin.flagPayment = function(orderId) {
+    if (!confirm('Flag payment and move to archive for investigation?')) return;
+    
+    const order = admin.allOrders.find(o => o.order_id === orderId);
+    if (order) {
+        order.verification_status = 'flagged';
+        
+        // Update in localStorage
+        const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const idx = localOrders.findIndex(o => o.order_id === orderId);
+        if (idx !== -1) {
+            localOrders[idx].verification_status = 'flagged';
+            localStorage.setItem('ice_orders', JSON.stringify(localOrders));
+        }
+        
+        // Add to flagged archive
+        const archive = JSON.parse(localStorage.getItem('ice_flagged_payments') || '[]');
+        const archiveIdx = archive.findIndex(o => o.order_id === orderId);
+        if (archiveIdx === -1) {
+            archive.push({ ...order, flagged_at: new Date().toISOString() });
+            localStorage.setItem('ice_flagged_payments', JSON.stringify(archive));
+        }
+        
+        // Force sync if cloud sync exists
+        if (window.IceQubeSync) {
+            window.IceQubeSync.syncLocalToCloud(localOrders);
+        }
+        
+        // Re-render
+        admin.updateDashboardUI(admin.allOrders);
+    }
+};
+
+admin.openFlaggedArchive = function() {
+    const archive = JSON.parse(localStorage.getItem('ice_flagged_payments') || '[]');
+    const listEl = document.getElementById('flagged-archive-list');
+    
+    if (archive.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 10px;">Archive is empty</div>';
+    } else {
+        listEl.innerHTML = archive.map(o => `
+            <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <img src="${o.payment_screenshot}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" onclick="admin.openPhotoModal('${o.payment_screenshot}', '${o.order_id}')" alt="Screenshot">
+                    <div>
+                        <div style="font-size: 0.8rem; font-weight: 700; color: white;">${o.order_id} <span style="font-size: 0.6rem; background: #ef4444; color: white; padding: 2px 4px; border-radius: 4px; margin-left: 4px;">FLAGGED</span></div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">${o.customer_name || 'Customer'} - ₱${o.total_price}</div>
+                        <div style="font-size: 0.6rem; color: #3b82f6; text-transform: uppercase;">${o.payment}</div>
+                        <div style="font-size: 0.6rem; color: #64748b;">Flagged on: ${new Date(o.flagged_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    document.getElementById('modal-flagged-archive').classList.add('active');
+};
