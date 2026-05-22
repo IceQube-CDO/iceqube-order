@@ -4265,7 +4265,7 @@ const app = {
         const method = this.orderData.payment;
         const total = this.orderData.total + (this.orderData.deliveryFee || 0);
 
-        if (method === 'GCash' || method === 'Bank Transfer') {
+        if (method === 'GCash' || method === 'Bank Transfer' || method === 'Purchase Order' || method === 'IceQube Wallet') {
 
             
             // Configure Modal for Method
@@ -4307,11 +4307,12 @@ const app = {
                 if (recipientName) recipientName.innerText = 'LAWRENCE FE BACAYO';
                 if (recipientNumber) recipientNumber.innerText = '0961 039 1173';
                 
+                qrContainer.style.display = 'block';
                 // NEW: Generate Dynamic QR with Amount (GCash Blueprint)
                 this.updateDynamicQR(total, 'gcash');
                 
                 if (verificationText) verificationText.innerText = 'Please upload your GCash screenshot.';
-            } else {
+            } else if (method === 'Bank Transfer') {
                 modal.classList.add('modal-bank-transfer');
                 title.innerText = 'Bank Transfer';
                 instructionsText.innerText = 'Scan the QR code below using your banking app (InstaPay) or Maya.';
@@ -4325,12 +4326,29 @@ const app = {
                 if (recipientName) recipientName.innerText = 'LAWRENCE FE BACAYO';
                 if (recipientNumber) recipientNumber.innerText = '0176 3092 9031';
                 
+                qrContainer.style.display = 'block';
                 // NEW: Generate Dynamic QR with Amount (GoTyme Blueprint)
                 this.updateDynamicQR(total, 'bank');
                 
                 const fallbackUI = document.getElementById('qr-fallback-ui');
                 if (fallbackUI) fallbackUI.style.display = 'none';
                 if (verificationText) verificationText.innerText = 'Please upload your Bank Transfer/InstaPay screenshot.';
+            } else if (method === 'Purchase Order') {
+                title.innerText = 'Purchase Order Attachment';
+                instructionsText.innerText = 'Please attach a photo or scan of your signed Purchase Order.';
+                openAppBtn.style.display = 'none';
+                qrContainer.style.display = 'none';
+                
+                if (step2Label) step2Label.innerText = 'Attach PO';
+                if (verificationText) verificationText.innerText = 'Upload your PO document below.';
+            } else if (method === 'IceQube Wallet') {
+                title.innerText = 'Wallet / Topup Attachment';
+                instructionsText.innerText = 'Please attach proof of your topup or any required wallet screenshot.';
+                openAppBtn.style.display = 'none';
+                qrContainer.style.display = 'none';
+                
+                if (step2Label) step2Label.innerText = 'Attach Proof';
+                if (verificationText) verificationText.innerText = 'Upload your proof document below.';
             }
             
             // Reset modal state
@@ -4402,6 +4420,7 @@ const app = {
             const uploadBox = document.getElementById('tally-upload-area');
             const statusText = document.getElementById('upload-status-text');
             
+            this.orderData.payment_screenshot_base64 = e.target.result;
             preview.src = e.target.result;
             preview.style.display = 'block';
             uploadBox.classList.add('has-file');
@@ -4964,6 +4983,7 @@ const app = {
             priority_fee: this.orderData.priorityFee || 0,
             po_number: this.orderData.poNumber,
             messenger_id: finalMessengerId || null,
+            payment_screenshot: this.orderData.payment_screenshot_base64 || null,
             is_real: true, // Safeguard for Purge Logic
             created_at: new Date().toISOString()
         };

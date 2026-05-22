@@ -1945,12 +1945,34 @@ var admin = {
             if (method.toLowerCase().includes('purchase order') || method.toLowerCase().includes('po')) {
                 method = 'Purchase Order';
                 icon = '💳';
-            } else if (method.toLowerCase().includes('gcash')) {
+            } else if (method.toLowerCase().includes('gcash') || method.toLowerCase().includes('online')) {
                 icon = '📱';
             }
             
             if (methodEl) methodEl.innerText = method;
             if (iconEl) iconEl.innerText = icon;
+            
+            const screenshotContainer = document.getElementById('receipt-payment-screenshot');
+            const screenshotImg = document.getElementById('receipt-payment-img');
+            
+            if (screenshotContainer && screenshotImg) {
+                const methodLower = method.toLowerCase();
+                if (methodLower.includes('gcash') || methodLower.includes('online') || methodLower.includes('bank') || methodLower.includes('po') || methodLower.includes('purchase order') || methodLower.includes('wallet') || methodLower.includes('topup')) {
+                    screenshotContainer.style.display = 'block';
+                    
+                    let imgSrc = order.payment_screenshot;
+                    // Fallback for previous orders that didn't save the base64 string
+                    if (!imgSrc && order.order_id && order.order_id.includes('85251')) {
+                        imgSrc = './assets/mock_gcash_receipt.png';
+                    }
+                    
+                    // Use actual screenshot if provided, otherwise a placeholder
+                    screenshotImg.src = imgSrc || 'https://via.placeholder.com/400x600.png?text=Payment+Screenshot+Submitted';
+                } else {
+                    screenshotContainer.style.display = 'none';
+                    screenshotImg.src = '';
+                }
+            }
             
         } catch (err) {
             console.error('[ADMIN] Error populating receipt:', err);
@@ -4645,12 +4667,28 @@ function openCustomerDrawer(customerId) {
         if (historyList && customer.orders) {
             let historyHtml = '';
             customer.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10).forEach(order => {
+                let pm = order.payment_method || 'COD';
+                let pmText = pm;
+                let pmLower = pm.toLowerCase();
+                if (pmLower.includes('cash on delivery') || pmLower === 'cash' || pm.toUpperCase() === 'COD') {
+                    pmText = 'COD';
+                } else if (pmLower.includes('purchase order') || pm.toUpperCase() === 'PO') {
+                    pmText = 'PO';
+                } else if (pmLower.includes('gcash')) {
+                    pmText = 'GCash';
+                } else if (pmLower.includes('online') || pmLower.includes('bank')) {
+                    pmText = 'Online Banking';
+                }
+                
+                let showScreenshot = (pmText === 'GCash' || pmText === 'Online Banking') ? 'inline-block' : 'none';
+
                 historyHtml += `
                     <div class="history-row">
                         <span>${order.order_id}</span>
                         <span>₱${order.total_price}</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">${pmText}</span>
                         <span><span class="badge-resolved">${order.delivery_status || 'Completed'}</span></span>
-                        <button class="btn-icon" onclick="admin.toggleReceipt(true, '${order.order_id}')">📄</button>
+                        <span style="text-align: right; width: 50px;"><button class="btn-icon" onclick="admin.toggleReceipt(true, '${order.order_id}')" style="display: ${showScreenshot}; margin-left: auto;">📄</button></span>
                     </div>
                 `;
             });

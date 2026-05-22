@@ -1788,6 +1788,10 @@
                         <span class="tag-icon">💳</span>
                         <span id="receipt-payment-method">-</span>
                     </div>
+                    <div id="receipt-payment-screenshot" style="display: none; margin: 20px auto; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center;">
+                        <p style="font-size: 0.75rem; color: #64748b; font-weight: 700; margin-bottom: 8px;">PAYMENT ATTACHMENT</p>
+                        <img id="receipt-payment-img" src="" style="max-width: 100%; border-radius: 6px;" alt="Payment Screenshot">
+                    </div>
                     <p>Thank you for choosing IceQube!</p>
                     <div class="barcode">|||||||||||||||||||||||||||||</div>
                 </div>
@@ -2313,8 +2317,9 @@
                             <div class="history-row header">
                                 <span>Order ID</span>
                                 <span>Amount</span>
+                                <span>Payment</span>
                                 <span>Status</span>
-                                <span>Receipt</span>
+                                <span style="text-align: right; width: 50px;">Receipt</span>
                             </div>
                             <div id="drawer-history-list">
                                 <!-- Dynamically filled -->
@@ -3455,7 +3460,7 @@
 
     <script src="js/app_header.js?v=2.4.0"></script>
     <script src="js/sync.js?v=2.4.0"></script>
-    <script src="js/admin_v24.js?v=2.4.3"></script>
+    <script src="js/admin_v24.js?v=2.4.5"></script>
 
 
     <!-- PWA Install Prompt -->
