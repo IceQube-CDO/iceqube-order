@@ -1293,6 +1293,25 @@
             filter: brightness(1.1);
         }
         .btn-dispatch:active { transform: scale(0.95); }
+        .btn-add-entry {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+            text-transform: uppercase;
+        }
+        .btn-add-entry:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(14, 165, 233, 0.3);
+            filter: brightness(1.1);
+        }
+        .btn-add-entry:active { transform: scale(0.95); }
         .status-awaiting {
             background: rgba(245, 158, 11, 0.1);
             color: #f59e0b;
@@ -3669,17 +3688,17 @@
 
             <!-- Summary Row -->
             <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 0.15rem;">
-                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 8px 4px; text-align: center;">
-                    <div style="font-size: 0.55rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Total Inflow</div>
-                    <div style="color: #22c55e; font-size: 0.85rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-in">₱0.00</div>
+                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 5px; text-align: center;">
+                    <div style="font-size: 0.66rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Total Inflow</div>
+                    <div style="color: #22c55e; font-size: 1.02rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-in">₱0.00</div>
                 </div>
-                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 8px 4px; text-align: center;">
-                    <div style="font-size: 0.55rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Total Outflow</div>
-                    <div style="color: #ef4444; font-size: 0.85rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-out">₱0.00</div>
+                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 5px; text-align: center;">
+                    <div style="font-size: 0.66rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Total Outflow</div>
+                    <div style="color: #ef4444; font-size: 1.02rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-out">₱0.00</div>
                 </div>
-                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 8px 4px; text-align: center;">
-                    <div id="cashflow-net-label" style="font-size: 0.55rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Net (Today)</div>
-                    <div style="font-size: 0.85rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-net">₱0.00</div>
+                <div style="background: var(--admin-card); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 5px; text-align: center;">
+                    <div id="cashflow-net-label" style="font-size: 0.66rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; line-height: 1.1; letter-spacing: 0.05em;">Net (Today)</div>
+                    <div style="font-size: 1.02rem; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 4px;" id="cashflow-net">₱0.00</div>
                 </div>
             </div>
 
@@ -3692,7 +3711,7 @@
                 </div>
                 <div style="display: flex; gap: 6px;">
                     <button style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 4px 8px; border-radius: 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;" onclick="admin.exportCashflow()">Export</button>
-                    <button class="btn-dispatch" style="padding: 4px 8px; font-size: 0.7rem; border-radius: 8px;" onclick="admin.openCashflowModal()">+ Add Entry</button>
+                    <button class="btn-add-entry" style="padding: 4px 8px; font-size: 0.7rem; border-radius: 8px;" onclick="admin.openCashflowModal()">+ Add Entry</button>
                 </div>
             </div>
 
