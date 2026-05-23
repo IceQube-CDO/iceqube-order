@@ -1512,34 +1512,28 @@ var admin = {
     },
 
     updateOperationFeed(orders) {
-        const feed = document.querySelector('.feed-list');
+        const feed = document.getElementById('operation-feed');
         if (!feed) return;
         
         if (orders.length === 0) {
-            feed.innerHTML = '<div class="feed-item"><div class="feed-content"><p>No orders recorded today.</p></div></div>';
+            feed.innerHTML = '<div style="text-align: center; color: #64748b; padding: 10px;">System Online. No recent activity.</div>';
             return;
         }
 
         const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
 
-        feed.innerHTML = orders.slice(0, 5).map(o => {
+        feed.innerHTML = '<div style="display: flex; flex-direction: column; gap: 10px;">' + orders.slice(0, 5).map(o => {
             const cleanCustName = (o.customer_name || '').trim();
             const isElite = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
-                <div class="feed-item" style="${isElite ? 'border-left: 3px solid #eab308;' : ''}">
-                    <div class="feed-time">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    <div class="feed-content">
-                        <p>
-                            <strong>Order ${o.order_id}</strong> - ${o.customer_name}
-                            ${isElite ? '<span style="background: #eab308; color: #000; padding: 1px 4px; border-radius: 3px; font-size: 0.55rem; font-weight: 900; margin-left: 4px;">ELITE</span>' : ''}
-                        </p>
-                        <small>
-                            ${o.payment_method} • ₱${o.total_price}
-                        </small>
-                    </div>
+                <div style="padding: 10px; background: rgba(14, 165, 233, 0.1); border-left: 3px solid ${isElite ? '#eab308' : '#0ea5e9'}; border-radius: 4px;">
+                    <span style="color: #94a3b8; font-size: 0.75rem;">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> - New Order <strong>${o.order_id}</strong> by ${o.customer_name}
+                    ${isElite ? '<span style="background: #eab308; color: #000; padding: 1px 4px; border-radius: 3px; font-size: 0.55rem; font-weight: 900; margin-left: 4px;">ELITE</span>' : ''}
+                    <br>
+                    <small style="color: #cbd5e1; margin-top: 4px; display: block;">${o.payment_method} • ₱${o.total_price}</small>
                 </div>
             `;
-        }).join('');
+        }).join('') + '</div>';
     },
 
     renderMockStats() {
