@@ -41,9 +41,9 @@ window.IceQubeSync = {
         localStorage.setItem('ice_deliveries', JSON.stringify(existingDeliveries));
 
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        const cleanId = id => id ? String(id).replace('#', '').trim() : '';
+        const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
         const targetId = cleanId(dispatchData.orderId);
-        const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id) === targetId);
+        const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id || o.id) === targetId);
         if (orderIdx > -1) {
             existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
             existingOrders[orderIdx].rider = dispatchData.riderId;
@@ -56,7 +56,9 @@ window.IceQubeSync = {
     publishDeliveryComplete: function(completionData) {
         console.log("📡 [Sync] Publishing Delivery Complete:", completionData.orderId);
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        const orderIdx = existingOrders.findIndex(o => o.order_id === completionData.orderId);
+        const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+        const targetId = cleanId(completionData.orderId);
+        const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id || o.id) === targetId);
         if (orderIdx > -1) {
             existingOrders[orderIdx].delivery_status = 'Delivered';
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
@@ -340,7 +342,7 @@ window.IceQubeSync = {
             if (data.type === 'NEW_DISPATCH') {
                 const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
                 const targetId = cleanId(payload.orderId);
-                const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id) === targetId);
+                const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id || o.id) === targetId);
                 if (orderIdx > -1) {
                     if (existingOrders[orderIdx].delivery_status === 'Pending') {
                         existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';

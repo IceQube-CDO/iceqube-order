@@ -2331,9 +2331,12 @@
             await syncGeotagToSupabase(currentOrderId, simulatedLat, simulatedLng, currentRider);
 
             // 2.5 Update Order Status in Cloud
+            const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+            const targetId = cleanId(currentOrderId);
+
             if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
                 try {
-                    await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${currentOrderId}`, {
+                    await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${targetId}`, {
                         method: 'PATCH',
                         headers: {
                             'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -2346,6 +2349,14 @@
                 } catch (err) {
                     console.warn('⚠️ Main Table Update Failed:', err);
                 }
+            }
+
+            // Update local storage
+            const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            const idx = allOrders.findIndex(o => cleanId(o.order_id || o.orderId) === targetId);
+            if (idx !== -1) {
+                allOrders[idx].delivery_status = 'Delivered';
+                localStorage.setItem('ice_orders', JSON.stringify(allOrders));
             }
             
             // 3. Complete UI Updates
