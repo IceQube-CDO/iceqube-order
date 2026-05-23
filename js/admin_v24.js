@@ -2078,8 +2078,24 @@ var admin = {
                     
                     if (imgSrc && imgSrc !== 'null') {
                         screenshotImg.src = imgSrc;
+                        screenshotImg.onerror = function() {
+                            this.onerror = null;
+                            const urlText = (this.src && this.src.length > 50) ? this.src.substring(0, 50) + '...' : this.src;
+                            const isFbCDN = this.src && this.src.includes('fbcdn.net');
+                            const errMsg = isFbCDN ? 'Messenger Attachment Expired or Blocked' : 'Failed to Load Image';
+                            
+                            // Instead of a broken image, show a message with a link
+                            this.outerHTML = `
+                                <div style="padding: 20px; background: #fff1f2; border: 1px dashed #f43f5e; border-radius: 8px; color: #e11d48; text-align: center;">
+                                    <p style="font-weight: 700; margin-bottom: 5px;">⚠️ ${errMsg}</p>
+                                    <p style="font-size: 0.7rem; margin-bottom: 10px; word-break: break-all;">URL: <a href="${this.src}" target="_blank" style="color: #2563eb; text-decoration: underline;">Click to open directly</a></p>
+                                    <p style="font-size: 0.65rem; color: #64748b;">(If it opens in a new tab, the browser blocked it here. If not, the link is expired.)</p>
+                                </div>
+                            `;
+                        };
                     } else {
                         screenshotImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiNlMmU4ZjAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iIzY0NzQ4YiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBTY3JlZW5zaG90IFVwbG9hZGVkPC90ZXh0Pjwvc3ZnPg==';
+                        screenshotImg.onerror = null; // Clear previous handler
                     }
                 } else {
                     screenshotContainer.style.display = 'none';
