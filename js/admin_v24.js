@@ -4802,7 +4802,7 @@ admin.initWeather = async function() {
         // Cagayan de Oro coordinates
         const lat = 8.4822;
         const lon = 124.6472;
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode&timezone=Asia%2FManila`);
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode,precipitation_probability&timezone=Asia%2FManila`);
         if (!res.ok) throw new Error('Failed to fetch weather');
         const data = await res.json();
         const current = data.current_weather;
@@ -4875,6 +4875,7 @@ admin.initWeather = async function() {
                 const tempH = Math.round(data.hourly.temperature_2m[i]);
                 const codeH = data.hourly.weathercode[i];
                 const iconH = getWeatherIcon(codeH);
+                const popH = data.hourly.precipitation_probability ? data.hourly.precipitation_probability[i] : 0;
                 
                 const dateObj = new Date(timeStr);
                 let hour = dateObj.getHours();
@@ -4887,6 +4888,7 @@ admin.initWeather = async function() {
                         <span class="h-time">${hour} ${ampm}</span>
                         <span class="h-icon">${iconH}</span>
                         <span class="h-temp">${tempH}°</span>
+                        <span style="font-size: 0.65rem; color: #38bdf8; font-weight: 700; margin-top: 4px;">${popH}% 💧</span>
                     </div>
                 `;
             }
