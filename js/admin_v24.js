@@ -2076,8 +2076,11 @@ var admin = {
                         imgSrc = './assets/mock_gcash_receipt.png';
                     }
                     
-                    // Use actual screenshot if provided, otherwise a placeholder
-                    screenshotImg.src = imgSrc || 'https://via.placeholder.com/400x600.png?text=Payment+Screenshot+Submitted';
+                    if (imgSrc && imgSrc !== 'null') {
+                        screenshotImg.src = imgSrc;
+                    } else {
+                        screenshotImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiNlMmU4ZjAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iIzY0NzQ4YiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBTY3JlZW5zaG90IFVwbG9hZGVkPC90ZXh0Pjwvc3ZnPg==';
+                    }
                 } else {
                     screenshotContainer.style.display = 'none';
                     screenshotImg.src = '';
@@ -5530,8 +5533,8 @@ admin.renderPaymentVerification = function(orders) {
         let imgSrc = o.payment_screenshot || (o.items && o.items.payment_screenshot);
         if (!imgSrc && o.order_id === '#IQ-85251') {
             imgSrc = './assets/mock_gcash_receipt.png';
-        } else if (!imgSrc) {
-            imgSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBhdGggZD0iTTIxIDE1bC01LTVMNCAxNCIvPjwvc3ZnPg==';
+        } else if (!imgSrc || imgSrc === 'null') {
+            imgSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiNlMmU4ZjAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iIzY0NzQ4YiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBTY3JlZW5zaG90IFVwbG9hZGVkPC90ZXh0Pjwvc3ZnPg==';
         }
         
         return `
@@ -5620,6 +5623,9 @@ admin.openFlaggedArchive = function() {
     } else {
         listEl.innerHTML = archive.map(o => {
             let imgSrc = o.payment_screenshot || (o.items && o.items.payment_screenshot);
+            if (!imgSrc || imgSrc === 'null') {
+                imgSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiNlMmU4ZjAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iIzY0NzQ4YiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBTY3JlZW5zaG90IFVwbG9hZGVkPC90ZXh0Pjwvc3ZnPg==';
+            }
             return `
             <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                 <div style="display: flex; gap: 10px; align-items: center;">
