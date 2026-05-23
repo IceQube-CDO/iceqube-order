@@ -2487,57 +2487,54 @@ var admin = {
             }
         }
 
-        // 3. Waterfall Chart (Floating Bars)
+        // 3. Stacked Bar Chart (Income Statement)
         const waterfallCtx = document.getElementById('waterfallChart')?.getContext('2d');
         if (waterfallCtx) {
             const netProfit = p.revenue - p.cogs - p.opex - p.depreciation;
-            const grossProfit = p.revenue - p.cogs;
-            const ebitda = grossProfit - p.opex;
 
             const data = {
-                labels: ['Revenue', 'COGS', 'OpEx', 'Dep.', 'Net'],
-                datasets: [{
-                    label: 'Amount',
-                    data: [
-                        [0, p.revenue],                         // Revenue
-                        [grossProfit, p.revenue],              // COGS (Steps down)
-                        [ebitda, grossProfit],                 // OpEx (Steps down)
-                        [netProfit, ebitda],                   // Dep. (Steps down)
-                        [0, netProfit]                         // Net Profit
-                    ],
-                    backgroundColor: (ctx) => {
-                        const idx = ctx.dataIndex;
-                        if (idx === 0) return '#22c55e'; // Revenue
-                        if (idx === 4) return netProfit >= 0 ? '#22c55e' : '#ef4444'; // Net
-                        return '#64748b'; // Intermediates
-                    },
-                    borderRadius: 4,
-                    borderSkipped: false
-                }]
+                labels: ['Gross Revenue', 'Distribution'],
+                datasets: [
+                    { label: 'Revenue', data: [p.revenue, 0], backgroundColor: '#22c55e', borderRadius: 4 },
+                    { label: 'COGS', data: [0, p.cogs], backgroundColor: '#f59e0b', borderRadius: 0 },
+                    { label: 'OpEx', data: [0, p.opex], backgroundColor: '#ef4444', borderRadius: 0 },
+                    { label: 'Depreciation', data: [0, p.depreciation], backgroundColor: '#64748b', borderRadius: 0 },
+                    { label: 'Net Profit', data: [0, netProfit], backgroundColor: netProfit >= 0 ? '#22c55e' : '#ef4444', borderRadius: 4 }
+                ]
             };
 
             if (this.charts.waterfall) {
-                this.charts.waterfall.data = data;
-                this.charts.waterfall.update();
-            } else {
-                if (typeof Chart !== 'undefined') {
-                    this.charts.waterfall = new Chart(waterfallCtx, {
-                        type: 'bar',
-                        data: data,
-                        options: {
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { 
-                                    grid: { color: 'rgba(255,255,255,0.05)' },
-                                    ticks: { color: '#64748b', font: { size: 10 } }
-                                },
-                                x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+                this.charts.waterfall.destroy();
+            }
+            
+            if (typeof Chart !== 'undefined') {
+                this.charts.waterfall = new Chart(waterfallCtx, {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        plugins: { 
+                            legend: { 
+                                display: true, 
+                                position: 'bottom',
+                                labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12 }
+                            } 
+                        },
+                        scales: {
+                            y: { 
+                                stacked: true,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#64748b', font: { size: 10 } }
                             },
-                            responsive: true,
-                            maintainAspectRatio: false
-                        }
-                    });
-                }
+                            x: { 
+                                stacked: true,
+                                grid: { display: false }, 
+                                ticks: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } 
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
             }
         }
     },

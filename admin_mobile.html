@@ -2432,41 +2432,7 @@
                 </div>
             </div>
 
-            <!-- 8. Staff On Duty Today -->
-            <div class="cc-card">
-                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Staff On Duty Today
-                    <div style="display: flex; gap: 8px;">
-                        <button class="status-badge" style="background: rgba(255,255,255,0.1); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showRiderAppQR()">
-                            <span style="font-size: 1rem;">📲</span> App Access
-                        </button>
-                        <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Rider')">
-                            <span>+</span> Add
-                        </button>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
-                    <div>
-                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Admin Officers</h4>
-                        <div id="admin-officers-list" style="display: grid; gap: 8px;">
-                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading admin officers...</div>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Hub Staff</h4>
-                        <div id="hub-staff-list" style="display: grid; gap: 8px;">
-                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading hub staff...</div>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Riders</h4>
-                        <div id="riders-list" style="display: grid; gap: 8px;">
-                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading riders...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- 4. Inventory Monitoring -->
             <div class="cc-card">
@@ -2999,6 +2965,42 @@
                                 <!-- Dynamically filled -->
                                 <div class="history-row" style="color: #94a3b8; font-size: 0.85rem; text-align: center; justify-content: center; padding: 15px;">Loading attendance data...</div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Members Lists (Admin, Hub, Riders) -->
+            <div class="cc-card">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Team Roster
+                    <div style="display: flex; gap: 8px;">
+                        <button class="status-badge" style="background: rgba(255,255,255,0.1); color: white; border: none; cursor: pointer; display: none; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showRiderAppQR()">
+                            <span style="font-size: 1rem;">📲</span> App Access
+                        </button>
+                        <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Rider')">
+                            <span>+</span> Add
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div>
+                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Admin Officers</h4>
+                        <div id="admin-officers-list" style="display: grid; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading admin officers...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Hub Staff</h4>
+                        <div id="hub-staff-list" style="display: grid; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading hub staff...</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Riders</h4>
+                        <div id="riders-list" style="display: grid; gap: 8px;">
+                            <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 10px;">Loading riders...</div>
                         </div>
                     </div>
                 </div>
@@ -3607,21 +3609,21 @@
             <!-- Row 1: Time Controls (1/3) & Net Profit (2/3) -->
             <div class="cc-card" style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 16px;">
                 <div class="metric-label" style="margin-bottom: 1.2rem;">Reporting Period</div>
-                <div class="time-toggle-group" style="display: flex; flex-direction: column; width: 100%; gap: 10px; background: transparent; border: none; padding: 0;">
-                    <button class="time-btn active" id="btn-mtd" onclick="admin.loadPnL('mtd')" style="width: 100%; padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.08);">Month-to-Date (MTD)</button>
-                    <button class="time-btn" id="btn-last_month" onclick="admin.loadPnL('last_month')" style="width: 100%; padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.08);">Last Month</button>
-                    <button class="time-btn" id="btn-ytd" onclick="admin.loadPnL('ytd')" style="width: 100%; padding: 12px; text-align: left; border: 1px solid rgba(255,255,255,0.08);">Year-to-Date (YTD)</button>
+                <div class="time-toggle-group" style="display: flex; flex-direction: row; width: 100%; gap: 8px; background: transparent; border: none; padding: 0;">
+                    <button class="time-btn active" id="btn-mtd" onclick="admin.loadPnL('mtd')" style="flex: 1; padding: 10px 4px; text-align: center; border: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem;">MTD</button>
+                    <button class="time-btn" id="btn-last_month" onclick="admin.loadPnL('last_month')" style="flex: 1; padding: 10px 4px; text-align: center; border: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem;">Last Mo</button>
+                    <button class="time-btn" id="btn-ytd" onclick="admin.loadPnL('ytd')" style="flex: 1; padding: 10px 4px; text-align: center; border: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem;">YTD</button>
                 </div>
             </div>
 
-            <div class="hero-card" style="grid-column: span 2; margin-bottom: 0;">
-                <div class="hero-header">
-                    <span class="card-title">NET PROFIT</span>
+            <div class="hero-card" style="margin-bottom: 0; padding: 12px;">
+                <div class="hero-header" style="margin-bottom: 5px;">
+                    <span class="card-title" style="font-size: 0.8rem;">NET PROFIT</span>
                     <span class="margin-badge" id="operational-margin">Margin: 0.0%</span>
                 </div>
-                <h1 id="hero-net-profit" class="text-green" style="font-size: 2.5rem; margin: 0;">₱0.00</h1>
-                <p class="sub-text">Includes all operational costs and asset depreciation.</p>
-                <div class="chart-container trend-chart-container">
+                <h1 id="hero-net-profit" class="text-green" style="font-size: 1.8rem; margin: 0;">₱0.00</h1>
+                <p class="sub-text" style="font-size: 0.7rem; margin-top: 4px; line-height: 1.2;">Includes all operational costs and asset depreciation.</p>
+                <div class="chart-container trend-chart-container" style="height: 60px; margin-top: 8px;">
                     <canvas id="profitTrendChart"></canvas>
                 </div>
             </div>
@@ -3629,9 +3631,9 @@
             <!-- THE P&L GRID -->
             <div class="pnl-grid" style="grid-column: 1 / -1;">
                 
-                <!-- LEFT: The Income Statement Waterfall -->
+                <!-- LEFT: The Income Statement Breakdown -->
                 <div class="stat-card waterfall-card">
-                    <h3 class="card-title">INCOME STATEMENT WATERFALL</h3>
+                    <h3 class="card-title">INCOME STATEMENT BREAKDOWN</h3>
                     
                     <div class="chart-container" style="height: 180px; margin-bottom: 20px;">
                         <canvas id="waterfallChart"></canvas>
