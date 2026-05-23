@@ -1723,19 +1723,25 @@
     </style>
     <style>
         /* MOBILE APP OVERRIDES - Forced for all viewports */
-            html, body.admin-mode {
+            html {
+                background: #020617; /* Dark background outside the phone area */
+            }
+            body.admin-mode {
                 position: fixed !important;
                 top: 0 !important;
                 left: 0 !important;
                 right: 0 !important;
                 bottom: 0 !important;
                 width: 100vw !important;
+                max-width: 390px !important; /* iPhone 13 size */
+                margin: 0 auto !important;
                 height: 100vh !important;
                 height: -webkit-fill-available !important;
                 overflow: hidden !important;
                 overscroll-behavior: none !important;
-                margin: 0 !important;
                 padding: 0 !important;
+                transform: translateZ(0) !important; /* Create containing block for fixed elements */
+                box-shadow: 0 0 50px rgba(0,0,0,0.5); /* Optional: add shadow for depth */
             }
             #command-center {
                 position: absolute !important;
