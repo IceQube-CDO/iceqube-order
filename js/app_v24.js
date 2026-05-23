@@ -3438,6 +3438,11 @@ const app = {
     },
 
     calculatePriorityFee() {
+        if (this.orderData && this.orderData.logistics === 'Self-Pickup in Macabalan') {
+            this.orderData.priorityFee = 0;
+            return 0;
+        }
+
         let totalWeight = 0;
         this.pricingMatrix.products.forEach(p => {
             const weight = parseInt(p.id.toString().replace(/[^0-9]/g, '')) || (p.id === 'bag3kg' ? 3 : 1);
@@ -4108,6 +4113,9 @@ const app = {
                 lng: null
             };
         }
+        
+        // Ensure priority fee is updated based on logistics selection
+        this.updateTotal();
         
         // Populate the Payment Summary container added in index.html
         this.updatePaymentSummary();
