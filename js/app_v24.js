@@ -5087,7 +5087,7 @@ const app = {
             delivery_fee: this.orderData.deliveryFee || 0,
             priority_fee: this.orderData.priorityFee || 0,
             po_number: this.orderData.poNumber,
-            messenger_id: finalMessengerId || null,
+            messenger_id: finalMessengerId || 'GUEST_WEB',
             is_real: true, // Safeguard for Purge Logic
             created_at: new Date().toISOString()
         };
