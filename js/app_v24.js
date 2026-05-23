@@ -223,12 +223,12 @@ const app = {
             }
         }
         
-        // Deep sniff: search all parameters for a 14-17 digit number (typical FB PSID format)
+        // Deep sniff: search all parameters for a 14-25 digit number (typical FB PSID format)
         if (!psid) {
             const sniffer = (params) => {
                 for (const val of params.values()) {
                     // Prevent grabbing the Page ID or other known non-user IDs
-                    if (/^\d{14,17}$/.test(val) && val !== '61557321703652') return val;
+                    if (/^\d{14,25}$/.test(val) && val !== '61557321703652') return val;
                 }
                 return null;
             };
@@ -4420,6 +4420,28 @@ const app = {
 
 
 
+    async compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_DIM = 600;
+                    let w = img.width, h = img.height;
+                    if (w > h && w > MAX_DIM) { h *= MAX_DIM / w; w = MAX_DIM; }
+                    else if (h > MAX_DIM) { w *= MAX_DIM / h; h = MAX_DIM; }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.5));
+                };
+                img.onerror = () => resolve(event.target.result);
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    },
+
     async handleStagedUpload(event) {
         const file = event.target.files[0];
         if (!file || !file.type.startsWith('image/')) return;
@@ -4434,21 +4456,37 @@ const app = {
 
         this.orderData.paymentReceipt = file;
         
-        const reader = new FileReader();
-        reader.onload = e => {
+        try {
+            const compressedBase64 = await this.compressImage(file);
             const preview = document.getElementById('staged-receipt-preview');
             const uploadBox = document.getElementById('tally-upload-area');
             const statusText = document.getElementById('upload-status-text');
             
-            this.orderData.payment_screenshot_base64 = e.target.result;
-            preview.src = e.target.result;
+            this.orderData.payment_screenshot_base64 = compressedBase64;
+            preview.src = compressedBase64;
             preview.style.display = 'block';
             uploadBox.classList.add('has-file');
             statusText.innerText = 'Receipt Attached';
             
             document.getElementById('btn-confirm-finish').disabled = false;
-        };
-        reader.readAsDataURL(file);
+        } catch (e) {
+            console.error('Compression failed:', e);
+            const reader = new FileReader();
+            reader.onload = e => {
+                const preview = document.getElementById('staged-receipt-preview');
+                const uploadBox = document.getElementById('tally-upload-area');
+                const statusText = document.getElementById('upload-status-text');
+                
+                this.orderData.payment_screenshot_base64 = e.target.result;
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                uploadBox.classList.add('has-file');
+                statusText.innerText = 'Receipt Attached';
+                
+                document.getElementById('btn-confirm-finish').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
     },
 
     async refCheck(file) {
