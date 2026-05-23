@@ -600,18 +600,20 @@
         }
 
         .metric-value {
-            font-size: 2.5rem;
-            font-weight: 800;
+            font-size: 2rem;
+            font-weight: 900;
             margin: 0.5rem 0;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.5px;
         }
 
         .metric-label {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             color: #94a3b8;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
+            font-family: 'Inter', sans-serif;
         }
 
         .status-badge {
@@ -2347,53 +2349,61 @@
             <!-- 1st row: #1 & #2 (Revenue & Kg Sold) -->
             <div style="display: flex; gap: 8px; width: 100%;">
                 <!-- Revenue Metric -->
-                <div class="cc-card" style="flex: 1; padding: 0.75rem;">
+                <div class="cc-card" style="flex: 1; padding: 1rem 0.75rem;">
                     <div class="metric-label" style="font-size: 0.65rem; line-height: 1.2;">Today's Revenue</div>
-                    <div class="metric-value" id="ops-revenue" style="font-size: 1.3rem; margin: 0.25rem 0;">₱0.00</div>
-                    <div class="metric-trend up" style="font-size: 0.6rem; line-height: 1.2;">+15% vs yesterday</div>
+                    <div class="metric-value" id="ops-revenue" style="font-size: 1.12rem; color: #10b981; margin: 0.4rem 0;">₱0.00</div>
+                    <div class="metric-trend up" style="font-size: 0.65rem; line-height: 1.2;">+15% vs yesterday</div>
                 </div>
 
                 <!-- Metric Card: Full Dice Sold -->
-                <div class="cc-card" style="flex: 1; padding: 0.75rem;">
+                <div class="cc-card" style="flex: 1; padding: 1rem 0.75rem;">
                     <div class="metric-label" style="font-size: 0.65rem; line-height: 1.2;">Full Dice (KG)</div>
-                    <div class="metric-value" id="ops-fulldice" style="font-size: 1.3rem; margin: 0.25rem 0;">0</div>
-                    <div class="metric-trend" id="ops-fulldice-capacity" style="font-size: 0.6rem; line-height: 1.2;">Operating at 85% capacity</div>
+                    <div class="metric-value" id="ops-fulldice" style="font-size: 1.44rem; color: #ffffff; margin: 0.4rem 0;">0</div>
+                    <div class="metric-trend" id="ops-fulldice-capacity" style="font-size: 0.65rem; line-height: 1.2; color: #cbd5e1;">Operating at 85% capacity</div>
                 </div>
 
                 <!-- Metric Card: Half-Dice Sold -->
-                <div class="cc-card" style="flex: 1; padding: 0.75rem;">
+                <div class="cc-card" style="flex: 1; padding: 1rem 0.75rem;">
                     <div class="metric-label" style="font-size: 0.65rem; line-height: 1.2;">Half-Dice (KG)</div>
-                    <div class="metric-value" id="ops-halfdice" style="font-size: 1.3rem; margin: 0.25rem 0;">0</div>
-                    <div class="metric-trend" id="ops-halfdice-capacity" style="font-size: 0.6rem; line-height: 1.2;">Operating at 85% capacity</div>
+                    <div class="metric-value" id="ops-halfdice" style="font-size: 1.44rem; color: #ffffff; margin: 0.4rem 0;">0</div>
+                    <div class="metric-trend" id="ops-halfdice-capacity" style="font-size: 0.65rem; line-height: 1.2; color: #cbd5e1;">Operating at 85% capacity</div>
                 </div>
             </div>
 
             <!-- 2nd row: #3 (Weather & Forecast) -->
             <div class="cc-card">
                 <div class="metric-label">Weather & Demand Forecast</div>
-                <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 15px;">
-                    <div style="font-size: 2.5rem;" id="live-weather-icon">☀️</div>
+                <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 18px;">
+                    <div style="font-size: 3rem; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));" id="live-weather-icon">☀️</div>
                     <div>
-                        <div style="font-size: 1.4rem; font-weight: 800;" id="live-weather-temp">--°C</div>
-                        <div style="color: #94a3b8; font-size: 0.75rem;">Cagayan de Oro</div>
+                        <div style="font-size: 1.8rem; font-weight: 900; font-family: 'Outfit', sans-serif; letter-spacing: -0.5px;" id="live-weather-temp">--°C</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-top: 2px;">Cagayan de Oro</div>
                     </div>
                 </div>
-                <div id="live-demand-box" style="margin-top: 1rem; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                    <div style="display: flex; align-items: center; color: #ef4444; font-weight: bold; font-size: 0.75rem;" id="live-demand-text">
+                <div id="live-demand-box" style="margin-top: 1.25rem; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    <div style="display: flex; align-items: center; color: #ef4444; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.05em;" id="live-demand-text">
                         <span class="demand-pulse"></span>
                         LOADING...
                     </div>
                 </div>
-                <div id="hourly-forecast-container" style="margin-top: 1rem; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none;">
+                <div id="hourly-forecast-container" style="margin-top: 1.25rem; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none;">
                     <!-- Hourly forecast items injected here -->
                 </div>
                 <style>
                     #hourly-forecast-container::-webkit-scrollbar { display: none; }
-                    .hourly-item { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; min-width: 50px; }
-                    .hourly-item .h-time { font-size: 0.65rem; color: #94a3b8; margin-bottom: 4px; font-weight: 700; }
-                    .hourly-item .h-icon { font-size: 1.2rem; margin-bottom: 4px; }
-                    .hourly-item .h-temp { font-size: 0.8rem; font-weight: 800; color: white; }
+                    .hourly-item { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 12px; min-width: 55px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                    .hourly-item .h-time { font-size: 0.7rem; color: #94a3b8; margin-bottom: 6px; font-weight: 700; }
+                    .hourly-item .h-icon { font-size: 1.4rem; margin-bottom: 6px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+                    .hourly-item .h-temp { font-size: 0.9rem; font-weight: 800; color: white; font-family: 'Outfit', sans-serif; }
                 </style>
+            </div>
+
+            <!-- 6. Live Operation Feed -->
+            <div class="cc-card">
+                <div class="metric-label">Live Operation Feed</div>
+                <div id="operation-feed" style="margin-top: 1rem; font-family: 'Inter', sans-serif; font-size: 0.75rem;">
+                    <div style="text-align: center; color: #64748b; padding: 10px;">System Online. No recent activity.</div>
+                </div>
             </div>
 
             <!-- 3. Online Payment Verification -->
@@ -2480,13 +2490,7 @@
                 </div>
             </div>
 
-            <!-- 6. Live Operation Feed -->
-            <div class="cc-card">
-                <div class="metric-label">Live Operation Feed</div>
-                <div id="operation-feed" style="margin-top: 1rem; font-family: 'Inter', sans-serif; font-size: 0.75rem;">
-                    <div style="text-align: center; color: #64748b; padding: 10px;">System Online. No recent activity.</div>
-                </div>
-            </div>
+
 
             <!-- 7. Live Logistics Map -->
             <div class="cc-card wide" style="display: flex; flex-direction: column;">

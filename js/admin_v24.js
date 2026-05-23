@@ -1590,15 +1590,27 @@ var admin = {
 
         const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
 
-        feed.innerHTML = '<div style="display: flex; flex-direction: column; gap: 10px;">' + orders.slice(0, 5).map(o => {
+        feed.innerHTML = '<div style="display: flex; flex-direction: column; gap: 12px;">' + orders.slice(0, 5).map(o => {
             const cleanCustName = (o.customer_name || '').trim();
             const isElite = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
-                <div style="padding: 10px; background: rgba(14, 165, 233, 0.1); border-left: 3px solid ${isElite ? '#eab308' : '#0ea5e9'}; border-radius: 4px;">
-                    <span style="color: #94a3b8; font-size: 0.75rem;">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> - New Order <strong>${o.order_id}</strong> by ${o.customer_name}
-                    ${isElite ? '<span style="background: #eab308; color: #000; padding: 1px 4px; border-radius: 3px; font-size: 0.55rem; font-weight: 900; margin-left: 4px;">ELITE</span>' : ''}
-                    <br>
-                    <small style="color: #cbd5e1; margin-top: 4px; display: block;">${o.payment_method} • ₱${o.total_price}</small>
+                <div style="padding: 14px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid ${isElite ? '#eab308' : '#0ea5e9'}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit', sans-serif;">
+                            New Order <span style="color: ${isElite ? '#eab308' : '#38bdf8'};">${o.order_id}</span>
+                        </span>
+                        <span style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">
+                            ${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px;">
+                        by <strong style="color: #fff;">${o.customer_name}</strong>
+                        ${isElite ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900; margin-left: 6px; vertical-align: middle;">ELITE</span>' : ''}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; color: #e2e8f0; font-weight: 600;">${o.payment_method}</span>
+                        <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">₱${o.total_price}</span>
+                    </div>
                 </div>
             `;
         }).join('') + '</div>';
