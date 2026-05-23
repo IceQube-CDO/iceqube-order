@@ -1970,14 +1970,14 @@
                 <div class="cc-card" style="flex: 1;">
                     <div class="metric-label">Full Dice sold today (kg)</div>
                     <div class="metric-value" id="ops-fulldice">0</div>
-                    <div class="metric-trend">Operating at 85% capacity</div>
+                    <div class="metric-trend" id="ops-fulldice-capacity">Operating at 85% capacity</div>
                 </div>
 
                 <!-- Metric Card: Half-Dice Sold -->
                 <div class="cc-card" style="flex: 1;">
                     <div class="metric-label">Half-Dice Sold today (kg)</div>
                     <div class="metric-value" id="ops-halfdice">0</div>
-                    <div class="metric-trend">Operating at 85% capacity</div>
+                    <div class="metric-trend" id="ops-halfdice-capacity">Operating at 85% capacity</div>
                 </div>
 
                 <!-- Weather & Demand Predictor -->
@@ -3259,10 +3259,10 @@
                         <input type="text" id="im-name" placeholder="e.g. Manitowoc #1" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Status</label>
-                        <select id="im-status" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
-                            <option value="operational">Operational</option>
-                            <option value="repair">Under Repair</option>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Ice Types</label>
+                        <select id="im-ice-type" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                            <option value="Full Dice">Full Dice</option>
+                            <option value="Half-Dice">Half-Dice</option>
                         </select>
                     </div>
                 </div>

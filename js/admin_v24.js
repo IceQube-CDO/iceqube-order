@@ -1524,6 +1524,34 @@ var admin = {
             if (metricValues.length >= 3) metricValues[2].innerText = halfDiceKg.toLocaleString();
         }
 
+        // Capacity Calculations
+        let totalFullDiceCapacity = 0;
+        let totalHalfDiceCapacity = 0;
+        
+        if (this.iceMachines) {
+            this.iceMachines.forEach(im => {
+                if (im.status === 'operational') {
+                    if (im.iceType === 'Full Dice') {
+                        totalFullDiceCapacity += (parseFloat(im.actualProd) || 0);
+                    } else if (im.iceType === 'Half-Dice') {
+                        totalHalfDiceCapacity += (parseFloat(im.actualProd) || 0);
+                    }
+                }
+            });
+        }
+
+        const fullDiceCapEl = document.getElementById('ops-fulldice-capacity');
+        if (fullDiceCapEl) {
+            const pct = totalFullDiceCapacity > 0 ? Math.round((fullDiceKg / totalFullDiceCapacity) * 100) : 0;
+            fullDiceCapEl.innerText = `Operating at ${pct}% capacity`;
+        }
+
+        const halfDiceCapEl = document.getElementById('ops-halfdice-capacity');
+        if (halfDiceCapEl) {
+            const pct = totalHalfDiceCapacity > 0 ? Math.round((halfDiceKg / totalHalfDiceCapacity) * 100) : 0;
+            halfDiceCapEl.innerText = `Operating at ${pct}% capacity`;
+        }
+
         // 4. Status Counters
         const statusValues = document.querySelectorAll('.status-item .status-value');
         if (statusValues.length >= 3) {
@@ -4182,6 +4210,7 @@ var admin = {
                         ${im.status === 'operational' ? 'Operational' : 'Under Repair'}
                     </button>
                 </div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;"><strong>Ice Type:</strong> ${im.iceType || 'N/A'}</div>
                 <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;"><strong>Brand:</strong> ${im.brand || 'N/A'} | <strong>Model:</strong> ${im.model || 'N/A'}</div>
                 <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;"><strong>Actual Prod:</strong> ${im.actualProd || 0} kg/day</div>
                 <button onclick="admin.editIceMachine('${im.id}')" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 0.75rem;">Edit Details</button>
@@ -4193,7 +4222,7 @@ var admin = {
         // Reset fields for new entry
         this.currentIceMachineEditId = null;
         document.getElementById('im-name').value = '';
-        document.getElementById('im-status').value = 'operational';
+        document.getElementById('im-ice-type').value = 'Full Dice';
         document.getElementById('im-brand').value = '';
         document.getElementById('im-model').value = '';
         document.getElementById('im-price').value = '';
@@ -4219,7 +4248,7 @@ var admin = {
 
         this.currentIceMachineEditId = id;
         document.getElementById('im-name').value = im.name || '';
-        document.getElementById('im-status').value = im.status || 'operational';
+        document.getElementById('im-ice-type').value = im.iceType || 'Full Dice';
         document.getElementById('im-brand').value = im.brand || '';
         document.getElementById('im-model').value = im.model || '';
         document.getElementById('im-price').value = im.price || '';
@@ -4254,7 +4283,8 @@ var admin = {
         const imData = {
             id: this.currentIceMachineEditId || 'im-' + Date.now(),
             name: name,
-            status: document.getElementById('im-status').value,
+            status: this.currentIceMachineEditId ? (this.iceMachines.find(m => m.id === this.currentIceMachineEditId)?.status || 'operational') : 'operational',
+            iceType: document.getElementById('im-ice-type').value,
             brand: document.getElementById('im-brand').value,
             model: document.getElementById('im-model').value,
             price: parseFloat(document.getElementById('im-price').value) || 0,
