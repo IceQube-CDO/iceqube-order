@@ -212,16 +212,30 @@ const app = {
         }
         const hashParams = new URLSearchParams(hashString);
         
-        const psid = urlParams.get('psid') || urlParams.get('extid') || 
-                     urlParams.get('messenger_uid') || urlParams.get('user_id') || 
-                     urlParams.get('userid') || urlParams.get('uid') || 
-                     urlParams.get('subscriber_id') || urlParams.get('chat_id') || 
-                     urlParams.get('sender_id') ||
-                     hashParams.get('psid') || hashParams.get('extid') || 
-                     hashParams.get('messenger_uid') || hashParams.get('user_id') ||
-                     hashParams.get('userid') || hashParams.get('uid') ||
-                     hashParams.get('subscriber_id') || hashParams.get('chat_id') || 
-                     hashParams.get('sender_id');
+        let psid = null;
+        const possibleKeys = ['psid', 'extid', 'messenger_uid', 'user_id', 'userid', 'uid', 'subscriber_id', 'chat_id', 'sender_id', 'mcu', 'mc_id', 'messenger_user_id', 'ig_uid', 'ig_id', 'thread_id'];
+        
+        for (const key of possibleKeys) {
+            const val = urlParams.get(key) || hashParams.get(key);
+            if (val && !val.includes('{{') && !val.includes('}}')) {
+                psid = val;
+                break;
+            }
+        }
+        
+        // Deep sniff: search all parameters for a 14-17 digit number (typical FB PSID format)
+        if (!psid) {
+            const sniffer = (params) => {
+                for (const val of params.values()) {
+                    if (/^\d{14,17}$/.test(val)) return val;
+                }
+                return null;
+            };
+            psid = sniffer(urlParams) || sniffer(hashParams);
+        }
+        
+        // Debug logging for troubleshooting Manychat URLs
+        localStorage.setItem('debug_last_url', window.location.href);
         if (psid) {
             console.log('Detected Messenger PSID:', psid);
             MESSENGER_CONFIG.RECIPIENT_ID = psid;
