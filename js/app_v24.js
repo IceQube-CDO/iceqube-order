@@ -213,7 +213,7 @@ const app = {
         const hashParams = new URLSearchParams(hashString);
         
         let psid = null;
-        const possibleKeys = ['psid', 'extid', 'messenger_uid', 'user_id', 'userid', 'uid', 'subscriber_id', 'chat_id', 'sender_id', 'mcu', 'mc_id', 'messenger_user_id', 'ig_uid', 'ig_id', 'thread_id'];
+        const possibleKeys = ['psid', 'extid', 'messenger_uid', 'messenger_id', 'user_id', 'userid', 'uid', 'subscriber_id', 'chat_id', 'sender_id', 'mcu', 'mc_id', 'messenger_user_id', 'ig_uid', 'ig_id', 'thread_id'];
         
         for (const key of possibleKeys) {
             const val = urlParams.get(key) || hashParams.get(key);
@@ -227,7 +227,8 @@ const app = {
         if (!psid) {
             const sniffer = (params) => {
                 for (const val of params.values()) {
-                    if (/^\d{14,17}$/.test(val)) return val;
+                    // Prevent grabbing the Page ID or other known non-user IDs
+                    if (/^\d{14,17}$/.test(val) && val !== '61557321703652') return val;
                 }
                 return null;
             };
@@ -4941,11 +4942,21 @@ const app = {
         if (!finalMessengerId && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
                 // Query previous orders for this establishment or contact number containing a messenger_id
-                const nameQuery = encodeURIComponent(customerName);
-                const phoneQuery = encodeURIComponent(contactNumber);
-                const queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(customer_name.eq.${nameQuery},contact_number.eq.${phoneQuery})&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
+                // IMPORTANT: Prevent matching generic values like 'N/A' or 'Guest Customer'
+                const isValidName = customerName && customerName.toLowerCase() !== 'guest customer';
+                const isValidPhone = contactNumber && contactNumber.toLowerCase() !== 'n/a' && contactNumber.length > 5;
                 
-                const res = await fetch(queryUrl, {
+                let queryUrl = null;
+                if (isValidName && isValidPhone) {
+                    queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(customer_name.eq.${encodeURIComponent(customerName)},contact_number.eq.${encodeURIComponent(contactNumber)})&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
+                } else if (isValidPhone) {
+                    queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?contact_number=eq.${encodeURIComponent(contactNumber)}&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
+                } else if (isValidName) {
+                    queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?customer_name=eq.${encodeURIComponent(customerName)}&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
+                }
+
+                if (queryUrl) {
+                    const res = await fetch(queryUrl, {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -4978,6 +4989,7 @@ const app = {
                             } catch(e) {}
                         }
                     }
+                }
                 }
             } catch (err) {
                 console.warn('Could not auto-fetch messenger ID from past orders:', err);

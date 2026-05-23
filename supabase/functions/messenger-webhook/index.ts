@@ -247,7 +247,8 @@ serve(async (req) => {
         const results: any = {};
         
         // 1. Send to Customer (whoever ordered gets the order confirmation message)
-        if (customerId) {
+        // Prevent sending to the Facebook Page ID itself to avoid inbox spam
+        if (customerId && customerId !== '61557321703652') {
           try {
             results.customer = await sendFBMessage(customerId, msg);
           } catch (err) {
