@@ -24,6 +24,7 @@ var admin = {
             'CONFIG_UTILITY_STATUS': { key: 'iceqube_utility_status', prop: 'utilityStatus', updateFn: 'updateUtilitiesUI' },
             'CONFIG_UTILITY_PAID_DATES': { key: 'iceqube_utility_paid_dates', prop: 'utilityPaidDates', updateFn: 'updateUtilitiesUI' },
             'CONFIG_MAINTENANCE_LOGS': { key: 'iceqube_maintenance_logs', prop: 'maintenanceLogs', updateFn: 'updateAssetsUI' },
+            'CONFIG_ICE_MACHINES': { key: 'iceqube_ice_machines', prop: 'iceMachines', updateFn: 'updateIceMachinesUI' },
             'CONFIG_RENTAL': { key: 'iceqube_rental', prop: 'rental', updateFn: 'updateUtilitiesUI' },
             'CONFIG_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
             'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' },
@@ -131,6 +132,9 @@ var admin = {
         { id: 'm1', name: 'Ice Machine #1', type: 'Machine', status: 'online', metric: 'Temp: -18°C • Optimal', price: 250000, dateAcquired: '2025-01-15', usefulLifeMonths: 60 },
         { id: 'm2', name: 'Ice Machine #2', type: 'Machine', status: 'online', metric: 'Temp: -20°C • Optimal', price: 250000, dateAcquired: '2025-02-10', usefulLifeMonths: 60 },
         { id: 'f1', name: 'Walk-in Freezer', type: 'Freezer', status: 'busy', metric: 'Defrost Cycle Active', price: 180000, dateAcquired: '2025-01-20', usefulLifeMonths: 84 }
+    ])),
+    iceMachines: JSON.parse(localStorage.getItem('iceqube_ice_machines') || JSON.stringify([
+        { id: 'im1', name: 'Ice Machine #1', brand: 'Manitowoc', model: 'IYT0500A', status: 'operational', price: 250000, dateAcquired: '2025-01-15', condition: 'brand_new', usefulLifeMonths: 60, publishProd: 500, actualProd: 480, serviceCenter: 'CoolTech Services', tech: 'John Doe', repairHistory: '', cleanSched: '1st of Month', descaleSched: 'Every 6 Months' }
     ])),
     utilities: JSON.parse(localStorage.getItem('iceqube_utilities') || JSON.stringify({
         electricity: 18450,
@@ -421,6 +425,7 @@ var admin = {
         this.updateFiltrationUI();
         this.updateMaintenanceUI();
         this.updateAssetsUI();
+        this.updateIceMachinesUI();
         this.updateUtilitiesUI();
         this.updateRentalUI();
         this.updatePricingUI();
@@ -1437,7 +1442,8 @@ var admin = {
         if (revenueEl) revenueEl.innerText = `₱${revenue.toLocaleString()}`;
         
         // 3. Kg Calculation
-        let totalKg = 0;
+        let fullDiceKg = 0;
+        let halfDiceKg = 0;
         todaysOrders.forEach(o => {
             if (o.items) {
                 const items = this.parseItems(o.items);
@@ -1457,10 +1463,10 @@ var admin = {
                 };
 
                 for (let key in fd) {
-                    totalKg += (parseFloat(fd[key]) || 0) * getKgMultiplier(key);
+                    fullDiceKg += (parseFloat(fd[key]) || 0) * getKgMultiplier(key);
                 }
                 for (let key in hd) {
-                    totalKg += (parseFloat(hd[key]) || 0) * getKgMultiplier(key);
+                    halfDiceKg += (parseFloat(hd[key]) || 0) * getKgMultiplier(key);
                 }
             }
         });
@@ -1471,17 +1477,30 @@ var admin = {
                 if (entry.category === 'Sales' && new Date(entry.timestamp).toDateString() === todayStr) {
                     const match = (entry.description || '').match(/(\d+(?:\.\d+)?)\s*kg/i);
                     if (match && match[1]) {
-                        totalKg += parseFloat(match[1]);
+                        if ((entry.description || '').toLowerCase().includes('half')) {
+                            halfDiceKg += parseFloat(match[1]);
+                        } else {
+                            fullDiceKg += parseFloat(match[1]);
+                        }
                     }
                 }
             });
         }
-        const bagsEl = document.getElementById('ops-bags');
-        if (bagsEl) {
-            bagsEl.innerText = totalKg.toLocaleString();
+        
+        const fullDiceEl = document.getElementById('ops-fulldice');
+        if (fullDiceEl) {
+            fullDiceEl.innerText = fullDiceKg.toLocaleString();
         } else {
             const metricValues = document.querySelectorAll('.cc-card .metric-value');
-            if (metricValues.length >= 2) metricValues[1].innerText = totalKg.toLocaleString();
+            if (metricValues.length >= 2) metricValues[1].innerText = fullDiceKg.toLocaleString();
+        }
+
+        const halfDiceEl = document.getElementById('ops-halfdice');
+        if (halfDiceEl) {
+            halfDiceEl.innerText = halfDiceKg.toLocaleString();
+        } else {
+            const metricValues = document.querySelectorAll('.cc-card .metric-value');
+            if (metricValues.length >= 3) metricValues[2].innerText = halfDiceKg.toLocaleString();
         }
 
         // 4. Status Counters
@@ -1818,6 +1837,7 @@ var admin = {
         if (viewId === 'assets') {
             this.updateMaintenanceUI();
             this.updateAssetsUI();
+            this.updateIceMachinesUI();
             this.updateUtilitiesUI();
             this.updateRentalUI();
         }
@@ -4096,6 +4116,143 @@ var admin = {
         }
         
         alert('Asset removed successfully.');
+    },
+
+    updateIceMachinesUI() {
+        const list = document.getElementById('ice-machines-list');
+        if (!list) return;
+
+        if (!this.iceMachines || this.iceMachines.length === 0) {
+            list.innerHTML = '<div style="color:#64748b; font-size: 0.9rem; padding: 1rem;">No ice machines found.</div>';
+            return;
+        }
+
+        list.innerHTML = this.iceMachines.map(im => `
+            <div class="rider-card" style="flex-direction: column; align-items: flex-start; padding: 1.2rem; position: relative;">
+                <button onclick="admin.deleteIceMachine('${im.id}')" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: #ef4444; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; font-size: 0.8rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">✕</button>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 10px; padding-right: 15px;">
+                    <h4 style="margin: 0; font-size: 1.1rem;">${im.name}</h4>
+                    <button onclick="admin.toggleIceMachineStatus('${im.id}')" class="status-badge" style="cursor: pointer; display: flex; align-items: center; gap: 6px; outline: none; ${im.status === 'operational' ? 'background: rgba(34, 197, 94, 0.1); color: #22c55e; border-color: rgba(34, 197, 94, 0.2);' : 'background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);'}">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${im.status === 'operational' ? '#22c55e' : '#ef4444'}; box-shadow: 0 0 8px ${im.status === 'operational' ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)'}"></span>
+                        ${im.status === 'operational' ? 'Operational' : 'Under Repair'}
+                    </button>
+                </div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;"><strong>Brand:</strong> ${im.brand || 'N/A'} | <strong>Model:</strong> ${im.model || 'N/A'}</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;"><strong>Actual Prod:</strong> ${im.actualProd || 0} kg/day</div>
+                <button onclick="admin.editIceMachine('${im.id}')" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 0.75rem;">Edit Details</button>
+            </div>
+        `).join('');
+    },
+
+    showIceMachineModal() {
+        // Reset fields for new entry
+        this.currentIceMachineEditId = null;
+        document.getElementById('im-name').value = '';
+        document.getElementById('im-status').value = 'operational';
+        document.getElementById('im-brand').value = '';
+        document.getElementById('im-model').value = '';
+        document.getElementById('im-price').value = '';
+        document.getElementById('im-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('im-condition').value = 'brand_new';
+        document.getElementById('im-life').value = '60';
+        document.getElementById('im-pub-prod').value = '';
+        document.getElementById('im-act-prod').value = '';
+        document.getElementById('im-svc-center').value = '';
+        document.getElementById('im-tech').value = '';
+        document.getElementById('im-tech-phone').value = '';
+        document.getElementById('im-tech-psid').value = '';
+        document.getElementById('im-repair-history').value = '';
+        document.getElementById('im-clean-sched').value = '';
+        document.getElementById('im-descale-sched').value = '';
+
+        document.getElementById('add-ice-machine-modal').style.display = 'flex';
+    },
+
+    editIceMachine(id) {
+        const im = this.iceMachines.find(m => m.id === id);
+        if (!im) return;
+
+        this.currentIceMachineEditId = id;
+        document.getElementById('im-name').value = im.name || '';
+        document.getElementById('im-status').value = im.status || 'operational';
+        document.getElementById('im-brand').value = im.brand || '';
+        document.getElementById('im-model').value = im.model || '';
+        document.getElementById('im-price').value = im.price || '';
+        document.getElementById('im-date').value = im.dateAcquired || '';
+        document.getElementById('im-condition').value = im.condition || 'brand_new';
+        document.getElementById('im-life').value = im.usefulLifeMonths || '60';
+        document.getElementById('im-pub-prod').value = im.publishProd || '';
+        document.getElementById('im-act-prod').value = im.actualProd || '';
+        document.getElementById('im-svc-center').value = im.serviceCenter || '';
+        document.getElementById('im-tech').value = im.tech || '';
+        document.getElementById('im-tech-phone').value = im.techPhone || '';
+        document.getElementById('im-tech-psid').value = im.techPSID || '';
+        document.getElementById('im-repair-history').value = im.repairHistory || '';
+        document.getElementById('im-clean-sched').value = im.cleanSched || '';
+        document.getElementById('im-descale-sched').value = im.descaleSched || '';
+
+        document.getElementById('add-ice-machine-modal').style.display = 'flex';
+    },
+
+    closeIceMachineModal() {
+        document.getElementById('add-ice-machine-modal').style.display = 'none';
+        this.currentIceMachineEditId = null;
+    },
+
+    saveIceMachine() {
+        const name = document.getElementById('im-name').value;
+        if (!name) {
+            alert('Machine Name is required.');
+            return;
+        }
+
+        const imData = {
+            id: this.currentIceMachineEditId || 'im-' + Date.now(),
+            name: name,
+            status: document.getElementById('im-status').value,
+            brand: document.getElementById('im-brand').value,
+            model: document.getElementById('im-model').value,
+            price: parseFloat(document.getElementById('im-price').value) || 0,
+            dateAcquired: document.getElementById('im-date').value,
+            condition: document.getElementById('im-condition').value,
+            usefulLifeMonths: parseInt(document.getElementById('im-life').value) || 60,
+            publishProd: parseFloat(document.getElementById('im-pub-prod').value) || 0,
+            actualProd: parseFloat(document.getElementById('im-act-prod').value) || 0,
+            serviceCenter: document.getElementById('im-svc-center').value,
+            tech: document.getElementById('im-tech').value,
+            techPhone: document.getElementById('im-tech-phone').value,
+            techPSID: document.getElementById('im-tech-psid').value,
+            repairHistory: document.getElementById('im-repair-history').value,
+            cleanSched: document.getElementById('im-clean-sched').value,
+            descaleSched: document.getElementById('im-descale-sched').value
+        };
+
+        if (this.currentIceMachineEditId) {
+            const idx = this.iceMachines.findIndex(m => m.id === this.currentIceMachineEditId);
+            if (idx > -1) this.iceMachines[idx] = imData;
+        } else {
+            this.iceMachines.push(imData);
+        }
+
+        admin.saveState('iceqube_ice_machines', this.iceMachines);
+        this.updateIceMachinesUI();
+        this.closeIceMachineModal();
+        alert('Ice Machine saved successfully!');
+    },
+
+    deleteIceMachine(id) {
+        if (!confirm('Are you sure you want to remove this Ice Machine?')) return;
+        this.iceMachines = this.iceMachines.filter(m => m.id !== id);
+        admin.saveState('iceqube_ice_machines', this.iceMachines);
+        this.updateIceMachinesUI();
+    },
+
+    toggleIceMachineStatus(id) {
+        const im = this.iceMachines.find(m => m.id === id);
+        if (!im) return;
+        im.status = im.status === 'operational' ? 'repair' : 'operational';
+        admin.saveState('iceqube_ice_machines', this.iceMachines);
+        this.updateIceMachinesUI();
     },
 
     showAddAssetModal() {

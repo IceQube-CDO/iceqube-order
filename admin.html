@@ -1966,10 +1966,17 @@
                     <div class="metric-trend up">+15% vs yesterday</div>
                 </div>
 
-                <!-- Metric Card: Bags Sold -->
+                <!-- Metric Card: Full Dice Sold -->
                 <div class="cc-card" style="flex: 1;">
-                    <div class="metric-label">Kg. Sold Today</div>
-                    <div class="metric-value" id="ops-bags">0</div>
+                    <div class="metric-label">Full Dice sold today (kg)</div>
+                    <div class="metric-value" id="ops-fulldice">0</div>
+                    <div class="metric-trend">Operating at 85% capacity</div>
+                </div>
+
+                <!-- Metric Card: Half-Dice Sold -->
+                <div class="cc-card" style="flex: 1;">
+                    <div class="metric-label">Half-Dice Sold today (kg)</div>
+                    <div class="metric-value" id="ops-halfdice">0</div>
                     <div class="metric-trend">Operating at 85% capacity</div>
                 </div>
 
@@ -2680,10 +2687,30 @@
         <!-- ASSETS & UTILITIES VIEW -->
             <div class="cc-grid" id="assets-view" style="display: none; grid-template-columns: 1fr 1fr;">
 
+            <!-- Ice Machines Card -->
+            <div class="cc-card wide">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Ice Machines Fleet
+                    <button class="status-badge" onclick="admin.showIceMachineModal()" style="padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; cursor: pointer; background: var(--admin-accent); border: none; color: white; font-weight: 800;">+ Add Machine</button>
+                </div>
+                <div id="ice-machines-list" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <!-- Example Machine -->
+                    <div class="rider-card" style="flex-direction: column; align-items: flex-start; padding: 1.2rem;">
+                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 1.1rem;">Ice Machine #1</h4>
+                            <div class="status-badge" style="background: rgba(34, 197, 94, 0.1); color: #22c55e; border-color: rgba(34, 197, 94, 0.2);">Operational</div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px;"><strong>Brand:</strong> Manitowoc | <strong>Model:</strong> IYT0500A</div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;"><strong>Actual Prod:</strong> 500 kg/day</div>
+                        <button onclick="admin.showIceMachineModal('Ice Machine #1')" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 0.75rem;">Edit Details</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Equipment Status -->
             <div class="cc-card">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
-                    Industrial Equipment Status
+                    Other Equipment Status
                     <button class="status-badge" onclick="admin.showAddAssetModal()" style="padding: 2px 8px; border-radius: 8px; font-size: 1rem; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">+</button>
                 </div>
                 <div id="equipment-list" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
@@ -3216,6 +3243,122 @@
                 <div style="display: flex; gap: 10px;">
                     <button onclick="admin.closeAddAssetModal()" style="flex: 1; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">Cancel</button>
                     <button onclick="admin.submitAddAsset()" style="flex: 2; padding: 12px; border-radius: 12px; background: var(--admin-accent); color: white; border: none; cursor: pointer; font-weight: 800; box-shadow: 0 0 20px var(--admin-glow);">Add Asset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD/EDIT ICE MACHINE MODAL -->
+        <div id="add-ice-machine-modal" class="qr-payout-modal" style="z-index: 20000;">
+            <div class="qr-card" style="text-align: left; position: relative; pointer-events: auto; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                <h2 style="margin-top: 0; font-size: 1.5rem;">Add/Edit Ice Machine</h2>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">Manage ice production units.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Machine Name</label>
+                        <input type="text" id="im-name" placeholder="e.g. Manitowoc #1" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Status</label>
+                        <select id="im-status" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                            <option value="operational">Operational</option>
+                            <option value="repair">Under Repair</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Brand</label>
+                        <input type="text" id="im-brand" placeholder="e.g. Scotsman" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Model</label>
+                        <input type="text" id="im-model" placeholder="e.g. C0530SA" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Purchase Price (₱)</label>
+                        <input type="number" id="im-price" placeholder="0.00" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Date Acquired</label>
+                        <input type="date" id="im-date" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Condition</label>
+                        <select id="im-condition" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                            <option value="brand_new">Brand New</option>
+                            <option value="second_hand">Second Hand</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Useful Life (Months)</label>
+                        <input type="number" id="im-life" placeholder="60" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Publish Prod. (kg)</label>
+                        <input type="number" id="im-pub-prod" placeholder="0" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Actual Prod. (kg)</label>
+                        <input type="number" id="im-act-prod" placeholder="0" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0; padding-top: 1.5rem;">
+                    <h3 style="font-size: 0.9rem; color: #e2e8f0; margin-top: 0;">Maintenance & Repair</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Service Center</label>
+                            <input type="text" id="im-svc-center" placeholder="Name & Number" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Repair Technician Name</label>
+                            <input type="text" id="im-tech" placeholder="Name" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Technician Cellphone Number</label>
+                            <input type="text" id="im-tech-phone" placeholder="e.g. 0917-000-0000" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">FB Messenger PSID</label>
+                            <input type="text" id="im-tech-psid" placeholder="PSID" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Repair History (Parts & Cost)</label>
+                        <textarea id="im-repair-history" rows="3" placeholder="Log repair history..." style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0; padding-top: 1.5rem;">
+                    <h3 style="font-size: 0.9rem; color: #e2e8f0; margin-top: 0;">Schedules</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Cleaning Schedule</label>
+                            <input type="text" id="im-clean-sched" placeholder="e.g. Every 1st of Month" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Descaling Schedule</label>
+                            <input type="text" id="im-descale-sched" placeholder="e.g. Every 6 Months" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="admin.closeIceMachineModal()" style="flex: 1; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">Cancel</button>
+                    <button onclick="admin.saveIceMachine()" style="flex: 2; padding: 12px; border-radius: 12px; background: var(--admin-accent); color: white; border: none; cursor: pointer; font-weight: 800; box-shadow: 0 0 20px var(--admin-glow);">Save Machine</button>
                 </div>
             </div>
         </div>
