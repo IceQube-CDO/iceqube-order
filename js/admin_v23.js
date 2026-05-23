@@ -2081,7 +2081,27 @@ var admin = {
         allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         const pendingOrders = allOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance');
-        const ledgerOrders = allOrders.filter(o => o.delivery_status !== 'Pending' && o.delivery_status !== 'Awaiting Acceptance');
+        
+        // Ledger Filter: Clean up completed orders from before 6:00 AM of the current operational day
+        const now = new Date();
+        const cutoff = new Date(now);
+        cutoff.setHours(6, 0, 0, 0);
+        if (now.getHours() < 6) {
+            cutoff.setDate(cutoff.getDate() - 1);
+        }
+
+        const ledgerOrders = allOrders.filter(o => {
+            if (o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance') return false;
+            
+            const isCompleted = o.delivery_status === 'Delivered' || o.delivery_status === 'Cancelled' || o.delivery_status === 'Rejected';
+            const orderDate = new Date(o.created_at || o.timestamp);
+            
+            // Hide older completed orders
+            if (isCompleted && orderDate < cutoff) {
+                return false;
+            }
+            return true;
+        });
 
         if (pendingBadge) pendingBadge.innerText = `${pendingOrders.length} Pending`;
         if (ledgerBadge) ledgerBadge.innerText = `${ledgerOrders.length} Orders`;
