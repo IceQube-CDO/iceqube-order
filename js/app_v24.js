@@ -357,6 +357,11 @@ const app = {
         const isMessenger = /FBAN|FBAV|Messenger/i.test(ua);
         const isChromeIOS = /CriOS/i.test(ua);
 
+        const messengerSection = document.getElementById('profile-messenger-section');
+        if (messengerSection) {
+            messengerSection.style.display = !isMessenger ? 'block' : 'none';
+        }
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
@@ -6918,27 +6923,10 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
     updateMessengerStatusUI() {
         const input = document.getElementById('profile-messenger-id');
-        const badge = document.getElementById('messenger-status-badge');
         
-        if (!badge) return;
-
         // Only update input if not focused to avoid interrupting user typing
         if (input && document.activeElement !== input) {
             input.value = this.user.messengerId || '';
-        }
-
-        // IMPROVED: Only show ON if both enabled AND an ID is present
-        const hasId = this.user.messengerId && this.user.messengerId.trim().length > 0;
-        const isActuallyOn = this.user.messengerEnabled && hasId;
-
-        if (isActuallyOn) {
-            badge.innerText = "ON";
-            badge.style.background = "#dcfce7";
-            badge.style.color = "#16a34a";
-        } else {
-            badge.innerText = "OFF";
-            badge.style.background = "#fee2e2";
-            badge.style.color = "#ef4444";
         }
     },
 
@@ -6984,18 +6972,6 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         }
     },
 
-    toggleMessengerNotifications() {
-        if (!this.user.messengerId) {
-            this.showToast("Please enter a Messenger ID first", "error");
-            return;
-        }
-        this.user.messengerEnabled = !this.user.messengerEnabled;
-        this.updateMessengerStatusUI();
-        
-        const status = this.user.messengerEnabled ? "ACTIVATED" : "DEACTIVATED";
-        const type = this.user.messengerEnabled ? "success" : "info";
-        this.showToast(`Messenger Notifications ${status}`, type);
-    },
 
     openMapForProfile() {
         console.log("📍 Opening Map for Profile Refinement...");
