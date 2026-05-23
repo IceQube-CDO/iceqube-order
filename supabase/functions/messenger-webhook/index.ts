@@ -35,7 +35,8 @@ async function sendFBMessage(recipientId: string, text: string) {
   const payload = {
     recipient: { id: recipientId },
     message: { text: text },
-    messaging_type: "RESPONSE"
+    messaging_type: "MESSAGE_TAG",
+    tag: "POST_PURCHASE_UPDATE"
   };
   
   console.log(`[Messenger] Sending to FB: ${recipientId}`);
@@ -372,9 +373,10 @@ serve(async (req) => {
       })
     }
 
-    // Default to RESPONSE messaging type if not provided (Meta deprecated Message Tags in Feb 2026)
-    if (!messagingType || messagingType === "MESSAGE_TAG") {
-      messagingType = "RESPONSE";
+    // Default to MESSAGE_TAG to bypass the 24h standard messaging window
+    if (!messagingType || messagingType === "RESPONSE") {
+      messagingType = "MESSAGE_TAG";
+      if (!tag) tag = "POST_PURCHASE_UPDATE";
     }
 
     const payload: any = {

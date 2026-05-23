@@ -4866,7 +4866,7 @@ const app = {
             // 5. RUN BACKGROUND TASKS (Sync & Notification)
             // We don't await these so the UI feels snappy
             this.supabaseUpdate(orderId).catch(err => console.error('Sync error:', err));
-            this.sendConfirmation().catch(err => console.warn('Notification skipped or failed:', err));
+            // Removed this.sendConfirmation() to prevent duplicate messages since the Supabase DB Webhook handles it on INSERT.
             
             // Antigravity: Automated Order Generation with Overdraft Logic
             generateOrder(
@@ -4937,7 +4937,7 @@ const app = {
 
         const contactNumber = (this.orderData.deliveryDetails && this.orderData.deliveryDetails.contact) ? this.orderData.deliveryDetails.contact : 'N/A';
 
-        let finalMessengerId = this.user.messengerId;
+        let finalMessengerId = this.user.messengerId || MESSENGER_CONFIG.RECIPIENT_ID;
         if (!finalMessengerId && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
                 // Query previous orders for this establishment or contact number containing a messenger_id
