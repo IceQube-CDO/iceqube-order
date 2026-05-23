@@ -1036,6 +1036,11 @@
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
 
+            <div class="buzzer-icon" id="buzzer-toggle-btn" style="position: relative; cursor: pointer; display: flex; align-items: center;" onclick="toggleBuzzerMute()" title="Toggle Buzzer">
+                <svg id="buzzer-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+            </div>
 
             <div class="notification-icon" style="position: relative; cursor: pointer;" onclick="alert('No new announcements.')">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1868,8 +1873,24 @@
         let buzzerActive = false;
         let buzzerInterval = null;
         let audioCtx = null;
+        let isBuzzerMuted = false;
+
+        function toggleBuzzerMute() {
+            isBuzzerMuted = !isBuzzerMuted;
+            const buzzerIcon = document.getElementById('buzzer-icon-svg');
+            if (!buzzerIcon) return;
+            if (isBuzzerMuted) {
+                // Muted icon
+                buzzerIcon.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>';
+                stopBuzzer();
+            } else {
+                // Unmuted icon
+                buzzerIcon.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>';
+            }
+        }
 
         function startBuzzer() {
+            if (isBuzzerMuted) return;
             if (buzzerActive) return;
             buzzerActive = true;
             
