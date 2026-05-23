@@ -2151,7 +2151,7 @@ var admin = {
                 if (methodLower.includes('gcash') || methodLower.includes('online') || methodLower.includes('bank') || methodLower.includes('po') || methodLower.includes('purchase order') || methodLower.includes('wallet') || methodLower.includes('topup')) {
                     screenshotContainer.style.display = 'block';
                     
-                    let imgSrc = order.payment_screenshot || (order.items && order.items.payment_screenshot);
+                    let imgSrc = order.payment_receipt_url || order.payment_screenshot || (order.items && (order.items.payment_receipt_url || order.items.payment_screenshot));
                     // Fallback for previous orders that didn't save the base64 string
                     if (!imgSrc && order.order_id && order.order_id.includes('85251')) {
                         imgSrc = './assets/mock_gcash_receipt.png';

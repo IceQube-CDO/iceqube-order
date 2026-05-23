@@ -5041,6 +5041,34 @@ const app = {
                 console.warn('Could not auto-fetch messenger ID from past orders:', err);
             }
         }
+        let paymentReceiptUrl = null;
+        if (this.orderData.paymentReceipt && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                console.log('⬆️ Uploading payment receipt to Supabase...');
+                const file = this.orderData.paymentReceipt;
+                const fileExt = file.name.split('.').pop();
+                const fileName = `receipt_${orderId.replace('#', '')}_${Date.now()}.${fileExt}`;
+                
+                const uploadRes = await fetch(`${SUPABASE_CONFIG.URL}/storage/v1/object/payment_receipts/${fileName}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Content-Type': file.type || 'image/jpeg'
+                    },
+                    body: file
+                });
+
+                if (uploadRes.ok) {
+                    paymentReceiptUrl = `${SUPABASE_CONFIG.URL}/storage/v1/object/public/payment_receipts/${fileName}`;
+                    console.log('✅ Payment receipt uploaded:', paymentReceiptUrl);
+                } else {
+                    console.error('❌ Failed to upload payment receipt:', await uploadRes.text());
+                }
+            } catch (err) {
+                console.error('❌ Error uploading payment receipt:', err);
+            }
+        }
 
         const payload = {
             order_id: orderId, 
@@ -5048,7 +5076,7 @@ const app = {
             receiver_name: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.person) ? this.orderData.deliveryDetails.person : customerName,
             contact_number: contactNumber,
             delivery_notes: (this.isQuickReorder ? '[⚡ QUICK REORDER] ' : '') + ((this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.'),
-            items: { ...this.orderData.qty, _matrix: this.pricingMatrix, payment_screenshot: this.orderData.payment_screenshot_base64 || null },
+            items: { ...this.orderData.qty, _matrix: this.pricingMatrix, payment_screenshot: this.orderData.payment_screenshot_base64 || null, payment_receipt_url: paymentReceiptUrl },
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
             delivery_status: 'Pending',
