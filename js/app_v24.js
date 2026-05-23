@@ -4976,7 +4976,7 @@ const app = {
             receiver_name: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.person) ? this.orderData.deliveryDetails.person : customerName,
             contact_number: contactNumber,
             delivery_notes: (this.isQuickReorder ? '[⚡ QUICK REORDER] ' : '') + ((this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.'),
-            items: { ...this.orderData.qty, _matrix: this.pricingMatrix },
+            items: { ...this.orderData.qty, _matrix: this.pricingMatrix, payment_screenshot: this.orderData.payment_screenshot_base64 || null },
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
             delivery_status: 'Pending',
@@ -4988,7 +4988,6 @@ const app = {
             priority_fee: this.orderData.priorityFee || 0,
             po_number: this.orderData.poNumber,
             messenger_id: finalMessengerId || null,
-            payment_screenshot: this.orderData.payment_screenshot_base64 || null,
             is_real: true, // Safeguard for Purge Logic
             created_at: new Date().toISOString()
         };

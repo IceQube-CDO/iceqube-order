@@ -2070,7 +2070,7 @@ var admin = {
                 if (methodLower.includes('gcash') || methodLower.includes('online') || methodLower.includes('bank') || methodLower.includes('po') || methodLower.includes('purchase order') || methodLower.includes('wallet') || methodLower.includes('topup')) {
                     screenshotContainer.style.display = 'block';
                     
-                    let imgSrc = order.payment_screenshot;
+                    let imgSrc = order.payment_screenshot || (order.items && order.items.payment_screenshot);
                     // Fallback for previous orders that didn't save the base64 string
                     if (!imgSrc && order.order_id && order.order_id.includes('85251')) {
                         imgSrc = './assets/mock_gcash_receipt.png';
@@ -5527,7 +5527,7 @@ admin.renderPaymentVerification = function(orders) {
     }
     
     listEl.innerHTML = pendingOrders.map(o => {
-        let imgSrc = o.payment_screenshot;
+        let imgSrc = o.payment_screenshot || (o.items && o.items.payment_screenshot);
         if (!imgSrc && o.order_id === '#IQ-85251') {
             imgSrc = './assets/mock_gcash_receipt.png';
         } else if (!imgSrc) {
@@ -5618,10 +5618,12 @@ admin.openFlaggedArchive = function() {
     if (archive.length === 0) {
         listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 10px;">Archive is empty</div>';
     } else {
-        listEl.innerHTML = archive.map(o => `
+        listEl.innerHTML = archive.map(o => {
+            let imgSrc = o.payment_screenshot || (o.items && o.items.payment_screenshot);
+            return `
             <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <img src="${o.payment_screenshot}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" onclick="admin.openPhotoModal('${o.payment_screenshot}', '${o.order_id}')" alt="Screenshot">
+                    <img src="${imgSrc}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" onclick="admin.openPhotoModal('${imgSrc}', '${o.order_id}')" alt="Screenshot">
                     <div>
                         <div style="font-size: 0.8rem; font-weight: 700; color: white;">${o.order_id} <span style="font-size: 0.6rem; background: #ef4444; color: white; padding: 2px 4px; border-radius: 4px; margin-left: 4px;">FLAGGED</span></div>
                         <div style="font-size: 0.7rem; color: #94a3b8;">${o.customer_name || 'Customer'} - ₱${o.total_price}</div>
@@ -5630,7 +5632,7 @@ admin.openFlaggedArchive = function() {
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
     
     document.getElementById('modal-flagged-archive').classList.add('active');
