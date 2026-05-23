@@ -374,7 +374,7 @@ const app = {
 
         const messengerSection = document.getElementById('profile-messenger-section');
         if (messengerSection) {
-            messengerSection.style.display = !isMessenger ? 'block' : 'none';
+            messengerSection.style.display = 'block';
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
