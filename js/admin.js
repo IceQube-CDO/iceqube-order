@@ -397,7 +397,9 @@ var admin = {
         if (!order || !order.order_id) return;
         
         const orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        const existingIdx = orders.findIndex(o => o.order_id === order.order_id);
+        const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+        const targetId = cleanId(order.order_id || order.id);
+        const existingIdx = orders.findIndex(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
         
         // If order is new OR it exists but hasn't had supplies deducted yet
         if (existingIdx === -1 || !orders[existingIdx].supplies_deducted) {

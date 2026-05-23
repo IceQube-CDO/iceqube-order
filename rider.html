@@ -1941,7 +1941,7 @@
             
             const uniqueMap = new Map();
             allOrders.forEach(order => {
-                const id = cleanId(order.order_id || order.orderId);
+                const id = cleanId(order.order_id || order.orderId || order.id);
                 if (!id) return;
 
                 const existing = uniqueMap.get(id);
@@ -1969,7 +1969,7 @@
             const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
             const targetId = cleanId(orderId);
 
-            const order = allOrders.find(o => cleanId(o.order_id) === targetId);
+            const order = allOrders.find(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
             if (!order) {
                 console.warn("⚠️ [Rider] Order not found for details view:", orderId);
                 return;
@@ -2125,7 +2125,7 @@
                 const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
                 const targetId = cleanId(activeOrder.order_id || activeOrder.orderId);
 
-                const idx = allOrders.findIndex(o => cleanId(o.order_id) === targetId);
+                const idx = allOrders.findIndex(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
                 if (idx !== -1) {
                     allOrders[idx].rider = currentRider;
                     allOrders[idx].delivery_status = 'In Transit'; 
@@ -2142,7 +2142,9 @@
                 if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
                     console.log(`📡 Syncing acceptance of ${targetId} to Supabase...`);
                     try {
-                        const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${targetId}`, {
+                        const dbId = allOrders[idx].id;
+                        const queryStr = dbId ? `id=eq.${dbId}` : `order_id=ilike.*${targetId}*`;
+                        const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                             method: 'PATCH',
                             headers: {
                                 'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -2336,7 +2338,12 @@
 
             if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
                 try {
-                    await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${targetId}`, {
+                    const allOrdersLocal = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                    const orderItem = allOrdersLocal.find(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
+                    const dbId = orderItem ? orderItem.id : null;
+                    const queryStr = dbId ? `id=eq.${dbId}` : `order_id=ilike.*${targetId}*`;
+
+                    await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                         method: 'PATCH',
                         headers: {
                             'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -2353,7 +2360,7 @@
 
             // Update local storage
             const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-            const idx = allOrders.findIndex(o => cleanId(o.order_id || o.orderId) === targetId);
+            const idx = allOrders.findIndex(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
             if (idx !== -1) {
                 allOrders[idx].delivery_status = 'Delivered';
                 localStorage.setItem('ice_orders', JSON.stringify(allOrders));
@@ -2711,7 +2718,7 @@
                 const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
                 const targetId = cleanId(orderId);
                 
-                const idx = allOrders.findIndex(o => cleanId(o.order_id) === targetId);
+                const idx = allOrders.findIndex(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
                 if (idx !== -1) {
                     allOrders[idx].rider = currentRider;
                     allOrders[idx].delivery_status = 'In Transit'; // Treat as active once claimed
@@ -2746,7 +2753,7 @@
             const allOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
             const cleanId = id => id ? String(id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
             const targetId = cleanId(orderId);
-            const order = allOrders.find(o => cleanId(o.order_id) === targetId);
+            const order = allOrders.find(o => cleanId(o.order_id || o.orderId || o.id) === targetId);
             if (!order) return;
 
             activeOrder = order;

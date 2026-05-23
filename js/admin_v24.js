@@ -1399,6 +1399,27 @@ var admin = {
                 return dateB - dateA;
             });
             
+            try {
+                const logsResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/delivery_logs?select=order_id,pod_photo_url,delivered_at&order=delivered_at.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+                if (logsResponse.ok) {
+                    const deliveryLogs = await logsResponse.json();
+                    deliveryLogs.forEach(log => {
+                        const targetOrder = merged.find(o => String(o.order_id).trim() === String(log.order_id).trim() || String(o.id).trim() === String(log.order_id).trim());
+                        if (targetOrder && !targetOrder.actual_delivered_at) {
+                            targetOrder.actual_delivered_at = log.delivered_at;
+                            targetOrder.geotag_url = log.pod_photo_url;
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch delivery logs:", err);
+            }
+            
             localStorage.setItem('ice_orders', JSON.stringify(merged.slice(0, 200)));
             this.allOrders = merged; // Update internal state
             this.updateDashboardUI(merged);
@@ -3034,6 +3055,30 @@ var admin = {
 
             const ledgerScheduleDisplay = parseSchedule(o.delivery_schedule);
 
+            const isDelivered = o.delivery_status === 'Delivered';
+            const cleanIdStr = o.order_id ? String(o.order_id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+            
+            const geotagUrl = o.geotag_url ? o.geotag_url : (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id') ? 
+                `${SUPABASE_CONFIG.URL}/storage/v1/object/public/ice_deliveries/pod_${cleanIdStr}.jpg` : '#');
+            
+            const geotagDisplay = isDelivered ? 
+                `<a href="${geotagUrl}" target="_blank" style="color: #0ea5e9; text-decoration: none; font-size: 1.2rem; cursor: pointer;" title="View Geotag">📍</a>` : 
+                `<span style="color: #64748b; font-size: 0.8rem;">-</span>`;
+
+            let timeDeliveredStr = '-';
+            if (isDelivered) {
+                const deliveredDateStr = o.actual_delivered_at || o.delivered_at || o.updated_at;
+                if (deliveredDateStr) {
+                    const d = new Date(deliveredDateStr);
+                    timeDeliveredStr = `<div style="display: flex; flex-direction: column; gap: 2px;">
+                        <span style="color: #f1f5f9; font-weight: 600; font-size: 0.75rem;">${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}</span>
+                        <span style="color: #94a3b8; font-weight: 500; font-size: 0.65rem;">${d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>`;
+                } else {
+                    timeDeliveredStr = 'Delivered';
+                }
+            }
+
             const cleanCustName = (o.customer_name || '').trim();
             const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
@@ -3052,10 +3097,10 @@ var admin = {
                         ${(o.delivery_lat && o.delivery_lng) ? `<a href="https://www.google.com/maps/dir/?api=1&origin=8.5020476,124.660855&destination=${o.delivery_lat},${o.delivery_lng}" target="_blank" style="color: inherit; text-decoration: underline; text-decoration-color: #0ea5e9; text-underline-offset: 4px; display: block; margin-bottom: 4px;">${addr}</a>` : `<div style="margin-bottom: 4px;">${addr}</div>`}
                     </td>
                     <td style="text-align: center; vertical-align: middle;">
-                        ${(o.delivery_notes && o.delivery_notes.trim() !== '' && o.delivery_notes.trim().toLowerCase() !== 'no special notes.') ? `<button onclick="alert('Note for Order ${o.order_id}:\\n\\n' + decodeURIComponent('${encodeURIComponent(o.delivery_notes)}'))" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 6px; cursor: pointer; color: #0ea5e9; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="View Note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>` : `<span style="color: #64748b; font-size: 0.8rem;">-</span>`}
+                        ${geotagDisplay}
                     </td>
-                    <td style="font-size: 0.75rem; white-space: nowrap;">
-                        ${ledgerScheduleDisplay}
+                    <td style="font-size: 0.75rem; white-space: nowrap; color: #f1f5f9; font-weight: 600;">
+                        ${timeDeliveredStr}
                     </td>
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
