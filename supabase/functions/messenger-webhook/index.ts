@@ -180,9 +180,9 @@ serve(async (req) => {
         const record = body.record;
         
         // Safeguard to only send for real/active orders
-        if (record.is_real === false) {
-          console.log(`[Webhook] Skipping notification for system test/mock order: ${record.order_id}`);
-          return new Response(JSON.stringify({ success: true, message: "Skipped mock/test order" }), {
+        if (record.is_real === false || record.order_id === 'CONFIG_ICEQUBE_TEAM_MEMBERS' || record.customer_name === 'SYSTEM_CONFIG') {
+          console.log(`[Webhook] Skipping notification for system test/mock/config order: ${record.order_id}`);
+          return new Response(JSON.stringify({ success: true, message: "Skipped mock/test/config order" }), {
             headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
             status: 200,
           });
