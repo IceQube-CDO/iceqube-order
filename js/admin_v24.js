@@ -5463,7 +5463,7 @@ admin.renderTeamCards = function() {
     let hubHtml = '';
     let ridersHtml = '';
 
-    admin.teamMembersData.forEach(member => {
+    admin.teamMembersData.forEach((member, index) => {
         if (!member || typeof member !== 'object') return; // Skip strings or nulls
         if (!member.name) member.name = 'Unknown Member'; // Bulletproof
         if (member.status === 'Archived') return;
@@ -5471,18 +5471,17 @@ admin.renderTeamCards = function() {
         const isActive = member.status === 'Active';
         const statusColor = isActive ? '#22c55e' : '#ef4444';
         const toggleBtnLabel = isActive ? 'Deactivate' : 'Activate';
-        const safeName = member.name.replace(/'/g, "\\'");
         const displayNickname = member.nickname || member.name.split(' ')[0] || 'Unknown';
 
         const cardHtml = `
-            <div class="rider-card" onclick="openTeamDrawer('${safeName}')" style="cursor: pointer; opacity: ${isActive ? '1' : '0.6'};">
+            <div class="rider-card" onclick="openTeamDrawer(${index})" style="cursor: pointer; opacity: ${isActive ? '1' : '0.6'};">
                 <div class="rider-avatar" style="background: ${isActive ? '#3b82f6' : '#64748b'};">${member.avatar || '?'}</div>
                 <div class="rider-info">
                     <h4 style="margin: 0; font-size: 1rem;">${displayNickname}</h4>
                     <p style="color: #64748b; font-size: 0.8rem; margin: 4px 0;">💼 ${member.designation || member.role || 'Staff'}</p>
                 </div>
                 <label class="status-toggle" onclick="event.stopPropagation();">
-                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="admin.toggleMemberStatus('${safeName}', this)">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="admin.toggleMemberStatus(${index}, this)">
                     <span class="status-slider"></span>
                 </label>
             </div>
@@ -5541,8 +5540,8 @@ admin.showAddTeamMemberOverlay = function(roleCategory) {
     }
 };
 
-admin.toggleMemberStatus = function(name, checkboxEl) {
-    const member = admin.teamMembersData.find(m => m.name === name);
+admin.toggleMemberStatus = function(index, checkboxEl) {
+    const member = admin.teamMembersData[index];
     if (member) {
         const action = member.status === 'Active' ? 'deactivate' : 'activate';
         if (confirm(`Are you sure you want to ${action} ${member.nickname || member.name.split(' ')[0]}?`)) {
@@ -5597,11 +5596,11 @@ admin.updateAttendanceSummary = function(filterType) {
     }
 };
 
-function openTeamDrawer(name) {
-    const member = admin.teamMembersData.find(m => m.name === name);
+function openTeamDrawer(index) {
+    const member = admin.teamMembersData[index];
     if (!member) return;
 
-    admin.currentDrawerMemberName = member.name;
+    admin.currentDrawerMemberIndex = index;
     admin.isEditingTeamMember = false; // Reset edit state
     
     // Reset edit button visually just in case
@@ -5645,7 +5644,8 @@ function openTeamDrawer(name) {
         <div class="history-row"><span>Yesterday</span><span>08:15 AM</span><span>05:30 PM</span><span style="color:#eab308">Late</span></div>
         <div class="history-row"><span>2 days ago</span><span>08:00 AM</span><span>05:00 PM</span><span style="color:#22c55e">Present</span></div>
     `;
-    document.getElementById('drawer-team-attendance').innerHTML = attendanceHtml;
+    const attendanceEl = document.getElementById('drawer-team-attendance') || document.getElementById('drawer-team-attendance-history');
+    if (attendanceEl) attendanceEl.innerHTML = attendanceHtml;
 
     document.getElementById('team-drawer-overlay').style.display = 'block';
     setTimeout(() => {
@@ -5691,7 +5691,7 @@ if (originalSwitchView) {
 }
 
 admin.isEditingTeamMember = false;
-admin.currentDrawerMemberName = '';
+admin.currentDrawerMemberIndex = -1;
 
 admin.toggleEditTeamMember = function() {
     admin.isEditingTeamMember = !admin.isEditingTeamMember;
@@ -5741,7 +5741,7 @@ admin.toggleEditTeamMember = function() {
         
         // Save changes
         const currentName = nameEl.innerText.trim();
-        const member = admin.teamMembersData.find(m => m.name === admin.currentDrawerMemberName);
+        const member = admin.teamMembersData[admin.currentDrawerMemberIndex];
         if (member) {
             member.name = currentName;
             member.nickname = document.getElementById('drawer-team-nickname').innerText.trim();
@@ -5755,8 +5755,6 @@ admin.toggleEditTeamMember = function() {
             member.pagibig = document.getElementById('drawer-team-pagibig').innerText.trim();
             member.rate = document.getElementById('drawer-team-rate').innerText.trim();
             
-            // If name changed, we need to update the drawer's state reference
-            admin.currentDrawerMemberName = currentName;
             admin.saveTeamMembers();
             admin.renderTeamCards();
         }
