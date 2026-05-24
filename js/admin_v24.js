@@ -302,7 +302,8 @@ var admin = {
         if (type === 'order' && !id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
                 const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-                const queryStr = isUuid ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+                const isInt = /^\d+$/.test(id);
+                const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
                 const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                     method: 'PATCH',
                     headers: {
@@ -3656,8 +3657,10 @@ var admin = {
         // 2. Remove from Cloud (Supabase)
         if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
-                const encodedId = encodeURIComponent(id);
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(id.eq.${encodedId},order_id.eq.${encodedId})`, {
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                const isInt = /^\d+$/.test(id);
+                const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                     method: 'DELETE',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -3687,7 +3690,8 @@ var admin = {
         
         try {
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-            const queryStr = isUuid ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+            const isInt = /^\d+$/.test(id);
+            const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
 
             await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                 method: 'PATCH',
@@ -3980,7 +3984,8 @@ var admin = {
             }
 
             const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-            const queryStr = isUuid ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+            const isInt = /^\d+$/.test(id);
+            const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
 
             await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                 method: 'PATCH',
@@ -4027,8 +4032,10 @@ var admin = {
         }
 
         try {
-            const encodedId = encodeURIComponent(id);
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(id.eq.${encodedId},order_id.eq.${encodedId})`, {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+            const isInt = /^\d+$/.test(id);
+            const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
