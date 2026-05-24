@@ -1547,7 +1547,8 @@
             try {
                 if (!SUPABASE_CONFIG.URL) throw new Error("Cloud not configured");
 
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=50&_cb=${Date.now()}`, {
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=50`, {
+                    cache: 'no-store',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
@@ -1606,7 +1607,8 @@
             try {
                 // Fetch ALL recent orders (like Admin does) and find the match in JS
                 // This is much more reliable than complex Supabase queries
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=50&_cb=${Date.now()}`, {
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=50`, {
+                    cache: 'no-store',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`

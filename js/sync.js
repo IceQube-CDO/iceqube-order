@@ -143,6 +143,7 @@ window.IceQubeSync = {
                 
                 const response = await fetch(url, {
                     method: 'GET',
+                    cache: 'no-store',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
@@ -243,6 +244,7 @@ window.IceQubeSync = {
                 
                 const response = await fetch(url, {
                     method: 'GET',
+                    cache: 'no-store',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
