@@ -2430,7 +2430,11 @@
                 try {
                     fetch('https://tbbezmpobjdkwpoflfcs.supabase.co/functions/v1/messenger-webhook', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                            'apikey': SUPABASE_CONFIG.ANON_KEY
+                        },
                         body: JSON.stringify({
                             action: 'send_delivery_confirmation',
                             customerId: activeOrder.messenger_id
