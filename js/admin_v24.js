@@ -3935,17 +3935,21 @@ var admin = {
             }
         }
 
-        // 1. Update localStorage immediately for UI consistency
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
         const orderIdx = existingOrders.findIndex(o => o.id == id || o.order_id == id);
+        
         let newStatus = undefined;
+        if (isAdminRider && riderName !== 'Unassigned') {
+            newStatus = 'Dispatched';
+            console.log(`🚀 Admin Rider selected, auto-dispatching to Dispatched...`);
+        }
+
+        // 1. Update localStorage immediately for UI consistency
         if (orderIdx > -1) {
             existingOrders[orderIdx].rider = riderName;
-            if (isAdminRider && riderName !== 'Unassigned') {
-                newStatus = 'Delivering';
+            if (newStatus) {
                 existingOrders[orderIdx].delivery_status = newStatus;
                 existingOrders[orderIdx].dispatched_at = new Date().toISOString();
-                console.log(`🚀 Admin Rider selected, auto-dispatching to Delivering...`);
             }
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
