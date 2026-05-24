@@ -3853,6 +3853,35 @@ var admin = {
         console.log(`✅ Marking Pickup Order ${orderId} as Served...`);
         try {
             await this.updateOrderStatus(id, 'Picked Up');
+            
+            // --- Send Customer Confirmation ---
+            try {
+                const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+                const targetClean = clean(orderId) || clean(id);
+                const fullOrder = (this.allOrders || []).find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || 
+                                  JSON.parse(localStorage.getItem('ice_orders') || '[]').find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean);
+                                  
+                if (fullOrder && fullOrder.customer_name) {
+                    const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+                    const cleanCustName = (fullOrder.customer_name || '').trim();
+                    const profile = directory[cleanCustName] || directory[fullOrder.customer_name] || {};
+                    const targetId = (profile && profile.messengerId) || (fullOrder.messenger_id || fullOrder.messengerId) || null;
+                    
+                    if (targetId) {
+                        let msg = `❄️ ICEQUBE ORDER PICKED UP!\n\n` +
+                                  `Hi ${fullOrder.customer_name},\n\n` +
+                                  `Your pickup order ${orderId} has been successfully completed and served.\n\n` +
+                                  `Thank you for choosing IceQube!`;
+                        await this.dispatchMessengerMessage(targetId, msg);
+                        console.log('✅ [Messenger] Pickup Confirmation Sent successfully.');
+                    } else {
+                        console.log('ℹ️ [Messenger] No customer PSID found for Pickup Confirmation.');
+                    }
+                }
+            } catch (e) {
+                console.error('❌ [Messenger] Failed to send Pickup Confirmation:', e);
+            }
+            
             alert(`Pickup Order ${orderId} marked as Served!`);
         } catch (err) {
             console.error('Marking Served failed:', err);
