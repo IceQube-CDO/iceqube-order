@@ -2423,6 +2423,20 @@
             alert(`Delivery Completed & Synced to Supabase!\n📍 Location: ${simulatedLat.toFixed(4)}° N, ${simulatedLng.toFixed(4)}° E\n💰 Payout Added: ₱${total.toFixed(2)}`);
             console.log("📡 Order Delivered by " + currentRider);
 
+            // Send Delivery Confirmation to Messenger
+            if (activeOrder && activeOrder.messenger_id) {
+                try {
+                    fetch('https://tbbezmpobjdkwpoflfcs.supabase.co/functions/v1/messenger-webhook', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'send_delivery_confirmation',
+                            customerId: activeOrder.messenger_id
+                        })
+                    }).catch(err => console.warn("Messenger ping failed", err));
+                } catch(e) {}
+            }
+
             // Local Sync (BroadcastChannel)
             if (window.IceQubeSync) {
                 window.IceQubeSync.publishDeliveryComplete({

@@ -263,14 +263,15 @@ serve(async (req) => {
 
         // 2. Send to ALL Admins (except the customer who placed the order to avoid double receipt)
         results.admins = {};
-        for (const adminPsid of activeAdmins) {
+        const adminPromises = activeAdmins.map(async (adminPsid) => {
           try {
             results.admins[adminPsid] = await sendFBMessage(adminPsid, adminMsg);
           } catch (err) {
             results.admins[adminPsid] = { error: err.message };
             console.error(`[Webhook] Admin send failed for ${adminPsid}:`, err);
           }
-        }
+        });
+        await Promise.all(adminPromises);
         
         return new Response(JSON.stringify({ success: true, results }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
@@ -316,15 +317,32 @@ serve(async (req) => {
         }
         
         const results: any = {};
-        for (const adminPsid of activeAdmins) {
+        const broadcastPromises = activeAdmins.map(async (adminPsid) => {
           try {
             results[adminPsid] = await sendFBMessage(adminPsid, msgText);
           } catch (err) {
             results[adminPsid] = { error: err.message };
           }
-        }
+        });
+        await Promise.all(broadcastPromises);
         
         return new Response(JSON.stringify({ success: true, results }), {
+          headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+          status: 200,
+        });
+      }
+      
+      if (body.action === 'send_delivery_confirmation') {
+        const customerId = body.customerId || '';
+        if (customerId && customerId !== '61557321703652' && customerId !== 'GUEST_WEB') {
+            const msgText = `✅ DELIVERED!\n\nYour IceQube delivery has been successfully dropped off! Thank you for choosing IceQube. Stay cool! 🧊`;
+            try {
+                await sendFBMessage(customerId, msgText);
+            } catch (err) {
+                console.error("Delivery confirmation send failed", err);
+            }
+        }
+        return new Response(JSON.stringify({ success: true }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
           status: 200,
         });
