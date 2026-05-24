@@ -2107,6 +2107,23 @@
             #order-ledger-body tr td:nth-child(12)::before { content: "TYPE"; }
             #order-ledger-body tr td:nth-child(13)::before { content: "RIDER"; }
             #order-ledger-body tr td:nth-child(14)::before { content: "STATUS"; }
+            
+            /* Minimized View for Orders */
+            #orders-view.minimized-orders .cashflow-table tr {
+                padding: 12px 16px !important;
+                margin-bottom: 8px !important;
+            }
+            #orders-view.minimized-orders .cashflow-table td:not(:nth-child(3)) {
+                display: none !important;
+            }
+            #orders-view.minimized-orders .cashflow-table td:nth-child(3) {
+                padding: 0 !important;
+                border-bottom: none !important;
+                justify-content: flex-start !important;
+            }
+            #orders-view.minimized-orders .cashflow-table td:nth-child(3)::before {
+                display: none !important;
+            }
     </style>
 </head>
 <body class="admin-mode">
@@ -2541,7 +2558,14 @@
         </div>
 
         <!-- ORDER QUEUE VIEW (UPDATED: SPLIT TABLES) -->
-            <div class="cc-grid" id="orders-view" style="display: none;">
+        <div class="cc-grid" id="orders-view" style="display: none;">
+
+            <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; padding: 0 5px; margin-bottom: -0.5rem; z-index: 10;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(14, 165, 233, 0.3);">
+                    <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Minimize View</span>
+                    <input type="checkbox" id="minimize-orders-toggle" onchange="document.getElementById('orders-view').classList.toggle('minimized-orders', this.checked)" style="width: 16px; height: 16px; accent-color: #0ea5e9; cursor: pointer; margin: 0;">
+                </label>
+            </div>
 
             <!-- PENDING DISPATCH QUEUE -->
             <div class="cc-card full-width" style="margin-bottom: 1rem; border-left: 4px solid #f59e0b;">
