@@ -1319,10 +1319,7 @@ var admin = {
             const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&_cb=${Date.now()}`, {
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                 }
             });
             if (!response.ok) {

@@ -145,10 +145,7 @@ window.IceQubeSync = {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                     }
                 });
 
@@ -248,10 +245,7 @@ window.IceQubeSync = {
                     method: 'GET',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                     }
                 });
 
