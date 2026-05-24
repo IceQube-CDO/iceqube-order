@@ -3901,8 +3901,20 @@ var admin = {
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
 
-        // 2. Re-render UI so the Dispatch button gets the new rider value
-        this.fetchRealStats();
+        // Also update in-memory state
+        if (this.allOrders) {
+            const memIdx = this.allOrders.findIndex(o => o.id === id || o.order_id === id);
+            if (memIdx > -1) {
+                this.allOrders[memIdx].rider = riderName;
+                if (newStatus) {
+                    this.allOrders[memIdx].delivery_status = newStatus;
+                    this.allOrders[memIdx].dispatched_at = existingOrders[orderIdx].dispatched_at;
+                }
+            }
+        }
+
+        // 2. Re-render UI immediately with local state
+        this.updateOrderQueue(this.allOrders || existingOrders);
 
         if (isAdminRider && riderName !== 'Unassigned') {
             alert(`Order ${id} auto-dispatched to Admin Rider ${riderName} and moved to Ledger.`);
@@ -3932,6 +3944,8 @@ var admin = {
                 body: JSON.stringify(patchData)
             });
             console.log('✅ Rider Assigned to Supabase' + (newStatus ? ` and Status updated to ${newStatus}` : ''));
+            // 3. Fetch from Supabase AFTER patch to ensure perfect sync
+            this.fetchRealStats();
         } catch (err) {
             console.error('Assignment Failed:', err);
         }
