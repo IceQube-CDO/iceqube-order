@@ -1456,7 +1456,7 @@ var admin = {
 
         const pending = orders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
         const dispatched = orders.filter(o => o.delivery_status === 'Dispatched').length;
-        const delivered = orders.filter(o => o.delivery_status === 'Delivered').length;
+        const delivered = orders.filter(o => o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up').length;
         
         let revenue = todaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
         let yesterdayRevenue = yesterdaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
@@ -3264,6 +3264,7 @@ var admin = {
 
     updateOrderQueue(orders) {
         const pendingBody = document.getElementById('pending-dispatch-body');
+        const pickupBody = document.getElementById('pickup-ledger-body');
         const ledgerBody = document.getElementById('order-ledger-body');
         const pendingBadge = document.getElementById('pending-count-badge');
         const ledgerBadge = document.getElementById('ledger-count-badge');
@@ -3282,7 +3283,13 @@ var admin = {
         // Sort by time: Newest at the top
         allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        const pendingOrders = allOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance');
+        const isPickup = (o) => {
+            if (!o.delivery_address) return false;
+            const lowerAddr = o.delivery_address.toLowerCase();
+            return lowerAddr.includes('self-pickup') || lowerAddr.includes('self pickup') || lowerAddr.includes('pickup');
+        };
+
+        const pendingOrders = allOrders.filter(o => (o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance') && !isPickup(o));
         
         // Ledger Filter: Clean up completed orders from before 6:00 AM of the current operational day
         const now = new Date();
@@ -3292,10 +3299,19 @@ var admin = {
             cutoff.setDate(cutoff.getDate() - 1);
         }
 
+        const pickupOrders = allOrders.filter(o => {
+            if (!isPickup(o)) return false;
+            const isCompleted = o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up' || o.delivery_status === 'Cancelled' || o.delivery_status === 'Rejected';
+            const orderDate = new Date(o.created_at || o.timestamp);
+            if (isCompleted && orderDate < cutoff) return false;
+            return true;
+        });
+
         const ledgerOrders = allOrders.filter(o => {
+            if (isPickup(o)) return false;
             if (o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance') return false;
             
-            const isCompleted = o.delivery_status === 'Delivered' || o.delivery_status === 'Cancelled' || o.delivery_status === 'Rejected';
+            const isCompleted = o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up' || o.delivery_status === 'Cancelled' || o.delivery_status === 'Rejected';
             const orderDate = new Date(o.created_at || o.timestamp);
             
             // Hide older completed orders
@@ -3305,7 +3321,9 @@ var admin = {
             return true;
         });
 
+        const pickupBadge = document.getElementById('pickup-count-badge');
         if (pendingBadge) pendingBadge.innerText = `${pendingOrders.length} Pending`;
+        if (pickupBadge) pickupBadge.innerText = `${pickupOrders.length} Pickups`;
         if (ledgerBadge) ledgerBadge.innerText = `${ledgerOrders.length} Orders`;
 
         const parseSchedule = (scheduleStr) => {
@@ -3416,15 +3434,72 @@ var admin = {
                                        padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
                             ${o.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
                         </button>
-                        <button onclick="admin.sendMessengerNotification('${o.order_id}')" 
-                                title="Resend Messenger Receipt"
-                                style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); color: #0ea5e9; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.2s ease;">
-                            💬
-                        </button>
                     </td>
                 </tr>
             `;
         }).join('');
+
+        // Render Pickup Table
+        if (pickupBody) {
+            pickupOrders.sort((a, b) => {
+                const aIsCompleted = (a.delivery_status === 'Delivered' || a.delivery_status === 'Picked Up' || a.delivery_status === 'Cancelled' || a.delivery_status === 'Rejected');
+                const bIsCompleted = (b.delivery_status === 'Delivered' || b.delivery_status === 'Picked Up' || b.delivery_status === 'Cancelled' || b.delivery_status === 'Rejected');
+                
+                if (aIsCompleted && !bIsCompleted) return 1;
+                if (!aIsCompleted && bIsCompleted) return -1;
+                
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            pickupBody.innerHTML = pickupOrders.map(o => {
+                const createdAt = new Date(o.created_at);
+                const isToday = createdAt.toDateString() === new Date().toDateString();
+                const timeStr = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateDisplay = isToday ? '' : `<div style="font-size: 0.6rem; opacity: 0.6; margin-top: 2px; font-weight: 600;">${createdAt.toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()}</div>`;
+                const displayTime = `<div style="display: flex; flex-direction: column;"><div>${timeStr}</div>${dateDisplay}</div>`;
+                const itemsStr = this.formatOrderItems(o);
+                const scheduleDisplay = parseSchedule(o.delivery_schedule);
+                const cleanCustName = (o.customer_name || '').trim();
+                const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
+                
+                return `
+                    <tr>
+                        <td>${displayTime}</td>
+                        <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: #10b981; cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
+                                    ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align: center; vertical-align: middle;">
+                            ${(o.delivery_notes && o.delivery_notes.trim() !== '' && o.delivery_notes.trim().toLowerCase() !== 'no special notes.') ? `<button onclick="alert('Note for Order ${o.order_id}:\\n\\n' + decodeURIComponent('${encodeURIComponent(o.delivery_notes)}'))" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 6px; cursor: pointer; color: #0ea5e9; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="View Note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>` : `<span style="color: #64748b; font-size: 0.8rem;">-</span>`}
+                        </td>
+                        <td style="font-size: 0.75rem; white-space: nowrap;">
+                            ${scheduleDisplay}
+                        </td>
+                        <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
+                        <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
+                        <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
+                        <td style="text-align: right; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                            ${(o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up') 
+                                ? `<button disabled style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #64748b; padding: 6px 12px; border-radius: 6px; cursor: not-allowed; font-size: 11px; font-weight: 800; text-transform: uppercase;">Served</button>`
+                                : `<button onclick="admin.markPickupServed('${o.id || o.order_id}', '${o.order_id}')" style="background: #10b981; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 800; text-transform: uppercase;">For Pickup</button>`
+                            }
+                            <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
+                                    style="background: ${o.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
+                                           border: 1px solid ${o.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
+                                           color: ${o.is_real !== false ? '#22c55e' : '#64748b'}; 
+                                           padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;" title="Toggle Test/Real Mode">
+                                ${o.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
         // Render Ledger Table (Uneditable)
         ledgerBody.innerHTML = ledgerOrders.map(o => {
@@ -3438,7 +3513,7 @@ var admin = {
 
             const ledgerScheduleDisplay = parseSchedule(o.delivery_schedule);
 
-            const isDelivered = o.delivery_status === 'Delivered';
+            const isDelivered = o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up';
             const cleanIdStr = o.order_id ? String(o.order_id).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
             
             const geotagUrl = o.geotag_url ? o.geotag_url : (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id') ? 
@@ -3490,6 +3565,22 @@ var admin = {
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
                     <td style="font-family: 'Inter', sans-serif; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
                     <td style="font-family: 'Inter', sans-serif; color: #64748b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="rider-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">${(o.rider || 'U')[0]}</div>
+                            <span style="font-size: 0.8rem; color: #cbd5e1;">${o.rider || 'Unassigned'}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                            <span class="status-badge status-${(o.delivery_status || 'Pending').toLowerCase()}" style="font-size: 0.65rem;">${o.delivery_status || 'Pending'}</span>
+                            ${(!isDelivered && o.delivery_status !== 'Cancelled' && o.delivery_status !== 'Rejected') ? `
+                            <button onclick="admin.markOrderDeliveredOverride('${o.id || o.order_id}', '${o.order_id}')" style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; font-size: 0.6rem; font-weight: 800; padding: 3px 6px; border-radius: 4px; cursor: pointer; text-transform: uppercase;" title="Force Delivered">
+                                OVERRIDE
+                            </button>
+                            ` : ''}
+                        </div>
+                    </td>
                     <td style="text-align: center;">
                         <button onclick="admin.toggleRealStatus('order', '${o.id || o.order_id}')" 
                                 style="background: ${o.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
@@ -3498,15 +3589,6 @@ var admin = {
                                        padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800;">
                             ${o.is_real !== false ? '🛡️ REAL' : '🧪 TEST'}
                         </button>
-                    </td>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div class="rider-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">${(o.rider || 'U')[0]}</div>
-                            <span style="font-size: 0.8rem; color: #cbd5e1;">${o.rider || 'Unassigned'}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="status-badge status-${(o.delivery_status || 'Pending').toLowerCase()}" style="font-size: 0.65rem;">${o.delivery_status || 'Pending'}</span>
                     </td>
                 </tr>
             `;
@@ -3711,6 +3793,44 @@ var admin = {
             if (!silent) alert(msg);
         } catch (err) {
             console.error('Dispatch failed:', err);
+        }
+    },
+
+    async markPickupServed(id, orderId) {
+        if (!confirm(`Mark Pickup Order ${orderId} as Served?`)) return;
+
+        if (id.startsWith('mock')) {
+            alert(`Pickup Order ${orderId} marked as Served!`);
+            this.fetchRealStats();
+            return;
+        }
+
+        console.log(`✅ Marking Pickup Order ${orderId} as Served...`);
+        try {
+            await this.updateOrderStatus(id, 'Picked Up');
+            alert(`Pickup Order ${orderId} marked as Served!`);
+        } catch (err) {
+            console.error('Marking Served failed:', err);
+            alert(`Failed to mark order as Served: ${err.message}`);
+        }
+    },
+
+    async markOrderDeliveredOverride(id, orderId) {
+        if (!confirm(`Manual Override: Force mark Order ${orderId} as DELIVERED?`)) return;
+
+        if (id.startsWith('mock')) {
+            alert(`Order ${orderId} manually marked as Delivered!`);
+            this.fetchRealStats();
+            return;
+        }
+
+        console.log(`✅ Manually Marking Order ${orderId} as Delivered...`);
+        try {
+            await this.updateOrderStatus(id, 'Delivered');
+            alert(`Order ${orderId} marked as Delivered!`);
+        } catch (err) {
+            console.error('Override failed:', err);
+            alert(`Failed to override status: ${err.message}`);
         }
     },
 
