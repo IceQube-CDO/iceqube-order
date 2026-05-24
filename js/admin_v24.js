@@ -3271,6 +3271,13 @@ var admin = {
         
         if (!pendingBody || !ledgerBody) return;
 
+        // PRESERVE EXPANDED STATE (MOBILE)
+        const expandedOrderIds = new Set(
+            Array.from(document.querySelectorAll('#orders-view .expanded'))
+                 .map(tr => tr.getAttribute('data-order-id'))
+                 .filter(id => id)
+        );
+
         const eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '["Loft Living CDO", "ZZ LOFT"]');
 
         // Use provided orders (from cloud) or fallback to local only if orders is null/undefined
@@ -3429,7 +3436,7 @@ var admin = {
             const cleanCustName = (o.customer_name || '').trim();
             const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
-                <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
+                <tr data-order-id="${o.order_id}" class="${expandedOrderIds.has(o.order_id) ? 'expanded' : ''}" style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                     <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
@@ -3501,7 +3508,7 @@ var admin = {
                 const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
                 
                 return `
-                    <tr>
+                    <tr data-order-id="${o.order_id}" class="${expandedOrderIds.has(o.order_id) ? 'expanded' : ''}">
                         <td>${displayTime}</td>
                         <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: #10b981; cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                         <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
@@ -3578,7 +3585,7 @@ var admin = {
             const cleanCustName = (o.customer_name || '').trim();
             const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
-                <tr>
+                <tr data-order-id="${o.order_id}" class="${expandedOrderIds.has(o.order_id) ? 'expanded' : ''}">
                     <td>${displayTime}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
                     <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
