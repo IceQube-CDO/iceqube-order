@@ -5504,7 +5504,7 @@ function openCustomerDrawer(customerId) {
                     pmText = 'Online Banking';
                 }
                 
-                let showScreenshot = (pmText === 'GCash' || pmText === 'Online Banking') ? 'inline-block' : 'none';
+                let showScreenshot = 'inline-block'; // Always show digital receipt
 
                 historyHtml += `
                     <div class="history-row">
