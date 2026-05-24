@@ -2577,6 +2577,36 @@
                 </div>
             </div>
 
+            <!-- PICKUP ORDER LEDGER -->
+            <div class="cc-card full-width" style="margin-bottom: 1rem; border-left: 4px solid #10b981;">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center; color: #10b981;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2rem;">🏬</span> PICKUP ORDER LEDGER (MACABALAN HUB)
+                    </div>
+                    <span id="pickup-count-badge" style="background: #10b981; color: #020617; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 800;">0 Pickups</span>
+                </div>
+                <div class="table-container" style="margin-top: 1rem;">
+                    <table class="cashflow-table">
+                        <thead>
+                            <tr>
+                                <th>TIME</th>
+                                <th>ORDER ID</th>
+                                <th>CUSTOMER</th>
+                                <th style="width: 50px; text-align: center;" title="Notes">NOTE</th>
+                                <th>PICKUP SCHEDULE</th>
+                                <th>ITEMS</th>
+                                <th>PAYMENT METHOD</th>
+                                <th>ITEM TOTAL</th>
+                                <th style="text-align: right;">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pickup-ledger-body">
+                            <!-- Pickup Orders Injected Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- DAILY ORDER LEDGER (UNEDITABLE) -->
             <div class="cc-card full-width">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">

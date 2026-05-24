@@ -3877,11 +3877,14 @@ var admin = {
 
         let isAdminRider = false;
         if (admin.teamMembersData && Array.isArray(admin.teamMembersData)) {
-            const member = admin.teamMembersData.find(m => (m.nickname === riderName || m.name === riderName));
-            if (member) {
+            const matchingMembers = admin.teamMembersData.filter(m => (m.nickname === riderName || m.name === riderName));
+            for (const member of matchingMembers) {
                 const roleStr = (member.roleCategory || member.role || member.designation || '').toLowerCase();
-                if (roleStr.includes('admin') || roleStr.includes('officer')) {
+                const isRider = roleStr.includes('rider') || roleStr.includes('delivery');
+                const isAdmin = roleStr.includes('admin') || roleStr.includes('officer');
+                if ((isRider || roleStr === 'rider') && isAdmin) {
                     isAdminRider = true;
+                    break;
                 }
             }
         }
