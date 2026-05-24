@@ -1963,7 +1963,7 @@
                 <div class="cc-card" style="flex: 1;">
                     <div class="metric-label">Today's Revenue</div>
                     <div class="metric-value" id="ops-revenue">₱0.00</div>
-                    <div class="metric-trend up">+15% vs yesterday</div>
+                    <div class="metric-trend up" id="ops-revenue-trend">+15% vs yesterday</div>
                 </div>
 
                 <!-- Metric Card: Full Dice Sold -->
@@ -2009,7 +2009,55 @@
                 </div>
             </div>
 
-            <div class="cc-card wide" style="display: flex; flex-direction: column;">
+            <!-- Revenue Average Monitor -->
+            <div class="cc-card wide" style="display: flex; flex-direction: column; position: relative;">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    Revenue Average Monitor
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- 1. Daily Averages -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1rem;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Daily Averages (Mon - Sun)</div>
+                        <div style="height: 180px; position: relative; width: 100%;">
+                            <canvas id="revDaysChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 2. This Week's Avg -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1rem; border-left: 3px solid #0ea5e9;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">This Week's Avg (Mon-Sun)</div>
+                        <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 4px;">
+                            <div id="rev-monitor-weekly-avg" class="rev-monitor-weekly-avg" style="font-size: 1.8rem; font-weight: 800; color: #0ea5e9; font-family: 'Outfit', sans-serif;">₱0.00</div>
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">/day</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Monthly Trend -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1rem;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center;">
+                            Monthly Trend (Jan - Dec)
+                            <select id="rev-monitor-year" class="rev-monitor-year" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(14, 165, 233, 0.3); color: #f8fafc; border-radius: 6px; padding: 2px 8px; font-size: 0.7rem; font-family: 'Inter', sans-serif; cursor: pointer; outline: none; border-right: 4px solid transparent;">
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                        <div style="height: 180px; position: relative; width: 100%;">
+                            <canvas id="revMonthsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 4. Yearly Revenue -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1rem; border-left: 3px solid #10b981; display: flex; flex-direction: column;">
+                        <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Yearly Revenue</div>
+                        <div id="rev-monitor-yearly" class="rev-monitor-yearly" style="font-size: 1.8rem; font-weight: 800; color: #10b981; margin-top: 4px; font-family: 'Outfit', sans-serif;">₱0.00</div>
+                        <div style="height: 120px; position: relative; width: 100%; margin-top: 10px;">
+                            <canvas id="revYearsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cc-card wide" style="display: flex; flex-direction: column; margin-bottom: 1.5rem;">
                 <div class="metric-label" style="display: flex; justify-content: space-between;">
                     Live Logistics Map (CDO)
                     <span style="color: #22c55e; font-size: 0.7rem;">● 4 Riders Online</span>

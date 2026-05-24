@@ -1444,24 +1444,64 @@ var admin = {
         this.updateOrderQueue(orders);
 
         // 2. Stats Calculation
-        const todayStr = new Date().toDateString();
-        const todaysOrders = orders.filter(o => new Date(o.created_at || Date.now()).toDateString() === todayStr);
+        const today = new Date();
+        const todayStr = today.toDateString();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toDateString();
+
+        const todaysOrders = orders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === todayStr);
+        const yesterdaysOrders = orders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === yesterdayStr);
 
         const pending = orders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
         const dispatched = orders.filter(o => o.delivery_status === 'Dispatched').length;
         const delivered = orders.filter(o => o.delivery_status === 'Delivered').length;
         
         let revenue = todaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        let yesterdayRevenue = yesterdaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+
         if (this.manualEntries) {
             this.manualEntries.forEach(entry => {
-                if (entry.category === 'Sales' && entry.type === 'IN' && new Date(entry.timestamp).toDateString() === todayStr) {
-                    revenue += (parseFloat(entry.amount) || 0);
+                if (entry.category === 'Sales' && entry.type === 'IN') {
+                    const entryDateStr = new Date(entry.timestamp).toDateString();
+                    if (entryDateStr === todayStr) {
+                        revenue += (parseFloat(entry.amount) || 0);
+                    } else if (entryDateStr === yesterdayStr) {
+                        yesterdayRevenue += (parseFloat(entry.amount) || 0);
+                    }
                 }
             });
         }
+        
         const revenueEl = document.getElementById('ops-revenue') || document.querySelector('.metric-value');
         if (revenueEl) revenueEl.innerText = `₱${revenue.toLocaleString()}`;
-        
+
+        // Update Revenue Trend vs Yesterday
+        const trendEls = document.querySelectorAll('#ops-revenue-trend, #ops-revenue-trend-mobile');
+        trendEls.forEach(el => {
+            let pct = 0;
+            if (yesterdayRevenue > 0) {
+                pct = Math.round(((revenue - yesterdayRevenue) / yesterdayRevenue) * 100);
+            } else if (revenue > 0) {
+                pct = 100;
+            }
+            
+            if (pct > 0) {
+                el.innerText = `+${pct}% vs yesterday`;
+                el.className = 'metric-trend up';
+                el.style.color = ''; el.style.background = '';
+            } else if (pct < 0) {
+                el.innerText = `${pct}% vs yesterday`;
+                el.className = 'metric-trend down';
+                el.style.color = ''; el.style.background = '';
+            } else {
+                el.innerText = `0% vs yesterday`;
+                el.className = 'metric-trend';
+                el.style.color = '#94a3b8';
+                el.style.background = 'rgba(255,255,255,0.1)';
+            }
+        });
+
         // 3. Kg Calculation
         let fullDiceKg = 0;
         let halfDiceKg = 0;
@@ -1567,6 +1607,7 @@ var admin = {
         this.updateAlertCenter(orders);
         this.updateComplaintsUI();
         this.renderPaymentVerification(orders);
+        this.updateRevenueMonitor(orders);
 
         // 6. Vacation Mode Auto-Dispatch (On-Load Check)
         if (this.vacationMode) {
@@ -1577,6 +1618,290 @@ var admin = {
                 }
             });
         }
+    },
+
+    updateRevenueMonitor(orders) {
+        if (!orders || orders.length === 0) return;
+
+        // Populate years dynamically
+        const yearsSet = new Set();
+        orders.forEach(o => {
+            const dateVal = o.created_at || o.timestamp;
+            if (dateVal) {
+                yearsSet.add(new Date(dateVal).getFullYear());
+            }
+        });
+        const currentYear = new Date().getFullYear();
+        yearsSet.add(currentYear); // Ensure current year is always there
+        const availableYears = Array.from(yearsSet).sort((a, b) => b - a);
+
+        const yearSelects = document.querySelectorAll('#rev-monitor-year, #rev-monitor-year-mobile');
+        
+        let targetYear = currentYear;
+        // Keep selected year if it exists
+        if (yearSelects.length > 0 && yearSelects[0].value) {
+            targetYear = parseInt(yearSelects[0].value);
+        }
+
+        yearSelects.forEach(select => {
+            if (select.options.length !== availableYears.length) {
+                select.innerHTML = '';
+                availableYears.forEach(year => {
+                    const opt = document.createElement('option');
+                    opt.value = year;
+                    opt.textContent = year;
+                    if (year === targetYear) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            }
+            if (!select.dataset.listenerAdded) {
+                select.dataset.listenerAdded = 'true';
+                select.addEventListener('change', (e) => {
+                    // Sync the other select
+                    yearSelects.forEach(s => s.value = e.target.value);
+                    this.updateRevenueMonitor(this.allOrders || orders);
+                });
+            }
+        });
+
+        // Filter orders by year and valid ones
+        const yearOrders = orders.filter(o => {
+            const dateVal = o.created_at || o.timestamp;
+            if (!dateVal) return false;
+            return new Date(dateVal).getFullYear() === targetYear;
+        });
+
+        // Compute Yearly Revenue
+        const yearlyRevenue = yearOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        const formattedYearly = `₱${yearlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        
+        const yearlyEls = document.querySelectorAll('#rev-monitor-yearly, #rev-monitor-yearly-mobile');
+        yearlyEls.forEach(el => el.innerText = formattedYearly);
+
+        // Compute This Week's Average (Mon-Sun)
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+        const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const currentMonday = new Date(now.setDate(diffToMonday));
+        currentMonday.setHours(0,0,0,0);
+        
+        const currentOrders = orders.filter(o => {
+            const dateVal = o.created_at || o.timestamp;
+            if (!dateVal) return false;
+            const d = new Date(dateVal);
+            return d >= currentMonday;
+        });
+        const currentWeekRevenue = currentOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        let daysElapsedThisWeek = new Date().getDay() || 7; 
+        const weeklyAvg = currentWeekRevenue / daysElapsedThisWeek;
+        const formattedWeekly = `₱${weeklyAvg.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+        
+        const weeklyEls = document.querySelectorAll('#rev-monitor-weekly-avg, #rev-monitor-weekly-avg-mobile');
+        weeklyEls.forEach(el => el.innerText = formattedWeekly);
+
+        // Process data for charts
+        const monthlyData = new Array(12).fill(0);
+        const dayOfWeekTotals = new Array(7).fill(0); 
+        const dayOfWeekCounts = new Array(7).fill(0);
+        const processedDays = new Set();
+
+        yearOrders.forEach(o => {
+            const dateVal = o.created_at || o.timestamp;
+            if (!dateVal) return;
+            const d = new Date(dateVal);
+            const month = d.getMonth();
+            const day = d.getDay();
+            const dateString = d.toDateString();
+            const price = parseFloat(o.total_price) || 0;
+
+            monthlyData[month] += price;
+            dayOfWeekTotals[day] += price;
+
+            // Track unique days for calculating averages
+            if (!processedDays.has(dateString)) {
+                processedDays.add(dateString);
+                dayOfWeekCounts[day]++;
+            }
+        });
+
+        const dailyAverages = [];
+        const displayDays = [1, 2, 3, 4, 5, 6, 0]; 
+        displayDays.forEach(day => {
+            const count = dayOfWeekCounts[day] || 1; 
+            dailyAverages.push(dayOfWeekCounts[day] > 0 ? dayOfWeekTotals[day] / count : 0);
+        });
+
+        // Shared Plugin for data labels
+        const dataLabelsPlugin = {
+            id: 'datalabels',
+            afterDatasetsDraw(chart, args, pluginOptions) {
+                const { ctx, data } = chart;
+                ctx.save();
+                ctx.font = 'bold 10px Inter';
+                ctx.fillStyle = '#f8fafc';
+                
+                const isHorizontal = chart.config.options.indexAxis === 'y';
+                
+                if (isHorizontal) {
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                } else {
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                }
+
+                chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+                    const val = data.datasets[0].data[index];
+                    if(val > 0) {
+                        const text = '₱' + val.toLocaleString(undefined, {maximumFractionDigits:0});
+                        if (isHorizontal) {
+                            ctx.fillText(text, datapoint.x + 6, datapoint.y);
+                        } else {
+                            ctx.fillText(text, datapoint.x, datapoint.y - 8);
+                        }
+                    }
+                });
+                ctx.restore();
+            }
+        };
+
+        // Render Months Chart (Desktop & Mobile)
+        const monthCanvasIds = ['revMonthsChart', 'revMonthsChartMobile'];
+        if (!this.revMonthsChartInstances) this.revMonthsChartInstances = {};
+
+        monthCanvasIds.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                if (this.revMonthsChartInstances[id]) this.revMonthsChartInstances[id].destroy();
+                this.revMonthsChartInstances[id] = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            label: 'Revenue',
+                            data: monthlyData,
+                            backgroundColor: '#0ea5e9',
+                            borderRadius: 4
+                        }]
+                    },
+                    plugins: [dataLabelsPlugin],
+                    options: {
+                        indexAxis: 'y',
+                        layout: { padding: { top: 10, right: 45, bottom: 10 } },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { 
+                                beginAtZero: true, 
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#94a3b8', font: { size: 10 } }
+                            },
+                            y: { 
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Render Daily Averages Chart (Desktop & Mobile)
+        const dayCanvasIds = ['revDaysChart', 'revDaysChartMobile'];
+        if (!this.revDaysChartInstances) this.revDaysChartInstances = {};
+
+        dayCanvasIds.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                if (this.revDaysChartInstances[id]) this.revDaysChartInstances[id].destroy();
+                this.revDaysChartInstances[id] = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Average Revenue',
+                            data: dailyAverages,
+                            backgroundColor: '#10b981',
+                            borderRadius: 4
+                        }]
+                    },
+                    plugins: [dataLabelsPlugin],
+                    options: {
+                        indexAxis: 'y',
+                        layout: { padding: { top: 10, right: 45, bottom: 10 } },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { 
+                                beginAtZero: true, 
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#94a3b8', font: { size: 10 } }
+                            },
+                            y: { 
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Render Yearly Revenue Chart (Past to Present)
+        const yearlyTotalsMap = new Map();
+        orders.forEach(o => {
+            const dateVal = o.created_at || o.timestamp;
+            if (dateVal) {
+                const y = new Date(dateVal).getFullYear();
+                const price = parseFloat(o.total_price) || 0;
+                yearlyTotalsMap.set(y, (yearlyTotalsMap.get(y) || 0) + price);
+            }
+        });
+        const pastToPresentYears = Array.from(yearsSet).sort((a, b) => a - b);
+        const yearlyDataArray = pastToPresentYears.map(y => yearlyTotalsMap.get(y) || 0);
+
+        const yearCanvasIds = ['revYearsChart', 'revYearsChartMobile'];
+        if (!this.revYearsChartInstances) this.revYearsChartInstances = {};
+
+        yearCanvasIds.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                if (this.revYearsChartInstances[id]) this.revYearsChartInstances[id].destroy();
+                this.revYearsChartInstances[id] = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: pastToPresentYears.map(String),
+                        datasets: [{
+                            label: 'Yearly Revenue',
+                            data: yearlyDataArray,
+                            backgroundColor: pastToPresentYears.map(y => y === targetYear ? '#10b981' : 'rgba(16, 185, 129, 0.3)'),
+                            borderRadius: 4
+                        }]
+                    },
+                    plugins: [dataLabelsPlugin],
+                    options: {
+                        indexAxis: 'y',
+                        layout: { padding: { top: 10, right: 45, bottom: 10 } },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { 
+                                beginAtZero: true, 
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#94a3b8', font: { size: 10 } }
+                            },
+                            y: { 
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+        });
     },
 
     updateOperationFeed(orders) {
