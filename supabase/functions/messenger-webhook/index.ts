@@ -248,7 +248,7 @@ serve(async (req) => {
                   .filter((m: any) => m.status === 'Active' && 
                                 (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
                                 m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&
-                                m.messenger !== customerId)
+                                String(m.messenger) !== String(customerId))
                   .map((m: any) => m.messenger);
               }
             }
@@ -258,7 +258,7 @@ serve(async (req) => {
         }
         
         if (activeAdmins.length === 0) {
-          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => id !== customerId);
+          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => String(id) !== String(customerId));
         }
 
         // 2. Send to ALL Admins (except the customer who placed the order to avoid double receipt)
@@ -312,7 +312,7 @@ serve(async (req) => {
         
         // Fallback to hardcoded list if fetch fails or no admins configured
         if (activeAdmins.length === 0) {
-          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => id !== customerId);
+          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => String(id) !== String(customerId));
         }
         
         const results: any = {};

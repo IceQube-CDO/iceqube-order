@@ -4986,60 +4986,8 @@ const app = {
 
         let finalMessengerId = this.user.messengerId || MESSENGER_CONFIG.RECIPIENT_ID;
         if (!finalMessengerId && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
-            try {
-                // Query previous orders for this establishment or contact number containing a messenger_id
-                // IMPORTANT: Prevent matching generic values like 'N/A' or 'Guest Customer'
-                const isValidName = customerName && customerName.toLowerCase() !== 'guest customer';
-                const isValidPhone = contactNumber && contactNumber.toLowerCase() !== 'n/a' && contactNumber.length > 5;
-                
-                let queryUrl = null;
-                if (isValidName && isValidPhone) {
-                    queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(customer_name.eq.${encodeURIComponent(customerName)},contact_number.eq.${encodeURIComponent(contactNumber)})&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
-                } else if (isValidPhone) {
-                    queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?contact_number=eq.${encodeURIComponent(contactNumber)}&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
-                } else if (isValidName) {
-                    queryUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?customer_name=eq.${encodeURIComponent(customerName)}&messenger_id=not.is.null&select=messenger_id&order=created_at.desc&limit=1`;
-                }
-
-                if (queryUrl) {
-                    const res = await fetch(queryUrl, {
-                    method: 'GET',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
-                    }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.length > 0 && data[0].messenger_id) {
-                        finalMessengerId = data[0].messenger_id;
-                        console.log('🔄 [Auto-Link] Found existing Messenger ID from past orders:', finalMessengerId);
-                        
-                        // Sync to memory and localStorage user profile
-                        this.user.messengerId = finalMessengerId;
-                        this.user.messengerEnabled = true;
-                        
-                        const profileStr = localStorage.getItem('iceqube_user_profile');
-                        if (profileStr) {
-                            try {
-                                const p = JSON.parse(profileStr);
-                                p.messengerId = finalMessengerId;
-                                p.messengerEnabled = true;
-                                p.updatedAt = new Date().toISOString();
-                                localStorage.setItem('iceqube_user_profile', JSON.stringify(p));
-                                
-                                // Broadcast update to Admin Command Center
-                                if (window.IceQubeSync) {
-                                    window.IceQubeSync.publishProfileUpdate(p);
-                                }
-                            } catch(e) {}
-                        }
-                    }
-                }
-                }
-            } catch (err) {
-                console.warn('Could not auto-fetch messenger ID from past orders:', err);
-            }
+            // Auto-link logic removed because it incorrectly grabbed Admin PSIDs
+            // when admins placed test orders or orders on behalf of customers in the past.
         }
         let paymentReceiptUrl = null;
         if (this.orderData.paymentReceipt && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
