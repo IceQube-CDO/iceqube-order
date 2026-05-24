@@ -271,14 +271,14 @@ var admin = {
 
         // 1. Detect current status
         const localData = JSON.parse(localStorage.getItem(key) || '[]');
-        const localIdx = localData.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
+        const localIdx = localData.findIndex(item => (item.id || item.order_id || item.timestamp) == id);
         
         let currentStatus = true; // Default to REAL for legacy data
         if (localIdx > -1) {
             const val = localData[localIdx].is_real;
             currentStatus = (val === undefined || val === null) ? true : !!val;
         } else {
-            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
+            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
             if (memoryItem) {
                 const val = memoryItem.is_real;
                 currentStatus = (val === undefined || val === null) ? true : !!val;
@@ -294,7 +294,7 @@ var admin = {
         }
 
         // 3. Update Memory State & UI Immediately
-        const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
+        const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
         if (memoryItem) memoryItem.is_real = newStatus;
         this.updateOrderQueue(this.allOrders);
 
@@ -3937,7 +3937,7 @@ var admin = {
 
         // 1. Update localStorage immediately for UI consistency
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        const orderIdx = existingOrders.findIndex(o => o.id === id || o.order_id === id);
+        const orderIdx = existingOrders.findIndex(o => o.id == id || o.order_id == id);
         let newStatus = undefined;
         if (orderIdx > -1) {
             existingOrders[orderIdx].rider = riderName;
@@ -3952,7 +3952,7 @@ var admin = {
 
         // Also update in-memory state
         if (this.allOrders) {
-            const memIdx = this.allOrders.findIndex(o => o.id === id || o.order_id === id);
+            const memIdx = this.allOrders.findIndex(o => o.id == id || o.order_id == id);
             if (memIdx > -1) {
                 this.allOrders[memIdx].rider = riderName;
                 if (newStatus) {
@@ -4009,14 +4009,14 @@ var admin = {
         
         // 1. Optimistic Local Update
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-        const orderIdx = existingOrders.findIndex(o => o.id === id || o.order_id === id);
+        const orderIdx = existingOrders.findIndex(o => o.id == id || o.order_id == id);
         if (orderIdx > -1) {
             existingOrders[orderIdx].delivery_status = newStatus;
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
 
         if (this.allOrders) {
-            const memIdx = this.allOrders.findIndex(o => o.id === id || o.order_id === id);
+            const memIdx = this.allOrders.findIndex(o => o.id == id || o.order_id == id);
             if (memIdx > -1) {
                 this.allOrders[memIdx].delivery_status = newStatus;
             }
