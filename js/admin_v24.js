@@ -3868,10 +3868,10 @@ var admin = {
                     const targetId = (profile && profile.messengerId) || (fullOrder.messenger_id || fullOrder.messengerId) || null;
                     
                     if (targetId) {
-                        let msg = `❄️ ICEQUBE ORDER PICKED UP!\n\n` +
+                        let msg = `❄️ ORDER PICKED UP!\n\n` +
                                   `Hi ${fullOrder.customer_name},\n\n` +
                                   `Your pickup order ${orderId} has been successfully completed and served.\n\n` +
-                                  `Thank you for choosing IceQube!`;
+                                  `Thank you for choosing IceQube CDO!`;
                         await this.dispatchMessengerMessage(targetId, msg);
                         console.log('✅ [Messenger] Pickup Confirmation Sent successfully.');
                     } else {
