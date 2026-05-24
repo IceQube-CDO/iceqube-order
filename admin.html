@@ -2664,6 +2664,22 @@
                 </div>
             </div>
 
+            <!-- Admin Riders Card -->
+            <div class="cc-card full-width">
+                <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">
+                    Admin Riders
+                    <div style="display: flex; gap: 8px;">
+                        <button class="status-badge" style="background: var(--admin-accent); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem;" onclick="admin.showAddTeamMemberOverlay('Admin Rider')">
+                            <span>+</span> Add Member
+                        </button>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;" id="admin-riders-list">
+                    <!-- Dynamic Data -->
+                    <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">Loading admin riders...</div>
+                </div>
+            </div>
+
             <!-- Riders Card -->
             <div class="cc-card full-width">
                 <div class="metric-label" style="display: flex; justify-content: space-between; align-items: center;">

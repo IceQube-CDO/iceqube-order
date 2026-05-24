@@ -3374,7 +3374,45 @@ var admin = {
             </div>`;
         };
 
-        const ridersList = ['Unassigned', 'John', 'Mark', 'Dave', 'Rico'];
+        let adminRiders = [];
+        let regularRiders = [];
+        
+        if (admin.teamMembersData && Array.isArray(admin.teamMembersData)) {
+            admin.teamMembersData.forEach(m => {
+                if (m.status !== 'Active') return;
+                const roleStr = (m.roleCategory || m.role || m.designation || '').toLowerCase();
+                const isRider = roleStr.includes('rider') || roleStr.includes('delivery');
+                const isAdmin = roleStr.includes('admin') || roleStr.includes('officer');
+                
+                const rName = m.nickname || m.name;
+                if (isRider || roleStr === 'rider') {
+                    if (isAdmin) adminRiders.push(rName);
+                    else regularRiders.push(rName);
+                }
+            });
+        }
+
+        const buildRiderOptions = (selectedRider) => {
+            let html = `<option value="Unassigned" ${selectedRider === 'Unassigned' || !selectedRider ? 'selected' : ''}>Unassigned</option>`;
+            if (adminRiders.length > 0) {
+                html += `<optgroup label="Admin Riders">`;
+                adminRiders.forEach(r => {
+                    html += `<option value="${r}" ${selectedRider === r ? 'selected' : ''}>${r}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+            if (regularRiders.length > 0) {
+                html += `<optgroup label="Riders">`;
+                regularRiders.forEach(r => {
+                    html += `<option value="${r}" ${selectedRider === r ? 'selected' : ''}>${r}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+            if (selectedRider && selectedRider !== 'Unassigned' && !adminRiders.includes(selectedRider) && !regularRiders.includes(selectedRider)) {
+                html += `<option value="${selectedRider}" selected>${selectedRider} (Inactive/Deleted)</option>`;
+            }
+            return html;
+        };
 
         // Render Pending Table
         pendingBody.innerHTML = pendingOrders.map(o => {
@@ -3419,7 +3457,7 @@ var admin = {
                     <td>
                         <div style="display: flex; gap: 6px; align-items: center;">
                             <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 80px;">
-                                ${ridersList.map(r => `<option value="${r}" ${o.rider === r ? 'selected' : ''}>${r}</option>`).join('')}
+                                ${buildRiderOptions(o.rider)}
                             </select>
                             <button class="btn-dispatch" onclick="admin.dispatchOrder('${o.id || o.order_id}', '${o.rider || 'Unassigned'}', '${o.order_id}')" style="flex-shrink: 0;">
                                 ${isAwaiting ? 'Re-Dispatch' : 'Dispatch'}
@@ -3837,16 +3875,38 @@ var admin = {
     async assignRider(id, riderName) {
         console.log(`📡 Assigning Rider ${riderName} to Order ${id}...`);
 
+        let isAdminRider = false;
+        if (admin.teamMembersData && Array.isArray(admin.teamMembersData)) {
+            const member = admin.teamMembersData.find(m => (m.nickname === riderName || m.name === riderName));
+            if (member) {
+                const roleStr = (member.roleCategory || member.role || member.designation || '').toLowerCase();
+                if (roleStr.includes('admin') || roleStr.includes('officer')) {
+                    isAdminRider = true;
+                }
+            }
+        }
+
         // 1. Update localStorage immediately for UI consistency
         const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
         const orderIdx = existingOrders.findIndex(o => o.id === id || o.order_id === id);
+        let newStatus = undefined;
         if (orderIdx > -1) {
             existingOrders[orderIdx].rider = riderName;
+            if (isAdminRider && riderName !== 'Unassigned') {
+                newStatus = 'Delivering';
+                existingOrders[orderIdx].delivery_status = newStatus;
+                existingOrders[orderIdx].dispatched_at = new Date().toISOString();
+                console.log(`🚀 Admin Rider selected, auto-dispatching to Delivering...`);
+            }
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
 
         // 2. Re-render UI so the Dispatch button gets the new rider value
         this.fetchRealStats();
+
+        if (isAdminRider && riderName !== 'Unassigned') {
+            alert(`Order ${id} auto-dispatched to Admin Rider ${riderName} and moved to Ledger.`);
+        }
 
         if (id.startsWith('mock')) return;
 
@@ -3856,6 +3916,12 @@ var admin = {
         }
         
         try {
+            const patchData = { rider: riderName };
+            if (newStatus) {
+                patchData.delivery_status = newStatus;
+                patchData.dispatched_at = new Date().toISOString();
+            }
+
             await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
                 method: 'PATCH',
                 headers: {
@@ -3863,9 +3929,9 @@ var admin = {
                     'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ rider: riderName })
+                body: JSON.stringify(patchData)
             });
-            console.log('✅ Rider Assigned to Supabase');
+            console.log('✅ Rider Assigned to Supabase' + (newStatus ? ` and Status updated to ${newStatus}` : ''));
         } catch (err) {
             console.error('Assignment Failed:', err);
         }
@@ -5906,6 +5972,7 @@ admin.saveTeamMembers = function() {
 admin.renderTeamCards = function() {
     const adminList = document.getElementById('admin-officers-list');
     const hubList = document.getElementById('hub-staff-list');
+    const adminRidersList = document.getElementById('admin-riders-list');
     const ridersList = document.getElementById('riders-list');
     
     if (!adminList || !hubList || !ridersList) return;
@@ -5936,6 +6003,7 @@ admin.renderTeamCards = function() {
 
     let adminHtml = '';
     let hubHtml = '';
+    let adminRidersHtml = '';
     let ridersHtml = '';
 
     admin.teamMembersData.forEach((member, index) => {
@@ -5962,14 +6030,20 @@ admin.renderTeamCards = function() {
             </div>
         `;
 
-        if (member.roleCategory === 'Admin Officer') adminHtml += cardHtml;
+        const roleStr = (member.roleCategory || member.role || member.designation || '').toLowerCase();
+
+        if (member.roleCategory === 'Admin Officer' || roleStr.includes('admin officer')) adminHtml += cardHtml;
         else if (member.roleCategory === 'Hub Staff') hubHtml += cardHtml;
+        else if (member.roleCategory === 'Admin Rider' || (member.roleCategory === 'Rider' && (roleStr.includes('admin') || roleStr.includes('officer')))) adminRidersHtml += cardHtml;
         else if (member.roleCategory === 'Rider') ridersHtml += cardHtml;
         else adminHtml += cardHtml; // Fallback
     });
 
     adminList.innerHTML = adminHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active admin officers.</div>';
     hubList.innerHTML = hubHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active hub staff.</div>';
+    if (adminRidersList) {
+        adminRidersList.innerHTML = adminRidersHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active admin riders.</div>';
+    }
     ridersList.innerHTML = ridersHtml || '<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 20px; grid-column: 1 / -1;">No active riders.</div>';
     
     // Update Vault List too
