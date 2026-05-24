@@ -3432,10 +3432,10 @@ var admin = {
                 <tr style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
-                    <td>
+                    <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
+                                <b style="font-size: 1rem; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;">${o.customer_name}</b>
                                 ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
@@ -3504,10 +3504,10 @@ var admin = {
                     <tr>
                         <td>${displayTime}</td>
                         <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: #10b981; cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
-                        <td>
+                        <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
-                                    <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
+                                    <b style="font-size: 1rem; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;">${o.customer_name}</b>
                                     ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                                 </div>
                             </div>
@@ -3581,10 +3581,10 @@ var admin = {
                 <tr>
                     <td>${displayTime}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: var(--admin-accent); cursor: pointer;" onclick="admin.toggleReceipt(true, '${o.order_id}')">${o.order_id} 📄</td>
-                    <td>
+                    <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; cursor: pointer; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;" onclick="openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}')">${o.customer_name}</b>
+                                <b style="font-size: 1rem; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;">${o.customer_name}</b>
                                 ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>

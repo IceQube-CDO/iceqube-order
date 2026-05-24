@@ -1925,7 +1925,8 @@
                 padding-bottom: 0 !important;
             }
             #orders-view .cashflow-table tr {
-                display: block;
+                display: flex;
+                flex-direction: column;
                 scroll-snap-align: start;
                 background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)) !important;
                 border: 1px solid rgba(14, 165, 233, 0.2) !important;
@@ -1994,9 +1995,14 @@
             }
             /* Customer */
             #orders-view .cashflow-table td:nth-child(3) {
+                order: -1;
                 font-family: 'Outfit', sans-serif !important;
-                font-size: 0.95rem !important;
+                font-size: 1.05rem !important;
                 font-weight: 700 !important;
+                border-bottom: 1px dashed rgba(255, 255, 255, 0.15) !important;
+                padding-bottom: 12px !important;
+                margin-bottom: 8px !important;
+                color: #ffffff !important;
             }
             /* Address & Note (Multi-line fields) */
             #orders-view .cashflow-table td:nth-child(4),
@@ -2080,7 +2086,7 @@
             /* Labels for Pending Dispatch Table */
             #pending-dispatch-body tr td:nth-child(1)::before { content: "TIME"; }
             #pending-dispatch-body tr td:nth-child(2)::before { content: "ORDER ID"; }
-            #pending-dispatch-body tr td:nth-child(3)::before { content: "CUSTOMER"; }
+            #pending-dispatch-body tr td:nth-child(3)::before { display: none !important; }
             #pending-dispatch-body tr td:nth-child(4)::before { content: "ADDRESS"; }
             #pending-dispatch-body tr td:nth-child(5)::before { content: "NOTE"; }
             #pending-dispatch-body tr td:nth-child(6)::before { content: "SCHEDULE"; }
@@ -2095,7 +2101,7 @@
             /* Labels for Order Ledger Table */
             #order-ledger-body tr td:nth-child(1)::before { content: "TIME"; }
             #order-ledger-body tr td:nth-child(2)::before { content: "ORDER ID"; }
-            #order-ledger-body tr td:nth-child(3)::before { content: "CUSTOMER"; }
+            #order-ledger-body tr td:nth-child(3)::before { display: none !important; }
             #order-ledger-body tr td:nth-child(4)::before { content: "ADDRESS"; }
             #order-ledger-body tr td:nth-child(5)::before { content: "GEOTAG FILE"; }
             #order-ledger-body tr td:nth-child(6)::before { content: "TIME DELIVERED"; }
@@ -2116,13 +2122,24 @@
             #orders-view.minimized-orders .cashflow-table td:not(:nth-child(3)) {
                 display: none !important;
             }
+            #orders-view.minimized-orders .cashflow-table tr.expanded td:not(:nth-child(3)) {
+                display: flex !important;
+            }
             #orders-view.minimized-orders .cashflow-table td:nth-child(3) {
                 padding: 0 !important;
                 border-bottom: none !important;
                 justify-content: flex-start !important;
             }
+            #orders-view.minimized-orders .cashflow-table tr.expanded td:nth-child(3) {
+                padding: 10px 0 !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+                justify-content: space-between !important;
+            }
             #orders-view.minimized-orders .cashflow-table td:nth-child(3)::before {
                 display: none !important;
+            }
+            #orders-view.minimized-orders .cashflow-table tr.expanded td:nth-child(3)::before {
+                display: block !important;
             }
     </style>
 </head>
@@ -2558,14 +2575,7 @@
         </div>
 
         <!-- ORDER QUEUE VIEW (UPDATED: SPLIT TABLES) -->
-        <div class="cc-grid" id="orders-view" style="display: none;">
-
-            <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; padding: 0 5px; margin-bottom: -0.5rem; z-index: 10;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(14, 165, 233, 0.3);">
-                    <span style="font-size: 0.75rem; color: #e2e8f0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Minimize View</span>
-                    <input type="checkbox" id="minimize-orders-toggle" onchange="document.getElementById('orders-view').classList.toggle('minimized-orders', this.checked)" style="width: 16px; height: 16px; accent-color: #0ea5e9; cursor: pointer; margin: 0;">
-                </label>
-            </div>
+        <div class="cc-grid minimized-orders" id="orders-view" style="display: none;">
 
             <!-- PENDING DISPATCH QUEUE -->
             <div class="cc-card full-width" style="margin-bottom: 1rem; border-left: 4px solid #f59e0b;">
