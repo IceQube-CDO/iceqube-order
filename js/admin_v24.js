@@ -3957,15 +3957,33 @@ var admin = {
     async updateOrderStatus(id, newStatus) {
         console.log(`📡 Updating Order ${id} to ${newStatus}...`);
         
+        // 1. Optimistic Local Update
+        const existingOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+        const orderIdx = existingOrders.findIndex(o => o.id === id || o.order_id === id);
+        if (orderIdx > -1) {
+            existingOrders[orderIdx].delivery_status = newStatus;
+            localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
+        }
+
+        if (this.allOrders) {
+            const memIdx = this.allOrders.findIndex(o => o.id === id || o.order_id === id);
+            if (memIdx > -1) {
+                this.allOrders[memIdx].delivery_status = newStatus;
+            }
+        }
+
+        // Re-render immediately
+        this.updateOrderQueue(this.allOrders || existingOrders);
+
         // Demo Mode: Skip network if Supabase not configured
         if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             console.log("🛠️ Local Sync Only: Supabase not configured.");
-            this.fetchRealStats();
             return;
         }
 
         try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
+            const encodedId = encodeURIComponent(id);
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?or=(id.eq.${encodedId},order_id.eq.${encodedId})`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
