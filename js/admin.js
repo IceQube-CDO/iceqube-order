@@ -440,7 +440,8 @@ var admin = {
             }
 
             // --- NEW: AUTOMATIC MESSENGER NOTIFICATION ---
-            if (!silent) this.sendMessengerNotification(order);
+            // Disabled: DB webhook handles this now to prevent duplicate notifications.
+            // if (!silent) this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
@@ -1010,7 +1011,8 @@ var admin = {
                     // 1. Always trigger notification for very recent orders (even on initial load)
                     if (isVeryRecent) {
                         console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
-                        this.sendMessengerNotification(co);
+                        // Disabled: DB webhook handles this now to prevent duplicate notifications.
+                        // this.sendMessengerNotification(co);
                     }
 
                     // 2. ALWAYS process for supplies (deduction), but only ALARM if not initial load

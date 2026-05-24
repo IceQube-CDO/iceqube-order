@@ -301,7 +301,9 @@ var admin = {
         // 4. Cloud Sync
         if (type === 'order' && !id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                const queryStr = isUuid ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                     method: 'PATCH',
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -577,8 +579,8 @@ var admin = {
             }
 
             // --- AUTOMATIC MESSENGER NOTIFICATION ---
-            // Re-enabled: DB webhook trigger is not reliably firing.
-            this.sendMessengerNotification(order);
+            // Disabled: DB webhook handles this now to prevent duplicate notifications.
+            // this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
@@ -1364,7 +1366,8 @@ var admin = {
                     // 1. Client-side notification (DB webhook trigger not reliably firing)
                     if (isVeryRecent) {
                         console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
-                        this.sendMessengerNotification(co);
+                        // Disabled: DB webhook handles this now to prevent duplicate notifications.
+                        // this.sendMessengerNotification(co);
                     }
 
                     // 2. Automated Inventory Deduction (Silent if initial load)
@@ -3683,7 +3686,10 @@ var admin = {
         }
         
         try {
-            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+            const queryStr = isUuid ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+
+            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -3973,7 +3979,10 @@ var admin = {
                 patchData.dispatched_at = new Date().toISOString();
             }
 
-            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+            const queryStr = isUuid ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+
+            await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,

@@ -431,7 +431,8 @@ var admin = {
             }
 
             // --- NEW: AUTOMATIC MESSENGER NOTIFICATION ---
-            this.sendMessengerNotification(order);
+            // Disabled: DB webhook handles this now to prevent duplicate notifications.
+            // this.sendMessengerNotification(order);
 
             if (!skipSync) this.fetchRealStats();
         } else {
@@ -1020,7 +1021,7 @@ var admin = {
                     // 1. Always trigger notification for very recent orders (even on initial load)
                     if (isVeryRecent) {
                         console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
-                        this.sendMessengerNotification(co);
+                        // this.sendMessengerNotification(co);
                     }
 
                     // 2. Only alarm (buzzer) if this isn't the very first time we're loading the dashboard
