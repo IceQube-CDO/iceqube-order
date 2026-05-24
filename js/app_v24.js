@@ -5212,20 +5212,10 @@ const app = {
         };
 
         // 1. Send to Customer
-        if (customerId && customerId.length > 5 && customerId !== '61557321703652') {
-            fetch(url, { method: 'POST', headers, body: JSON.stringify({ recipientId: customerId, message: msg }) }).catch(e => console.error(e));
-        }
+        // Removed manual ping: Supabase Webhook automatically handles this on INSERT.
 
         // 2. Send to Admins dynamically via Edge Function
-        fetch(url, { 
-            method: 'POST', 
-            headers, 
-            body: JSON.stringify({ 
-                action: 'broadcast_to_admins', 
-                message: adminMsg,
-                customerId: customerId
-            }) 
-        }).catch(e => console.error('Failed to notify admins:', e));
+        // Removed manual ping: Supabase Webhook automatically handles this on INSERT.
 
         return true;
     },
