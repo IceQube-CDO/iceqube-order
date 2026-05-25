@@ -1619,21 +1619,16 @@ const app = {
             
             if (this.googleMap) {
                 this.googleMap.setCenter({ lat, lng });
-                this.googleMap.setZoom(17);
-                if (this.googleMarker) this.googleMarker.setPosition({ lat, lng });
-            } else if (this.map) {
-                this.map.setView([lat, lng], 17);
-                this.mapMarker.setLatLng([lat, lng]);
+                this.googleMap.setZoom(20);
             }
 
-            this._lockedPlace = place.name || input.value; // Lock the searched business
-            this._tempAddress = this._lockedPlace;
-            this._tempLat = lat;
-            this._tempLng = lng;
-            const addrInput = document.getElementById('map-search-input');
-            if (addrInput) addrInput.value = place.formatted_address || place.name;
+            // Immediately lock and finalize just like Direct Tap!
+            this._lockedPlace = place.name;
+            
             const badgeElem = document.getElementById('map-badge-container');
-            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge">📍 SEARCH</span>`;
+            if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+            
+            this.finalizeAddress(place, lat, lng);
         });
     },
 
@@ -2125,6 +2120,10 @@ const app = {
                             
                             // Finalize instantly, bypassing all guessing logic
                             this.finalizeAddress(place, place.geometry.location.lat(), place.geometry.location.lng());
+                        } else {
+                            // Inform the user if the Places API is blocked (common when running on file://)
+                            alert(`Google Places API Error: ${status}\nThis usually happens when opening the HTML file directly (file://) instead of a live web server or localhost.`);
+                            if (badgeElem) badgeElem.innerHTML = `<span class="scanning-badge">Tap Failed</span>`;
                         }
                     });
                 } else if (e.latLng) {
@@ -2431,7 +2430,7 @@ const app = {
                 const nearby = await new Promise((resolve) => {
                     placesService.nearbySearch({
                         location: { lat, lng },
-                        rankBy: google.maps.places.RankBy.DISTANCE
+                        radius: 50 // Increased slightly
                     }, (results, status) => {
                         if (status === google.maps.places.PlacesServiceStatus.OK) resolve(results);
                         else resolve(null);
@@ -2439,9 +2438,19 @@ const app = {
                 });
 
                 if (nearby && nearby.length > 0) {
-                    // Skip administrative areas
-                    const areaTypes = ['locality', 'neighborhood', 'political', 'sublocality', 'country'];
-                    const best = nearby.find(r => !r.types.some(t => areaTypes.includes(t)));
+                    const sortedNearby = nearby.sort((a, b) => {
+                        const distA = Math.pow(a.geometry.location.lat() - lat, 2) + Math.pow(a.geometry.location.lng() - lng, 2);
+                        const distB = Math.pow(b.geometry.location.lat() - lat, 2) + Math.pow(b.geometry.location.lng() - lng, 2);
+                        return distA - distB;
+                    });
+
+                    const areaTypes = [
+                        'locality', 'neighborhood', 'political', 'sublocality', 'sublocality_level_1', 
+                        'sublocality_level_2', 'country', 'route', 'postal_code', 
+                        'administrative_area_level_1', 'administrative_area_level_2'
+                    ];
+                    
+                    const best = sortedNearby.find(r => !r.types.some(t => areaTypes.includes(t)));
                     
                     if (best && best.name) {
                         name = best.name;
@@ -2454,7 +2463,7 @@ const app = {
             }
         }
 
-        // STRATEGY 2: GOOGLE GEOCODER (BEST FOR STREET ADDRESSES)
+        // STRATEGY 2: GOOGLE GEOCODER (BEST FOR PREMISES / STREET ADDRESSES)
         if (!isEstablishment && window.google && google.maps && google.maps.Geocoder) {
             try {
                 const geocoder = new google.maps.Geocoder();
@@ -2469,26 +2478,31 @@ const app = {
                 ]);
 
                 if (response && response.length > 0) {
-                    // Find anything specific (not a broad area or a whole district/barangay)
                     const areaTypes = [
                         'locality', 'political', 
                         'administrative_area_level_1', 'administrative_area_level_2', 
-                        'country', 'postal_code'
+                        'country', 'postal_code', 'neighborhood', 'route', 
+                        'sublocality', 'sublocality_level_1', 'sublocality_level_2'
                     ];
                     
-                    // Try to find the most specific result that is NOT one of those area types
-                    const specificResult = response.find(r => !r.types.some(t => areaTypes.includes(t)));
+                    // Prioritize exact premises or POIs that Places API might have missed
+                    const highPriorityTypes = ['premise', 'subpremise', 'point_of_interest', 'establishment'];
+                    let specificResult = response.find(r => r.types.some(t => highPriorityTypes.includes(t)));
+                    
+                    if (!specificResult) {
+                        specificResult = response.find(r => !r.types.some(t => areaTypes.includes(t)));
+                    }
                     
                     if (specificResult) {
-                        name = specificResult.name || specificResult.formatted_address.split(',')[0].trim();
-                        isEstablishment = specificResult.types.includes('establishment') || specificResult.types.includes('point_of_interest');
+                        // Geocoder results do not have a .name property, extract from formatted_address
+                        let extractedName = specificResult.formatted_address.split(',')[0].trim();
+                        name = extractedName;
+                        isEstablishment = specificResult.types.some(t => ['establishment', 'point_of_interest', 'premise', 'subpremise'].includes(t));
                         fullAddress = specificResult.formatted_address;
                     } else {
-                        // Fallback to the first result but filter out area names from the label
+                        // Fallback: Use the first result, typically a street or block
                         const first = response[0];
                         const parts = first.formatted_address.split(',');
-                        // If the first part is a number or street, use it. 
-                        // In PH, addresses often start with block/lot or street name.
                         name = parts.slice(0, 2).join(',').trim();
                         fullAddress = first.formatted_address;
                     }
@@ -2667,6 +2681,15 @@ const app = {
     confirmMapLocation() {
         console.log("📍 Confirming Map Location...");
         try {
+            const mapSearchInput = document.getElementById('map-search-input');
+            const userTypedAddress = mapSearchInput ? mapSearchInput.value.trim() : null;
+            
+            // If the user manually typed something in the search bar, override the scanned address
+            if (userTypedAddress && userTypedAddress !== this._tempAddress) {
+                this._tempAddress = userTypedAddress;
+                this._tempEstablishment = userTypedAddress;
+            }
+
             if (!this._tempAddress) {
                 this._tempAddress = (this._tempLat && this._tempLng) 
                     ? `${this._tempLat.toFixed(4)}, ${this._tempLng.toFixed(4)}`
@@ -2690,7 +2713,7 @@ const app = {
                 if (!this.user) this.user = {};
                 this.user.savedLat = this._tempLat;
                 this.user.savedLng = this._tempLng;
-                this.user.savedAddress = addrInput?.value || this._tempAddress;
+                this.user.savedAddress = this._tempAddress;
                 this.user.savedEstablishment = this._tempEstablishment || "";
                 
                 this.updateProfileMapPreview();
@@ -2699,7 +2722,7 @@ const app = {
             } else {
                 console.log("Logistics context detected");
                 // Regular Order Logic
-                this.orderData.deliveryDetails.location = document.getElementById('delivery-location')?.value || this._tempAddress;
+                this.orderData.deliveryDetails.location = this._tempAddress;
                 this.orderData.deliveryDetails.physical_address = this._tempFullAddress || this._tempAddress;
                 if (this._tempEstablishment) {
                     this.orderData.deliveryDetails.establishment = this._tempEstablishment;
