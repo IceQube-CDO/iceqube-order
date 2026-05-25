@@ -1612,7 +1612,32 @@ const app = {
 
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
-            if (!place.geometry || !place.geometry.location) return;
+            
+            // If geometry is missing, it means the user pressed Enter or a bug caused the prediction to be lost
+            if (!place.geometry || !place.geometry.location) {
+                console.log("No geometry found for:", place.name);
+                // Try to search for it using NearbySearch or FindPlace as fallback
+                const placesService = new google.maps.places.PlacesService(this.googleMap);
+                placesService.textSearch({
+                    query: place.name || input.value,
+                    bounds: this.googleMap.getBounds()
+                }, (results, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+                        const fallbackPlace = results[0];
+                        this._lockedPlace = fallbackPlace.name;
+                        const lat = fallbackPlace.geometry.location.lat();
+                        const lng = fallbackPlace.geometry.location.lng();
+                        this.googleMap.setCenter({ lat, lng });
+                        this.googleMap.setZoom(20);
+                        const badgeElem = document.getElementById('map-badge-container');
+                        if (badgeElem) badgeElem.innerHTML = `<span class="live-badge" style="background:#4382ec;">📍 EXACT</span>`;
+                        this.finalizeAddress(fallbackPlace, lat, lng);
+                    } else {
+                        this.showToast("Could not locate on map. Please drag pin.", 'error');
+                    }
+                });
+                return;
+            }
 
             const lat = place.geometry.location.lat();
             const lng = place.geometry.location.lng();
@@ -1631,8 +1656,8 @@ const app = {
             this.finalizeAddress(place, lat, lng);
         });
 
-        // FIX: Google Maps Autocomplete mobile touchend bug
-        // This ensures dropdown items can be tapped on physical mobile phones
+        // FIX: Google Maps Autocomplete mobile touch bug
+        // Intercept touchstart to prevent input blur, then trigger native click
         setTimeout(() => {
             const observer = new MutationObserver(() => {
                 const pacContainers = document.querySelectorAll('.pac-container');
@@ -1640,20 +1665,11 @@ const app = {
                     if (!container.dataset.mobileFixed) {
                         container.dataset.mobileFixed = 'true';
                         
-                        container.addEventListener('touchend', (e) => {
-                            e.preventDefault(); // Stop input from blurring
-                            
-                            // Find the actual .pac-item that was tapped
-                            let item = e.target;
-                            while (item && !item.classList.contains('pac-item')) {
-                                if (item === container) return;
-                                item = item.parentElement;
-                            }
-                            
+                        container.addEventListener('touchstart', (e) => {
+                            const item = e.target.closest ? e.target.closest('.pac-item') : null;
                             if (item) {
-                                // Simulate Google's expected click
-                                const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-                                item.dispatchEvent(clickEvent);
+                                e.preventDefault(); // Stop input from blurring and disappearing
+                                item.click(); // Fire native click
                             }
                         }, { passive: false });
                     }
