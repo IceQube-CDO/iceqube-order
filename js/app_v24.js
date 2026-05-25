@@ -1630,6 +1630,37 @@ const app = {
             
             this.finalizeAddress(place, lat, lng);
         });
+
+        // FIX: Google Maps Autocomplete mobile touchend bug
+        // This ensures dropdown items can be tapped on physical mobile phones
+        setTimeout(() => {
+            const observer = new MutationObserver(() => {
+                const pacContainers = document.querySelectorAll('.pac-container');
+                pacContainers.forEach(container => {
+                    if (!container.dataset.mobileFixed) {
+                        container.dataset.mobileFixed = 'true';
+                        
+                        container.addEventListener('touchend', (e) => {
+                            e.preventDefault(); // Stop input from blurring
+                            
+                            // Find the actual .pac-item that was tapped
+                            let item = e.target;
+                            while (item && !item.classList.contains('pac-item')) {
+                                if (item === container) return;
+                                item = item.parentElement;
+                            }
+                            
+                            if (item) {
+                                // Simulate Google's expected click
+                                const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                                item.dispatchEvent(clickEvent);
+                            }
+                        }, { passive: false });
+                    }
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }, 1000);
     },
 
     applyQuickReorderDefaults() {
