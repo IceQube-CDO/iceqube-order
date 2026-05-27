@@ -3488,6 +3488,7 @@ var admin = {
 
             const cleanCustName = (o.customer_name || '').trim();
             const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
+            const isServedOrDelivered = o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up';
             return `
                 <tr data-order-id="${o.order_id}" class="${expandedOrderIds.has(o.order_id) ? 'expanded' : ''}" style="${isAwaiting ? 'opacity: 0.7; background: rgba(245, 158, 11, 0.05);' : ''}">
                     <td>${displayTime}</td>
@@ -3495,7 +3496,7 @@ var admin = {
                     <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;">${o.customer_name}</b>
+                                <b style="font-size: 1rem; color: ${isServedOrDelivered ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isServedOrDelivered ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
                                 ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
@@ -3559,6 +3560,7 @@ var admin = {
                 const scheduleDisplay = parseSchedule(o.delivery_schedule);
                 const cleanCustName = (o.customer_name || '').trim();
                 const isEliteOrder = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
+                const isPickupServed = o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up';
                 
                 return `
                     <tr data-order-id="${o.order_id}" class="${expandedOrderIds.has(o.order_id) ? 'expanded' : ''}">
@@ -3567,7 +3569,7 @@ var admin = {
                         <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
-                                    <b style="font-size: 1rem; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;">${o.customer_name}</b>
+                                    <b style="font-size: 1rem; color: ${isPickupServed ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isPickupServed ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
                                     ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                                 </div>
                             </div>
@@ -3644,7 +3646,7 @@ var admin = {
                     <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; color: white; text-decoration: underline; text-decoration-color: white; text-underline-offset: 4px;">${o.customer_name}</b>
+                                <b style="font-size: 1rem; color: ${isDelivered ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isDelivered ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
                                 ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
