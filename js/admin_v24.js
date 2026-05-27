@@ -3903,9 +3903,9 @@ var admin = {
                     const targetId = (profile && profile.messengerId) || (fullOrder.messenger_id || fullOrder.messengerId) || null;
                     
                     if (targetId) {
-                        let msg = `❄️ ORDER PICKED UP!\n\n` +
-                                  `Hi ${fullOrder.customer_name},\n\n` +
-                                  `Your pickup order ${orderId} has been successfully completed and served.\n\n` +
+                        let msg = `✅ORDER PICKED UP!\n\n` +
+                                  `Hi ${fullOrder.customer_name},\n` +
+                                  `Your pickup order ${orderId} has been successfully completed and served.\n` +
                                   `Thank you for choosing IceQube CDO!`;
                         await this.dispatchMessengerMessage(targetId, msg);
                         console.log('✅ [Messenger] Pickup Confirmation Sent successfully.');
@@ -5781,6 +5781,12 @@ function openCustomerDrawer(customerId) {
         const addrInput = document.getElementById('drawer-address-input');
         if (addrInput) addrInput.value = addressVal;
 
+        const latInput = document.getElementById('drawer-lat-input');
+        if (latInput) latInput.value = profile.lat || '';
+
+        const lngInput = document.getElementById('drawer-lng-input');
+        if (lngInput) lngInput.value = profile.lng || '';
+
         const messengerInput = document.getElementById('drawer-messenger-input');
         if (messengerInput) messengerInput.value = messengerVal;
 
@@ -6082,6 +6088,52 @@ function toggleProfileEdit(isEditing) {
         displayMode.style.display = 'none';
         editMode.style.display = 'flex';
         editBtn.style.display = 'none';
+
+        setTimeout(() => {
+            if (!admin.customerEditMap) {
+                const mapContainer = document.getElementById('drawer-map-container');
+                if (mapContainer) {
+                    admin.customerEditMap = L.map('drawer-map-container', { zoomControl: false }).setView([8.4822, 124.6469], 14);
+                    L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=en&gl=ph&x={x}&y={y}&z={z}', {
+                        maxZoom: 20,
+                        attribution: '&copy; Google Maps'
+                    }).addTo(admin.customerEditMap);
+                    const pinIcon = L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    });
+                    
+                    admin.customerEditMarker = L.marker([8.4822, 124.6469], { 
+                        draggable: false,
+                        icon: pinIcon
+                    }).addTo(admin.customerEditMap);
+                    
+                    admin.customerEditMap.on('move', function() {
+                        const pos = admin.customerEditMap.getCenter();
+                        admin.customerEditMarker.setLatLng(pos);
+                    });
+                    
+                    admin.customerEditMap.on('moveend', function() {
+                        const pos = admin.customerEditMap.getCenter();
+                        admin.customerEditMarker.setLatLng(pos);
+                        document.getElementById('drawer-lat-input').value = pos.lat;
+                        document.getElementById('drawer-lng-input').value = pos.lng;
+                    });
+                }
+            }
+            
+            if (admin.customerEditMap) {
+                let currentLat = parseFloat(document.getElementById('drawer-lat-input').value) || 8.4822;
+                let currentLng = parseFloat(document.getElementById('drawer-lng-input').value) || 124.6469;
+                admin.customerEditMarker.setLatLng([currentLat, currentLng]);
+                admin.customerEditMap.setView([currentLat, currentLng], 15);
+                admin.customerEditMap.invalidateSize();
+            }
+        }, 100);
     } else {
         displayMode.style.display = 'grid';
         editMode.style.display = 'none';
@@ -6359,6 +6411,11 @@ async function saveCustomerProfile() {
     const contactNumber = document.getElementById('drawer-phone-input').value.trim();
     const address = document.getElementById('drawer-address-input').value.trim();
     const messengerId = document.getElementById('drawer-messenger-input').value.trim();
+    
+    const latInput = document.getElementById('drawer-lat-input');
+    const lngInput = document.getElementById('drawer-lng-input');
+    const lat = latInput ? latInput.value : '';
+    const lng = lngInput ? lngInput.value : '';
 
     if (!customerName) {
         alert("Establishment name cannot be empty.");
@@ -6385,7 +6442,9 @@ async function saveCustomerProfile() {
         contactPerson,
         contactNumber,
         address,
-        messengerId
+        messengerId,
+        lat,
+        lng
     };
 
     profiles[activeName] = updatedProfile;
