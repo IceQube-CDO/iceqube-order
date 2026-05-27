@@ -1944,18 +1944,19 @@ var admin = {
         feed.innerHTML = '<div style="display: flex; flex-direction: column; gap: 12px;">' + orders.slice(0, 5).map(o => {
             const cleanCustName = (o.customer_name || '').trim();
             const isElite = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
+            const isServedOrDelivered = o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up';
             return `
-                <div style="padding: 14px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid ${isElite ? '#eab308' : '#0ea5e9'}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: background 0.2s;" onclick="admin.goToOrder('${o.order_id}')" onmouseenter="this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.background='rgba(255,255,255,0.03)'">
+                <div style="padding: 14px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid ${isServedOrDelivered ? '#64748b' : (isElite ? '#eab308' : '#0ea5e9')}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: background 0.2s; opacity: ${isServedOrDelivered ? 0.6 : 1};" onclick="admin.goToOrder('${o.order_id}')" onmouseenter="this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.background='rgba(255,255,255,0.03)'">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                         <span style="font-size: 0.8rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit', sans-serif;">
-                            New Order <span style="color: ${isElite ? '#eab308' : '#38bdf8'};">${o.order_id}</span>
+                            New Order <span style="color: ${isServedOrDelivered ? '#64748b' : (isElite ? '#eab308' : '#38bdf8')};">${o.order_id}</span>
                         </span>
                         <span style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">
                             ${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     </div>
                     <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px;">
-                        by <strong style="color: #fff; font-size: 1.1rem;">${o.customer_name}</strong>
+                        by <strong style="color: ${isServedOrDelivered ? '#64748b' : '#fff'}; font-size: 1.1rem;">${o.customer_name}</strong>
                         ${isElite ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900; margin-left: 6px; vertical-align: middle;">ELITE</span>' : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
