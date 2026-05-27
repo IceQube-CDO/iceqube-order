@@ -1469,6 +1469,11 @@ var admin = {
         // 1. Priority: Update Order Queue
         this.updateOrderQueue(orders);
 
+        const todayStr = new Date().toDateString();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toDateString();
+
         // 2. Stats Calculation
         const realOrders = orders.filter(o => o.is_real !== false);
         const todaysOrders = realOrders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === todayStr);
@@ -3047,7 +3052,8 @@ var admin = {
                 type: 'IN',
                 amount: amount,
                 source: 'AUTO',
-                is_real: o.is_real
+                is_real: o.is_real,
+                id: o.id || o.order_id
             };
         });
 
@@ -3100,7 +3106,7 @@ var admin = {
                             <span class="source-${entry.source.toLowerCase()}">${entry.source}</span>
                         </td>
                         <td style="text-align: right; display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                            <button onclick="admin.toggleRealStatus('cashflow', '${entry.timestamp}')" 
+                            <button onclick="admin.toggleRealStatus('${entry.source === 'AUTO' ? 'order' : 'cashflow'}', '${entry.source === 'AUTO' ? entry.id : entry.timestamp}')" 
                                     style="background: ${entry.is_real !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.03)'}; 
                                            border: 1px solid ${entry.is_real !== false ? '#22c55e' : 'rgba(255,255,255,0.1)'}; 
                                            color: ${entry.is_real !== false ? '#22c55e' : '#64748b'}; 
