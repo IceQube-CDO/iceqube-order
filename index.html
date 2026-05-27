@@ -604,108 +604,7 @@
                 </div>
             </section>
 
-            <!-- Step 3: SCHEDULE -->
-            <section id="step-schedule" class="step-content">
-                <div class="step-header">
-                    <button class="back-nav-btn" onclick="app.prevStep()">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    </button>
-                    <h1>When should we deliver?</h1>
-                </div>
-                <div class="step-body">
-                    <p class="subtitle">Choose your preferred timing.</p>
-                <div class="selection-grid">
-                    <div id="card-deliver-now" class="card" onclick="app.selectSchedule('Deliver Now', this)">
-                        <div>
-                            <h3>Deliver Now</h3>
-                            <span class="subtext">Arrives in 30-45 mins</span>
-                        </div>
-                        <div class="check-icon">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </div>
-                    </div>
-                    <div id="card-schedule-date" class="card" onclick="app.selectSchedule('Schedule a Date & Time', this)">
-                        <div>
-                            <h3>Schedule a Date & Time</h3>
-                            <p>Pick a future slot.</p>
-                        </div>
-                        <div class="check-icon">✓</div>
-                    </div>
-                </div>
-
-                <div id="schedule-inputs" style="display: none;">
-                    <div class="premium-picker-grid">
-                        <div class="premium-picker-card" onclick="this.querySelector('input').showPicker()">
-                            <div class="picker-icon-wrapper">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            </div>
-                            <div class="picker-info">
-                                <label>Delivery Date</label>
-                                <div id="display-date" class="picker-display-value">Select Date</div>
-                            </div>
-                            <input type="date" id="schedule-date" class="hidden-input" oninput="app.handlePickerChange('date', this.value)">
-                        </div>
-
-                        <div class="premium-picker-row">
-                            <div class="premium-picker-card compact" onclick="this.querySelector('select').showPicker()">
-                                <div class="picker-icon-wrapper small">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                </div>
-                                <div class="picker-info">
-                                    <label>Hour</label>
-                                    <div id="display-hour" class="picker-display-value">Pick</div>
-                                </div>
-                                <select id="select-hour" class="hidden-input" onchange="app.handleInlineTimeChange()">
-                                    <option value="" disabled selected>Pick</option>
-                                    <option value="08">8 AM</option>
-                                    <option value="09">9 AM</option>
-                                    <option value="10">10 AM</option>
-                                    <option value="11">11 AM</option>
-                                    <option value="12">12 PM</option>
-                                    <option value="13">1 PM</option>
-                                    <option value="14">2 PM</option>
-                                    <option value="15">3 PM</option>
-                                    <option value="16">4 PM</option>
-                                    <option value="17">5 PM</option>
-                                    <option value="18">6 PM</option>
-                                    <option value="19">7 PM</option>
-                                    <option value="20">8 PM</option>
-                                    <option value="21">9 PM</option>
-                                </select>
-                            </div>
-
-                            <div class="premium-picker-card compact" onclick="this.querySelector('select').showPicker()">
-                                <div class="picker-icon-wrapper small">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                                </div>
-                                <div class="picker-info">
-                                    <label>Minute</label>
-                                    <div id="display-minute" class="picker-display-value">00</div>
-                                </div>
-                                <select id="select-minute" class="hidden-input" onchange="app.handleInlineTimeChange()">
-                                    <option value="00">00</option>
-                                    <option value="15">15</option>
-                                    <option value="30">30</option>
-                                    <option value="45">45</option>
-                                </select>
-                            </div>
-                        </div>
-                        <input type="time" id="schedule-time" style="display: none;">
-                    </div>
-                    <!-- Time Frame Warning -->
-                    <div id="time-warning" class="time-warning">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        <span>Delivery is only available between 8 AM - 10 PM. For special requests outside these hours, please message our <a href="https://m.me/icequbecdo" target="_blank" style="color: inherit; font-weight: 700; text-decoration: underline;">FB Page</a> for negotiation.</span>
-                    </div>
-                </div>
-
-                    <button id="schedule-next" class="btn-primary" onclick="app.nextStep()" disabled style="margin-top: 2rem; display: none;">
-                        Continue to Logistics
-                    </button>
-                </div>
-            </section>
-
-            <!-- Step 4: LOGISTICS (Nested Flow) -->
+            <!-- Step 3: LOGISTICS (Nested Flow) -->
             <section id="step-logistics" class="step-content">
                 <div class="step-header">
                     <button class="back-nav-btn" onclick="app.prevStep()">
@@ -818,8 +717,8 @@
                         </div>
                     </div>
 
-                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.goToPayment()" style="margin-top: 1rem;" disabled>
-                        Continue to Payment
+                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.nextStep()" style="margin-top: 1rem;" disabled>
+                        Continue to Schedule
                     </button>
                 </div>
 
@@ -881,7 +780,108 @@
                             <a href="https://www.google.com/maps/place/IceQube/@8.5020529,124.6582747,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu" target="_blank" class="btn-external-link">Open in Google Maps →</a>
                         </div>
                     </div>
-                    <button class="btn-primary" onclick="app.goToPayment()" style="margin-top: 2rem;">
+                    <button class="btn-primary" onclick="app.nextStep()" style="margin-top: 2rem;">
+                        Continue to Schedule
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 4: SCHEDULE -->
+            <section id="step-schedule" class="step-content">
+                <div class="step-header">
+                    <button class="back-nav-btn" onclick="app.prevStep()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h1>When should we deliver?</h1>
+                </div>
+                <div class="step-body">
+                    <p class="subtitle">Choose your preferred timing.</p>
+                <div class="selection-grid">
+                    <div id="card-deliver-now" class="card" onclick="app.selectSchedule('Deliver Now', this)">
+                        <div>
+                            <h3>Deliver Now</h3>
+                            <span class="subtext">Arrives in 30-45 mins</span>
+                        </div>
+                        <div class="check-icon">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                    </div>
+                    <div id="card-schedule-date" class="card" onclick="app.selectSchedule('Schedule a Date & Time', this)">
+                        <div>
+                            <h3>Schedule a Date & Time</h3>
+                            <p>Pick a future slot.</p>
+                        </div>
+                        <div class="check-icon">✓</div>
+                    </div>
+                </div>
+
+                <div id="schedule-inputs" style="display: none;">
+                    <div class="premium-picker-grid">
+                        <div class="premium-picker-card" onclick="this.querySelector('input').showPicker()">
+                            <div class="picker-icon-wrapper">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div class="picker-info">
+                                <label>Delivery Date</label>
+                                <div id="display-date" class="picker-display-value">Select Date</div>
+                            </div>
+                            <input type="date" id="schedule-date" class="hidden-input" oninput="app.handlePickerChange('date', this.value)">
+                        </div>
+
+                        <div class="premium-picker-row">
+                            <div class="premium-picker-card compact" onclick="this.querySelector('select').showPicker()">
+                                <div class="picker-icon-wrapper small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </div>
+                                <div class="picker-info">
+                                    <label>Hour</label>
+                                    <div id="display-hour" class="picker-display-value">Pick</div>
+                                </div>
+                                <select id="select-hour" class="hidden-input" onchange="app.handleInlineTimeChange()">
+                                    <option value="" disabled selected>Pick</option>
+                                    <option value="08">8 AM</option>
+                                    <option value="09">9 AM</option>
+                                    <option value="10">10 AM</option>
+                                    <option value="11">11 AM</option>
+                                    <option value="12">12 PM</option>
+                                    <option value="13">1 PM</option>
+                                    <option value="14">2 PM</option>
+                                    <option value="15">3 PM</option>
+                                    <option value="16">4 PM</option>
+                                    <option value="17">5 PM</option>
+                                    <option value="18">6 PM</option>
+                                    <option value="19">7 PM</option>
+                                    <option value="20">8 PM</option>
+                                    <option value="21">9 PM</option>
+                                </select>
+                            </div>
+
+                            <div class="premium-picker-card compact" onclick="this.querySelector('select').showPicker()">
+                                <div class="picker-icon-wrapper small">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                                </div>
+                                <div class="picker-info">
+                                    <label>Minute</label>
+                                    <div id="display-minute" class="picker-display-value">00</div>
+                                </div>
+                                <select id="select-minute" class="hidden-input" onchange="app.handleInlineTimeChange()">
+                                    <option value="00">00</option>
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="45">45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="time" id="schedule-time" style="display: none;">
+                    </div>
+                    <!-- Time Frame Warning -->
+                    <div id="time-warning" class="time-warning">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Please choose a valid time depending on your logistics choice. For special requests outside these hours, please message our <a href="https://m.me/icequbecdo" target="_blank" style="color: inherit; font-weight: 700; text-decoration: underline;">FB Page</a> for negotiation.</span>
+                    </div>
+                </div>
+
+                    <button id="schedule-next" class="btn-primary" onclick="app.goToPayment()" disabled style="margin-top: 2rem; display: none;">
                         Continue to Payment
                     </button>
                 </div>
@@ -1013,7 +1013,7 @@
                     </div>
                 </div>
 
-                <button id="btn-finish-order" class="btn-primary" onclick="app.finishOrder()" style="margin-top: 2rem;" disabled>
+                <button id="btn-finish-order" class="btn-primary" onclick="app.finishOrder()" style="margin-top: 2rem; display: none;" disabled>
                     Place Order & Pay
                 </button>
                 </div>

@@ -2226,6 +2226,11 @@ const app = {
             return;
         }
 
+        // Break any existing place lock when user explicitly asks for their location
+        if (!silent) {
+            this._lockedPlace = null;
+        }
+
         const badgeElem = document.getElementById('map-badge-container');
         const addrInput = document.getElementById('map-search-input');
         const originalText = addrInput ? addrInput.value : '';
@@ -2291,9 +2296,18 @@ const app = {
                                 }
                                 this.reverseGeocode(lat, lng);
                             },
-                            null,
+                            (errFallback) => {
+                                console.warn("Fallback Geolocation Error:", errFallback);
+                                this.showToast("Could not determine your location.", "error");
+                            },
                             { enableHighAccuracy: false, timeout: 5000 }
                         );
+                    } else if (error.code === error.PERMISSION_DENIED) {
+                        this.showToast("Please allow location access in your device settings.", "error");
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        this.showToast("Location unavailable. Please check your GPS signal.", "error");
+                    } else {
+                        this.showToast("Failed to get location.", "error");
                     }
                 }
             },
@@ -3565,13 +3579,20 @@ const app = {
             const now = new Date();
             const hour = now.getHours();
             const min = now.getMinutes();
-            // Rest hour is 9:30 PM (21:30) to 8:00 AM (08:00)
-            const isRestHour = hour < 8 || (hour === 21 && min >= 30) || hour >= 22;
+            let isRestHour = false;
+            let timeMsg = '';
+            if (this.orderData.logistics === 'Doorstep Delivery') {
+                isRestHour = hour < 9 || hour >= 21;
+                timeMsg = 'Deliver Now is only available from 9:00 AM to 9:00 PM for Doorstep Delivery. Please schedule a Date & Time.';
+            } else {
+                isRestHour = hour < 8 || hour >= 22;
+                timeMsg = 'Deliver Now is only available from 8:00 AM to 10:00 PM for Pickup. Please schedule a Date & Time.';
+            }
             if (isRestHour) {
                 if (typeof this.showToast === 'function') {
-                    this.showToast('Deliver Now is only available from 8:00 AM to 9:30 PM. Please schedule a Date & Time.', 'error');
+                    this.showToast(timeMsg, 'error');
                 } else {
-                    alert('Deliver Now is only available from 8:00 AM to 9:30 PM. Please schedule a Date & Time.');
+                    alert(timeMsg);
                 }
                 return;
             }
@@ -3628,7 +3649,12 @@ const app = {
             const now = new Date();
             const hour = now.getHours();
             const min = now.getMinutes();
-            const isRestHour = hour < 8 || (hour === 21 && min >= 30) || hour >= 22;
+            let isRestHour = false;
+            if (this.orderData.logistics === 'Doorstep Delivery') {
+                isRestHour = hour < 9 || hour >= 21;
+            } else {
+                isRestHour = hour < 8 || hour >= 22;
+            }
             
             if (isRestHour) {
                 deliverNowCard.style.opacity = '0.5';
@@ -3651,8 +3677,26 @@ const app = {
         // Reset dropdowns
         const hourSelect = document.getElementById('select-hour');
         const minSelect = document.getElementById('select-minute');
-        if (hourSelect) hourSelect.selectedIndex = 0;
-        if (minSelect) minSelect.value = '00';
+        if (hourSelect) {
+            hourSelect.innerHTML = '<option value="" disabled selected>Pick</option>';
+            let startHour = this.orderData.logistics === 'Doorstep Delivery' ? 9 : 8;
+            let endHour = this.orderData.logistics === 'Doorstep Delivery' ? 21 : 22;
+            for (let i = startHour; i <= endHour; i++) {
+                let hourStr = i.toString().padStart(2, '0');
+                let displayStr = (i % 12 || 12) + ' ' + (i >= 12 ? 'PM' : 'AM');
+                hourSelect.innerHTML += `<option value="${hourStr}">${displayStr}</option>`;
+            }
+            hourSelect.selectedIndex = 0;
+        }
+        if (minSelect) {
+            minSelect.innerHTML = `
+                <option value="00">00</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="45">45</option>
+            `;
+            minSelect.value = '00';
+        }
 
         // Hide and disable the Continue button
         const nextBtn = document.getElementById('schedule-next');
@@ -3678,11 +3722,29 @@ const app = {
         const hourSelect = document.getElementById('select-hour');
         const minSelect = document.getElementById('select-minute');
         const hour = hourSelect.value;
-        const minute = minSelect.value;
+        let minute = minSelect.value;
         
-        // Update display values
         const displayHour = document.getElementById('display-hour');
         const displayMin = document.getElementById('display-minute');
+
+        let maxHour = this.orderData.logistics === 'Doorstep Delivery' ? 21 : 22;
+        
+        if (hour) {
+            const numHour = parseInt(hour, 10);
+            if (numHour === maxHour) {
+                minSelect.innerHTML = '<option value="00">00</option>';
+                minute = '00';
+            } else if (minSelect.options.length < 4) {
+                minSelect.innerHTML = `
+                    <option value="00">00</option>
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="45">45</option>
+                `;
+                minSelect.value = minute || '00';
+                minute = minSelect.value;
+            }
+        }
         
         if (hour) {
             const hourText = hourSelect.options[hourSelect.selectedIndex].text;
@@ -3736,8 +3798,13 @@ const app = {
 
         if (time) {
             const [hours, minutes] = time.split(':').map(Number);
-            isValidTime = hours >= 8 && hours < 22;
-            if (!isValidTime) msg = "Delivery is only available between 8 AM - 10 PM.";
+            if (this.orderData.logistics === 'Doorstep Delivery') {
+                isValidTime = (hours >= 9 && hours < 21) || (hours === 21 && minutes === 0);
+                if (!isValidTime) msg = "Delivery is only available between 9:00 AM - 9:00 PM.";
+            } else {
+                isValidTime = (hours >= 8 && hours < 22) || (hours === 22 && minutes === 0);
+                if (!isValidTime) msg = "Pickup is only available between 8:00 AM - 10:00 PM.";
+            }
         }
 
         if (date) {
@@ -3766,7 +3833,12 @@ const app = {
     },
 
     selectLogistics(method, element) {
+        const changed = this.orderData.logistics !== method;
         this.orderData.logistics = method;
+        
+        if (changed) {
+            this.resetScheduleView();
+        }
 
         // Apply shared "Choice Standard" selection highlight
         const cards = document.querySelectorAll('#logistics-selection .card');
@@ -4201,6 +4273,11 @@ const app = {
         const btn = document.getElementById('btn-finish-order');
         const codBox = document.getElementById('cod-verification-box');
         const poBox = document.getElementById('po-entry-box');
+        
+        // Show the button once a payment method is selected
+        if (btn) {
+            btn.style.display = 'block';
+        }
         
         // Update button text based on method
         if (method === 'Cash on Delivery') {
