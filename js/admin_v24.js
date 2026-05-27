@@ -3951,10 +3951,7 @@ var admin = {
                     const targetId = (profile && profile.messengerId) || (fullOrder.messenger_id || fullOrder.messengerId) || null;
                     
                     if (targetId) {
-                        let msg = `❄️ ORDER DELIVERED!\n\n` +
-                                  `Hi ${fullOrder.customer_name},\n\n` +
-                                  `Your order ${orderId} has been successfully delivered.\n\n` +
-                                  `Thank you for choosing IceQube CDO!`;
+                        let msg = `✅ DELIVERED!\n\nYour IceQube delivery has been successfully dropped off! Thank you for choosing IceQube. Stay cool! 🧊`;
                         await this.dispatchMessengerMessage(targetId, msg);
                         console.log('✅ [Messenger] Delivery Confirmation Sent successfully.');
                     } else {
