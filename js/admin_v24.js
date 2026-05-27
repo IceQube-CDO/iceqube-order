@@ -3496,7 +3496,7 @@ var admin = {
                     <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; color: ${isServedOrDelivered ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isServedOrDelivered ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
+                                <b class="${isServedOrDelivered ? 'served-customer-name' : ''}" style="font-size: 1rem; color: ${isServedOrDelivered ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isServedOrDelivered ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
                                 ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
@@ -3569,7 +3569,7 @@ var admin = {
                         <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
-                                    <b style="font-size: 1rem; color: ${isPickupServed ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isPickupServed ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
+                                    <b class="${isPickupServed ? 'served-customer-name' : ''}" style="font-size: 1rem; color: ${isPickupServed ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isPickupServed ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
                                     ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                                 </div>
                             </div>
@@ -3646,7 +3646,7 @@ var admin = {
                     <td style="cursor: pointer;" onclick="if(document.getElementById('orders-view') && document.getElementById('orders-view').classList.contains('minimized-orders')) { this.closest('tr').classList.toggle('expanded'); } else { openCustomerDrawer('${o.customer_name.replace(/'/g, "\\'")}') }">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <b style="font-size: 1rem; color: ${isDelivered ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isDelivered ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
+                                <b class="${isDelivered ? 'served-customer-name' : ''}" style="font-size: 1rem; color: ${isDelivered ? '#64748b' : 'white'}; text-decoration: underline; text-decoration-color: ${isDelivered ? '#64748b' : 'white'}; text-underline-offset: 4px;">${o.customer_name}</b>
                                 ${isEliteOrder ? '<span style="background: #eab308; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 900;">ELITE</span>' : ''}
                             </div>
                         </div>
