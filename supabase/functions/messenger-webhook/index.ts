@@ -246,8 +246,8 @@ serve(async (req) => {
               if (Array.isArray(itemsData)) {
                 activeAdmins = itemsData
                   .filter((m: any) => m.status === 'Active' && 
-                                (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
-                                m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&
+                                (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
+                                m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger) &&
                                 String(m.messenger) !== String(customerId))
                   .map((m: any) => m.messenger);
               }
@@ -300,8 +300,8 @@ serve(async (req) => {
               if (Array.isArray(itemsData)) {
                 activeAdmins = itemsData
                   .filter((m: any) => m.status === 'Active' && 
-                                (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
-                                m.messenger && m.messenger.length > 5 && m.messenger !== 'N/A' &&
+                                (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
+                                m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger) &&
                                 m.messenger !== customerId)
                   .map((m: any) => m.messenger);
               }
