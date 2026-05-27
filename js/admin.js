@@ -360,10 +360,8 @@ var admin = {
             });
 
             window.IceQubeSync.onDeliveryEvent((event) => {
-                if (event.type === 'DELIVERY_COMPLETED') {
-                    console.log("🏁 [Admin] Delivery completed via Sync:", event.payload.orderId);
-                    this.fetchRealStats(); // Refresh everything
-                }
+                console.log(`📥 [Admin] Delivery Event received via Sync: ${event.type}`, event.payload);
+                this.fetchRealStats(); // Refresh everything
             });
 
             window.IceQubeSync.onMessengerEvent((event) => {

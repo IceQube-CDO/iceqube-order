@@ -45,7 +45,7 @@ window.IceQubeSync = {
         const targetId = cleanId(dispatchData.orderId);
         const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id || o.id) === targetId);
         if (orderIdx > -1) {
-            existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
+            existingOrders[orderIdx].delivery_status = dispatchData.status || 'Awaiting Acceptance';
             existingOrders[orderIdx].rider = dispatchData.riderId;
             localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
         }
@@ -340,11 +340,9 @@ window.IceQubeSync = {
                 const targetId = cleanId(payload.orderId);
                 const orderIdx = existingOrders.findIndex(o => cleanId(o.order_id || o.id) === targetId);
                 if (orderIdx > -1) {
-                    if (existingOrders[orderIdx].delivery_status === 'Pending') {
-                        existingOrders[orderIdx].delivery_status = 'Awaiting Acceptance';
-                        existingOrders[orderIdx].rider = payload.riderId;
-                        localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
-                    }
+                    existingOrders[orderIdx].delivery_status = payload.status || 'Awaiting Acceptance';
+                    existingOrders[orderIdx].rider = payload.riderId;
+                    localStorage.setItem('ice_orders', JSON.stringify(existingOrders));
                 }
             }
             callback(data);

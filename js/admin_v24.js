@@ -502,10 +502,8 @@ var admin = {
             });
 
             window.IceQubeSync.onDeliveryEvent((event) => {
-                if (event.type === 'DELIVERY_COMPLETED') {
-                    console.log("🏁 [Admin] Delivery completed via Sync:", event.payload.orderId);
-                    this.fetchRealStats(); // Refresh everything
-                }
+                console.log(`📥 [Admin] Delivery Event received via Sync: ${event.type}`, event.payload);
+                this.fetchRealStats(); // Refresh everything
             });
 
             window.IceQubeSync.onMessengerEvent((event) => {
@@ -4029,6 +4027,36 @@ var admin = {
                 body: JSON.stringify(patchData)
             });
             console.log('✅ Rider Assigned to Supabase' + (newStatus ? ` and Status updated to ${newStatus}` : ''));
+            
+            // Broadcast the assignment/dispatch event to other tabs & apps
+            if (window.IceQubeSync) {
+                if (isAdminRider && riderName !== 'Unassigned') {
+                    const clean = str => str ? String(str).toUpperCase().replace('#', '').replace('IQ-', '').trim() : '';
+                    const targetClean = clean(id);
+                    const fullOrder = (this.allOrders || []).find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || 
+                                      existingOrders.find(o => clean(o.id) === targetClean || clean(o.order_id) === targetClean) || {};
+                    
+                    const dispatchData = {
+                        orderId: fullOrder.order_id || id,
+                        id: id,
+                        riderId: riderName,
+                        dispatchedAt: new Date().toISOString(),
+                        status: newStatus,
+                        orderDetails: fullOrder
+                    };
+                    window.IceQubeSync.publishDispatch(dispatchData);
+                } else {
+                    window.IceQubeSync.publishDeliveryEvent({
+                        type: 'RIDER_ASSIGNED',
+                        payload: {
+                            orderId: id,
+                            riderId: riderName,
+                            status: 'Pending'
+                        }
+                    });
+                }
+            }
+
             // 3. Fetch from Supabase AFTER patch to ensure perfect sync
             this.fetchRealStats();
         } catch (err) {
