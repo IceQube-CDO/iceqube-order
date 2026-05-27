@@ -643,7 +643,7 @@
                             <div class="input-icon-left">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                             </div>
-                            <input type="text" id="delivery-location" class="input-high-contrast" placeholder="Client Name or Establishment" required oninput="app.handleLocationInput(this.value)">
+                            <input type="text" id="delivery-location" class="input-high-contrast" placeholder="Client Name or Establishment" required oninput="app.handleLocationInput(this.value); app.validateLogisticsForm();">
                         </div>
 
                         <!-- Person Receiving -->
@@ -651,7 +651,7 @@
                             <div class="input-icon-left">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </div>
-                            <input type="text" id="delivery-person" class="input-high-contrast" placeholder="Person Receiving">
+                            <input type="text" id="delivery-person" class="input-high-contrast" placeholder="Person Receiving" oninput="app.validateLogisticsForm();">
                         </div>
 
                         <!-- Contact Number -->
@@ -659,7 +659,7 @@
                             <div class="input-icon-left">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             </div>
-                                                        <input type="tel" id="delivery-contact" class="input-high-contrast" placeholder="Contact Number (09XX XXX XXXX)" oninput="app.validateContact(this.value)" maxlength="13">
+                                                        <input type="tel" id="delivery-contact" class="input-high-contrast" placeholder="Contact Number (09XX XXX XXXX)" oninput="app.validateContact(this.value); app.validateLogisticsForm();" maxlength="13">
                             <div id="contact-warning" class="input-warning" style="display: none;">Number must start with 09 and be 11 digits.</div>
                         </div>
 
@@ -683,41 +683,10 @@
                         </div>
                     </div>
 
-                    <div id="delivery-summary" style="display: none; margin-top: 0.75rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
-                        <h3 style="margin-bottom: 0.75rem;">Order Details</h3>
-                        <div id="summary-items-list" style="margin-bottom: 1rem; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.75rem;">
-                            <!-- Populated by JS -->
-                        </div>
-                        <div id="cloud-sync-status-text" style="font-size: 0.65rem; color: #94a3b8; text-align: right; margin-bottom: 8px; font-style: italic;">
-                            Checking Cloud Pricing...
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="opacity: 0.8;">Subtotal:</span>
-                            <span id="summary-subtotal" style="font-weight: 600;">₱0</span>
-                        </div>
-                        <div id="summary-discount-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; color: #22c55e;">
-                            <span id="summary-discount-label" style="opacity: 0.8;">Discount:</span>
-                            <span id="summary-discount-amount" style="font-weight: 600;">-₱0</span>
-                        </div>
-                        <div id="summary-priority-fee-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="opacity: 0.8;">Bulk Weight Fee:</span>
-                            <span id="summary-priority-fee" style="font-weight: 600;">₱0</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="opacity: 0.8;">Delivery Fee (<span id="summary-zone" style="font-weight: 500;">Zone 1</span>):</span>
-                            <span id="summary-delivery-fee" style="font-weight: 600;">₱30</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
-                            <span>Total to Pay:</span>
-                            <span id="summary-total" style="font-weight: bold; font-size: 1.1rem;">₱0</span>
-                        </div>
-                        <div id="summary-manual-review" style="display: none; color: #d97706; margin-top: 0.75rem; font-size: 0.85rem; background: #fef3c7; padding: 0.75rem; border-radius: 0.5rem; display: flex; gap: 0.5rem; align-items: flex-start;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 0.1rem;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                            <span>Region is marked outside CDO. Delivery fee requires manual review before dispatch.</span>
-                        </div>
-                    </div>
 
-                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.nextStep()" style="margin-top: 1rem;" disabled>
+
+
+                    <button id="btn-payment-delivery" class="btn-primary" onclick="app.saveLogisticsDetails()" style="margin-top: 1rem;" disabled>
                         Continue to Schedule
                     </button>
                 </div>
@@ -780,7 +749,7 @@
                             <a href="https://www.google.com/maps/place/IceQube/@8.5020529,124.6582747,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff3006cb43a85:0x2c7bd600367daea9!8m2!3d8.5020476!4d124.660855!16s%2Fg%2F11ywbv3d5_?entry=ttu" target="_blank" class="btn-external-link">Open in Google Maps →</a>
                         </div>
                     </div>
-                    <button class="btn-primary" onclick="app.nextStep()" style="margin-top: 2rem;">
+                    <button class="btn-primary" onclick="app.saveLogisticsDetails()" style="margin-top: 2rem;">
                         Continue to Schedule
                     </button>
                 </div>
@@ -999,8 +968,11 @@
                         <span id="payment-discount-label" style="opacity: 0.8;">Discount:</span>
                         <span id="payment-discount" style="font-weight: 600;">-₱0</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                        <span style="opacity: 0.8;">Delivery Fee:</span>
+                    <div id="payment-delivery-fee-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; align-items: flex-start;">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="opacity: 0.8;">Delivery Fee:</span>
+                            <span id="payment-delivery-breakdown" style="font-size: 0.75rem; color: #64748b; margin-top: 2px; font-weight: normal;"></span>
+                        </div>
                         <span id="payment-delivery-fee" style="font-weight: 600;">₱0</span>
                     </div>
                     <div id="payment-priority-fee-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">

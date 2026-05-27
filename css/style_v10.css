@@ -784,6 +784,31 @@ h1 {
     font-size: 0.875rem;
 }
 
+/* Compact styling specifically for Payment Step cards to prevent scrolling */
+#step-payment .selection-grid {
+    gap: 0.5rem;
+}
+
+#step-payment .card {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+}
+
+#step-payment .card svg {
+    width: 24px;
+    height: 24px;
+}
+
+#step-payment .card h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.1rem;
+}
+
+#step-payment .card p {
+    font-size: 0.75rem;
+    margin-bottom: 0;
+}
+
 .check-icon {
     width: 24px;
     height: 24px;
@@ -1017,8 +1042,17 @@ h1 {
     overflow: hidden;
 }
 
+#step-qty .step-body {
+    padding-bottom: 0.5rem;
+}
+
 .qty-sticky-footer {
-    margin-top: 1.5rem;
+    margin-top: 0.75rem;
+    padding: 0 1rem 1.5rem;
+}
+
+.qty-sticky-footer .btn-primary {
+    margin-top: 0;
 }
 
 .btn-link {
@@ -1241,6 +1275,14 @@ input:focus, textarea:focus {
     background: #2563eb;
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:disabled {
+    background: #cbd5e1 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
 .btn-secondary {

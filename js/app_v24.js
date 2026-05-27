@@ -264,6 +264,21 @@ const app = {
                 }
             }
             
+            // Trigger cloud profile restoration if local profile is empty or default
+            const existing = localStorage.getItem('iceqube_user_profile');
+            let isDefaultOrEmpty = true;
+            if (existing) {
+                try {
+                    const parsed = JSON.parse(existing);
+                    if (parsed.establishment && parsed.establishment !== 'Guest Customer') {
+                        isDefaultOrEmpty = false;
+                    }
+                } catch(e) {}
+            }
+            if (isDefaultOrEmpty) {
+                this.restoreProfileFromCloud(psid);
+            }
+            
             // Sync to UI immediately
             this.updateMessengerStatusUI();
             const msgIdInput = document.getElementById('profile-messenger-id');
@@ -292,6 +307,21 @@ const app = {
                 this.updateMessengerStatusUI();
                 const msgIdHidden = document.getElementById('profile-messenger-id');
                 if (msgIdHidden) msgIdHidden.value = finalPsid;
+
+                // Restores from cloud if profile is empty/default
+                const existing = localStorage.getItem('iceqube_user_profile');
+                let isDefaultOrEmpty = true;
+                if (existing) {
+                    try {
+                        const parsed = JSON.parse(existing);
+                        if (parsed.establishment && parsed.establishment !== 'Guest Customer') {
+                            isDefaultOrEmpty = false;
+                        }
+                    } catch(e) {}
+                }
+                if (isDefaultOrEmpty) {
+                    this.restoreProfileFromCloud(finalPsid);
+                }
             }
         }
 
@@ -688,7 +718,7 @@ const app = {
             window.open(url, '_blank');
         }, 800);
     },
-    steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
+    steps: ['start', 'qty', 'logistics', 'schedule', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
     autoData: {
         schedules: {}
@@ -1883,6 +1913,11 @@ const app = {
         this.lastStepIndex = index;
         this.updateProgress();
 
+        // Run delivery fee calculation asynchronously when entering index 4 (Payment)
+        if (index === 4) {
+            this.runAsyncDeliveryFeeCalculation();
+        }
+
         // --- ELITE TIER AUTO-SKIP PAYMENT ---
         if (index === 4 && (this.user.accountType === 'Elite' || this.user.accountType === 'PO')) {
             // Auto-select PO
@@ -1919,18 +1954,44 @@ const app = {
         }
 
         // --- Step-Specific Initialization ---
-        if (index === 3) { // Logistics Step
+        if (index === 2) { // Logistics Step
+            const locInput = document.getElementById('delivery-location');
             const perInput = document.getElementById('delivery-person');
             const conInput = document.getElementById('delivery-contact');
+            const instInput = document.getElementById('delivery-instructions');
+            const mapsInput = document.getElementById('delivery-maps');
             
-            // Note: delivery-location is now purely manual per user request
-            
+            // Prefill Doorstep Delivery Form (only if companyName is not 'Guest Customer')
+            if (locInput && !locInput.value && this.user.companyName && this.user.companyName !== 'Guest Customer') {
+                locInput.value = this.user.companyName;
+                this.orderData.deliveryDetails.location = this.user.companyName;
+            }
             if (perInput && !perInput.value && this.user.contactPerson) {
                 perInput.value = this.user.contactPerson;
             }
             if (conInput && !conInput.value && this.user.contactNumber) {
                 conInput.value = this.formatPhone(this.user.contactNumber);
             }
+            if (instInput && !instInput.value && this.user.savedInstructions) {
+                instInput.value = this.user.savedInstructions;
+            }
+            if (mapsInput && !mapsInput.value && this.user.savedAddress) {
+                mapsInput.value = `📍 ${this.user.savedAddress}`;
+                mapsInput.classList.add('populated');
+                this.orderData.deliveryDetails.maps = `https://www.google.com/maps?q=${this.user.savedLat || 0},${this.user.savedLng || 0}`;
+                this.orderData.deliveryDetails.lat = this.user.savedLat;
+                this.orderData.deliveryDetails.lng = this.user.savedLng;
+            }
+            
+            // Prefill Pickup Form if not filled (only if companyName is not 'Guest Customer')
+            const pickEst = document.getElementById('pickup-establishment');
+            const pickPer = document.getElementById('pickup-person');
+            const pickNum = document.getElementById('pickup-contact');
+            if (pickEst && !pickEst.value && this.user.companyName && this.user.companyName !== 'Guest Customer') pickEst.value = this.user.companyName;
+            if (pickPer && !pickPer.value && this.user.contactPerson) pickPer.value = this.user.contactPerson;
+            if (pickNum && !pickNum.value && this.user.contactNumber) pickNum.value = this.formatPhone(this.user.contactNumber);
+
+            this.validateLogisticsForm();
         }
     },
 
@@ -1938,25 +1999,21 @@ const app = {
         if (this.currentStep < this.steps.length - 1) {
             const from = this.currentStep;
             
-            // Skip Logistics (Step 3) and possibly Payment (Step 4) if it's a Quick Reorder
-            if (this.isQuickReorder && this.currentStep === 2) {
-                // Ensure fees are computed before skipping logistics for ANYONE
-                if (this.orderData.logistics === 'Doorstep Delivery') {
-                    if (this.orderData.deliveryDetails && (this.orderData.deliveryDetails.lat || this.orderData.deliveryDetails.maps)) {
+            // Skip Logistics (Step 2) if it's a Quick Reorder and we are on Qty (Step 1)
+            if (this.isQuickReorder && this.currentStep === 1) {
+                this.currentStep = 3; // Skip logistics (2), go to schedule (3)
+            } else if (this.isQuickReorder && this.currentStep === 3) {
+                // If exiting Schedule (3) on Quick Reorder, Elite/PO users skip Payment (4) and finalize
+                const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
+                if (isElite) {
+                    if (this.orderData.logistics === 'Doorstep Delivery') {
                         await this.calculateDeliveryFee();
                     }
-                }
-                this.calculatePriorityFee();
-
-                const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
-
-                if (isElite) {
                     this.orderData.payment = 'Purchase Order';
                     await this.processFinalOrder(); 
                     return; 
                 } else {
-                    this.updatePaymentSummary();
-                    this.currentStep = 4; // Jump to Payment for Standard users
+                    this.currentStep++; // Go to Payment (4) normally
                 }
             } else {
                 this.currentStep++;
@@ -2452,7 +2509,7 @@ const app = {
         }
 
         if (target === 'delivery') {
-            this.calculateDeliveryFee();
+            this.validateLogisticsForm();
         }
     },
 
@@ -2794,7 +2851,7 @@ const app = {
                     mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
                     this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
                 }
-                this.calculateDeliveryFee();
+                this.validateLogisticsForm();
             }
             
             this.hideSearchSuggestions();
@@ -3327,9 +3384,9 @@ const app = {
                 return;
             }
 
-            // Skip Logistics (Step 3) backwards if it's a Quick Reorder
-            if (this.isQuickReorder && this.currentStep === 4) {
-                this.currentStep = 2; // Jump back to Schedule
+            // Skip Logistics (Step 2) backwards if it's a Quick Reorder and we are on Schedule (Step 3)
+            if (this.isQuickReorder && this.currentStep === 3) {
+                this.currentStep = 1; // Jump back to Qty
             } else {
                 this.currentStep--;
             }
@@ -3511,8 +3568,17 @@ const app = {
 
         const nextBtn = document.getElementById('qty-next');
         if (nextBtn) {
-            nextBtn.innerText = `Confirm Order (₱${this.orderData.total})`;
-            nextBtn.disabled = itemsTotal === 0; // Disable if no items, even if fee makes it > 0
+            const total3kg = (parseFloat(this.orderData.qty.fullDice['bag3kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag3kg']) || 0);
+            const total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
+            const meetsMinimum = (total3kg >= 2) || (total1kg >= 6);
+
+            if (meetsMinimum) {
+                nextBtn.innerText = `Confirm Order (₱${this.orderData.total})`;
+                nextBtn.disabled = false;
+            } else {
+                nextBtn.innerText = `Min: 2x 3kg or 6x 1kg (₱${this.orderData.total})`;
+                nextBtn.disabled = true;
+            }
         }
     },
 
@@ -3863,7 +3929,7 @@ const app = {
         } else if (state === 'delivery') {
             document.getElementById('logistics-delivery').classList.add('active');
             // Re-validate if pin link or coordinates are already present
-            this.calculateDeliveryFee();
+            this.validateLogisticsForm();
         } else if (state === 'pickup') {
             document.getElementById('logistics-pickup').classList.add('active');
             setTimeout(() => this.initPickupMap(), 100);
@@ -3871,171 +3937,341 @@ const app = {
     },
 
     async calculateDeliveryFee() {
-        const pinLink = document.getElementById('delivery-maps').value;
-        const lat = this.orderData.deliveryDetails.lat;
-        const lng = this.orderData.deliveryDetails.lng;
-        const contact = document.getElementById('delivery-contact').value;
-        const summaryDiv = document.getElementById('delivery-summary');
-        const placeOrderBtn = document.getElementById('btn-payment-delivery');
+        try {
+            const pinLink = this.orderData.deliveryDetails?.maps || (document.getElementById('delivery-maps')?.value || '');
+            const lat = this.orderData.deliveryDetails?.lat;
+            const lng = this.orderData.deliveryDetails?.lng;
+            const contact = this.orderData.deliveryDetails?.contact || (document.getElementById('delivery-contact')?.value || '');
 
-        const digits = contact.replace(/\D/g, '');
-        const isContactValid = digits.length === 11 && digits.startsWith('09');
+            const digits = contact.replace(/\D/g, '');
+            const isContactValid = digits.length === 11 && digits.startsWith('09');
 
-        if ((!pinLink.trim() && !lat) || !isContactValid) {
-            summaryDiv.style.display = 'none';
-            placeOrderBtn.disabled = true;
-            return;
-        }
-
-        // Simulate a tiny loading delay for realism while typing
-        placeOrderBtn.disabled = true;
-        document.getElementById('summary-delivery-fee').innerText = 'Calculating route...';
-
-        const { distanceKm, routeTimeMins } = await this.fetchRoutingDistance(lat && lng ? `${lng},${lat}` : pinLink);
-
-        let fee = 0;
-        let zone = '';
-        let isManualReview = false;
-
-        // Rate Card logic based on Distance (tiered) + Time Surcharges
-        const calculateMaximFee = (distanceInKm) => {
-            const delivery = this.pricingMatrix.delivery || {};
-            const baseFare = delivery.baseFare !== undefined ? parseFloat(delivery.baseFare) : 30;
-            // Tiered per-km rates — fallback to legacy perKmRate if new fields aren't set
-            let perKmShort = delivery.perKmShort !== undefined ? parseFloat(delivery.perKmShort) : (delivery.perKmRate !== undefined ? parseFloat(delivery.perKmRate) : 15);
-            let perKmLong = delivery.perKmLong !== undefined ? parseFloat(delivery.perKmLong) : 20;
-
-            if (distanceInKm <= 1) return baseFare;
-            
-            let distanceFee = 0;
-            const extraKm = distanceInKm - 1; // km beyond the first
-            
-            if (extraKm <= 4) {
-                // 1-5km zone: all extra km at short rate
-                distanceFee = Math.ceil(extraKm) * perKmShort;
-            } else {
-                // First 4 extra km at short rate, remainder at long rate
-                distanceFee = (4 * perKmShort) + (Math.ceil(extraKm - 4) * perKmLong);
+            if ((!pinLink.trim() && !lat) || !isContactValid) {
+                this.orderData.deliveryFee = 0;
+                this.orderData.priorityFee = 0;
+                this.orderData.distancePremium = 0;
+                this.orderData.peakHourSurcharge = 0;
+                this.orderData.bulkWeightSurcharge = 0;
+                this.orderData.isManualReview = true;
+                this.orderData.deliveryZone = 'Manual Review (Missing Details)';
+                return;
             }
-            
-            return baseFare + distanceFee;
-        };
 
-        // Time-based surcharge calculation
-        const calculateTimeSurcharge = () => {
-            const delivery = this.pricingMatrix.delivery || {};
-            const lateNightFee = parseFloat(delivery.lateNightFee) || 0;
-            const peakHoursFee = parseFloat(delivery.peakHoursFee) || 0;
-            
-            // Determine effective hour: use scheduled time if available, else current time
-            let effectiveHour;
-            if (this.orderData.schedule && this.orderData.schedule.time) {
-                effectiveHour = parseInt(this.orderData.schedule.time.split(':')[0]);
-            } else {
-                effectiveHour = new Date().getHours();
-            }
-            
-            let surcharge = 0;
-            
-            // Peak hours: 5PM–7PM (17, 18, 19)
-            if (effectiveHour >= 17 && effectiveHour <= 19) {
-                surcharge += peakHoursFee;
-            }
-            
-            // Late night: 9 PM onward (21:00+)
-            if (effectiveHour >= 21) {
-                surcharge += lateNightFee;
-            }
-            
-            return surcharge;
-        };
+            const { distanceKm, routeTimeMins } = await this.fetchRoutingDistance(lat && lng ? `${lng},${lat}` : pinLink);
 
-        if (distanceKm > 15) {
-            zone = `Outside CDO (>15km)`;
-            fee = 0;
-            isManualReview = true;
-        } else {
-            zone = `${distanceKm} km`;
-            
-            // Apply Free Delivery Threshold if met
-            const delivery = this.pricingMatrix.delivery || { freeThreshold: 0 };
-            const threshold = parseFloat(delivery.freeThreshold) || 0;
-            const currentSubtotal = this.orderData.subtotal || 0;
-            
-            if (threshold > 0 && currentSubtotal >= threshold) {
-                console.log(`✅ [Logistics] Free Delivery threshold met (Subtotal: ₱${currentSubtotal} >= ₱${threshold})`);
+            let fee = 0;
+            let zone = '';
+            let isManualReview = false;
+
+            const calculateMaximFee = (distanceInKm) => {
+                const delivery = this.pricingMatrix.delivery || {};
+                const baseFare = delivery.baseFare !== undefined ? parseFloat(delivery.baseFare) : 30;
+                let perKmShort = delivery.perKmShort !== undefined ? parseFloat(delivery.perKmShort) : (delivery.perKmRate !== undefined ? parseFloat(delivery.perKmRate) : 15);
+                let perKmLong = delivery.perKmLong !== undefined ? parseFloat(delivery.perKmLong) : 20;
+
+                if (distanceInKm <= 1) return baseFare;
+                
+                let distanceFee = 0;
+                const extraKm = distanceInKm - 1;
+                
+                if (extraKm <= 4) {
+                    distanceFee = Math.ceil(extraKm) * perKmShort;
+                } else {
+                    distanceFee = (4 * perKmShort) + (Math.ceil(extraKm - 4) * perKmLong);
+                }
+                
+                return baseFare + distanceFee;
+            };
+
+            const calculateTimeSurcharge = () => {
+                const delivery = this.pricingMatrix.delivery || {};
+                const lateNightFee = parseFloat(delivery.lateNightFee) || 0;
+                const peakHoursFee = parseFloat(delivery.peakHoursFee) || 0;
+                
+                let effectiveHour;
+                if (this.orderData.schedule && this.orderData.schedule.time) {
+                    effectiveHour = parseInt(this.orderData.schedule.time.split(':')[0]);
+                } else {
+                    effectiveHour = new Date().getHours();
+                }
+                
+                let surcharge = 0;
+                if (effectiveHour >= 17 && effectiveHour <= 19) {
+                    surcharge += peakHoursFee;
+                }
+                if (effectiveHour >= 21) {
+                    surcharge += lateNightFee;
+                }
+                
+                return surcharge;
+            };
+
+            if (distanceKm > 15) {
+                zone = `Outside CDO (>15km)`;
                 fee = 0;
-                zone += " (FREE)";
+                isManualReview = true;
             } else {
-                fee = calculateMaximFee(distanceKm);
-                // Add time-based surcharges
-                const timeSurcharge = calculateTimeSurcharge();
-                if (timeSurcharge > 0) {
-                    fee += timeSurcharge;
-                    
-                    // Expose the reason in the UI
-                    let effectiveHour = this.orderData.schedule && this.orderData.schedule.time ? parseInt(this.orderData.schedule.time.split(':')[0]) : new Date().getHours();
-                    if (effectiveHour >= 17 && effectiveHour <= 19) {
-                        zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
-                    } else if (effectiveHour >= 21) {
-                        zone += ` + ₱${parseFloat(delivery.lateNightFee) || 0} Late`;
+                zone = `${distanceKm.toFixed(1)} km`;
+                const delivery = this.pricingMatrix.delivery || { freeThreshold: 0 };
+                const threshold = parseFloat(delivery.freeThreshold) || 0;
+                const currentSubtotal = this.orderData.subtotal || 0;
+                
+                if (threshold > 0 && currentSubtotal >= threshold) {
+                    fee = 0;
+                    zone += " (FREE)";
+                } else {
+                    fee = calculateMaximFee(distanceKm);
+                    const timeSurcharge = calculateTimeSurcharge();
+                    if (timeSurcharge > 0) {
+                        fee += timeSurcharge;
+                        let effectiveHour = this.orderData.schedule && this.orderData.schedule.time ? parseInt(this.orderData.schedule.time.split(':')[0]) : new Date().getHours();
+                        if (effectiveHour >= 17 && effectiveHour <= 19) {
+                            zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
+                        } else if (effectiveHour >= 21) {
+                            zone += ` + ₱${parseFloat(delivery.lateNightFee) || 0} Late`;
+                        }
                     }
-                    
-                    console.log(`🕐 [Logistics] Time surcharge applied: +₱${timeSurcharge}`);
                 }
             }
-        }
 
-        // Weight-based Priority Fee
-        const trafficBonus = this.calculatePriorityFee();
+            const trafficBonus = this.calculatePriorityFee();
 
-        this.orderData.deliveryFee = fee;
-        this.orderData.priorityFee = trafficBonus;
-        this.orderData.isManualReview = isManualReview;
-        this.orderData.deliveryZone = zone;
-
-        summaryDiv.style.display = 'block';
-        document.getElementById('summary-subtotal').innerText = `₱${this.orderData.subtotal}`;
-        document.getElementById('summary-zone').innerText = zone;
-        
-        // Show/hide discount row
-        const discountRow = document.getElementById('summary-discount-row');
-        if (discountRow) {
-            const discountAmount = parseFloat(this.orderData.discountAmount) || 0;
-            if (discountAmount > 0) {
-                discountRow.style.display = 'flex';
-                const labelEl = document.getElementById('summary-discount-label');
-                if (labelEl) labelEl.innerText = this.orderData.discountLabel || 'Discount:';
-                document.getElementById('summary-discount-amount').innerText = `-₱${discountAmount}`;
-            } else {
-                discountRow.style.display = 'none';
+            let distPremium = 0;
+            let peakSurcharge = 0;
+            if (!isManualReview) {
+                const threshold = parseFloat(this.pricingMatrix.delivery?.freeThreshold) || 0;
+                const currentSubtotal = this.orderData.subtotal || 0;
+                if (threshold > 0 && currentSubtotal >= threshold) {
+                    distPremium = 0;
+                    peakSurcharge = 0;
+                } else {
+                    const timeSurcharge = calculateTimeSurcharge();
+                    distPremium = fee - timeSurcharge;
+                    peakSurcharge = timeSurcharge;
+                }
             }
+
+            this.orderData.deliveryFee = fee;
+            this.orderData.priorityFee = trafficBonus;
+            this.orderData.distancePremium = distPremium;
+            this.orderData.peakHourSurcharge = peakSurcharge;
+            this.orderData.bulkWeightSurcharge = trafficBonus;
+            this.orderData.isManualReview = isManualReview;
+            this.orderData.deliveryZone = zone;
+            this.orderData.distance = distanceKm;
+        } catch (error) {
+            console.error("Error in calculateDeliveryFee:", error);
+            this.orderData.isManualReview = true;
+            this.orderData.deliveryZone = 'Manual Review (Routing Error)';
+            this.orderData.distancePremium = 0;
+            this.orderData.peakHourSurcharge = 0;
+            this.orderData.bulkWeightSurcharge = 0;
         }
-        
-        // Show/hide heavy load surcharge row
-        const priorityRow = document.getElementById('summary-priority-fee-row');
-        if (priorityRow) {
-            if (trafficBonus > 0) {
-                priorityRow.style.display = 'flex';
-                document.getElementById('summary-priority-fee').innerText = `₱${trafficBonus}`;
+    },
+
+    validateLogisticsForm() {
+        try {
+            const placeOrderBtn = document.getElementById('btn-payment-delivery');
+            if (!placeOrderBtn) return;
+
+            if (this.logisticsState === 'delivery') {
+                const name = document.getElementById('delivery-location')?.value || '';
+                const person = document.getElementById('delivery-person')?.value || '';
+                const contact = document.getElementById('delivery-contact')?.value || '';
+                const pinLink = document.getElementById('delivery-maps')?.value || '';
+                const lat = this.orderData.deliveryDetails?.lat;
+
+                const digits = contact.replace(/\D/g, '');
+                const isContactValid = digits.length === 11 && digits.startsWith('09');
+                const isLocationValid = name.trim().length > 0;
+                const isPersonValid = person.trim().length > 0;
+                const isMapValid = pinLink.trim().length > 0 || lat;
+
+                if (isContactValid && isLocationValid && isPersonValid && isMapValid) {
+                    placeOrderBtn.disabled = false;
+                } else {
+                    placeOrderBtn.disabled = true;
+                }
             } else {
-                priorityRow.style.display = 'none';
+                // Pickup is always allowed to proceed
+                placeOrderBtn.disabled = false;
             }
+        } catch (error) {
+            console.error("Error in validateLogisticsForm:", error);
         }
-        
-        let feeText = `₱${fee}`;
-        document.getElementById('summary-delivery-fee').innerText = isManualReview ? 'Manual Review' : feeText;
-        
-        const manualReviewNotice = document.getElementById('summary-manual-review');
-        if (isManualReview) {
-            manualReviewNotice.style.display = 'block';
-            document.getElementById('summary-total').innerText = `₱${this.orderData.total} + TBD`;
-        } else {
-            manualReviewNotice.style.display = 'none';
-            document.getElementById('summary-total').innerText = `₱${this.orderData.total + this.orderData.deliveryFee}`;
+    },
+
+    saveLogisticsDetails() {
+        try {
+            if (!this.isQuickReorder) {
+                if (this.logisticsState === 'delivery') {
+                    const establishment = document.getElementById('delivery-location').value.trim();
+                    const person = document.getElementById('delivery-person').value.trim();
+                    const contact = document.getElementById('delivery-contact').value.trim();
+                    const instructions = document.getElementById('delivery-instructions').value.trim();
+                    const maps = document.getElementById('delivery-maps').value.trim();
+                    
+                    // Fallbacks for lat, lng, and physical address if the user didn't open the map in the current session
+                    const lat = maps ? (this._tempLat || this.orderData.deliveryDetails?.lat || this.user.savedLat || null) : null;
+                    const lng = maps ? (this._tempLng || this.orderData.deliveryDetails?.lng || this.user.savedLng || null) : null;
+                    
+                    let physical_address = this._tempAddress || this.orderData.deliveryDetails?.physical_address || this.user.savedAddress || establishment;
+                    // If the maps field is populated with a custom text, make sure we use a clean address
+                    if (maps && maps.startsWith('📍 ')) {
+                        const cleanMaps = maps.replace('📍 ', '').trim();
+                        if (cleanMaps) {
+                            physical_address = cleanMaps;
+                        }
+                    }
+
+                    this.orderData.deliveryDetails = {
+                        establishment: establishment,
+                        physical_address: physical_address,
+                        person: person,
+                        contact: contact,
+                        instructions: instructions,
+                        maps: maps,
+                        lat: lat,
+                        lng: lng
+                    };
+
+                    // Automatically copy to user profile / my account
+                    const profile = {
+                        establishment: establishment,
+                        contactPerson: person,
+                        contactNumber: contact,
+                        address: physical_address,
+                        instructions: instructions,
+                        lat: lat,
+                        lng: lng,
+                        messengerId: this.user.messengerId || '',
+                        messengerEnabled: this.user.messengerEnabled || false,
+                        updatedAt: new Date().toISOString()
+                    };
+                    localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+
+                    // Update live user object
+                    this.user.companyName = establishment;
+                    this.user.contactPerson = person;
+                    this.user.contactNumber = contact;
+                    this.user.savedAddress = physical_address;
+                    this.user.savedInstructions = instructions;
+                    this.user.savedLat = lat;
+                    this.user.savedLng = lng;
+
+                    // Sync with Admin sync if available
+                    if (window.IceQubeSync) {
+                        window.IceQubeSync.publishProfileUpdate(profile);
+                    }
+
+                    // Reload user profile to sync the Edit modal inputs and UI components
+                    this.loadUserProfile();
+
+                } else if (this.logisticsState === 'pickup') {
+                    const establishment = document.getElementById('pickup-establishment').value.trim();
+                    const person = document.getElementById('pickup-person').value.trim();
+                    const contact = document.getElementById('pickup-contact').value.trim();
+
+                    this.orderData.deliveryDetails = {
+                        establishment: establishment,
+                        person: person,
+                        contact: contact,
+                        physical_address: 'Self-Pickup @ Macabalan Hub',
+                        instructions: 'Customer Pickup',
+                        maps: '',
+                        lat: null,
+                        lng: null
+                    };
+
+                    // For pickup, we also copy name & contact to profile, but preserve existing address/map details!
+                    const saved = localStorage.getItem('iceqube_user_profile');
+                    let profile = {};
+                    if (saved) {
+                        try { profile = JSON.parse(saved); } catch(e) {}
+                    }
+                    profile.establishment = establishment;
+                    profile.contactPerson = person;
+                    profile.contactNumber = contact;
+                    profile.updatedAt = new Date().toISOString();
+
+                    localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+
+                    // Update live user object
+                    this.user.companyName = establishment;
+                    this.user.contactPerson = person;
+                    this.user.contactNumber = contact;
+
+                    // Sync with Admin sync if available
+                    if (window.IceQubeSync) {
+                        window.IceQubeSync.publishProfileUpdate(profile);
+                    }
+
+                    // Reload user profile to sync the Edit modal inputs and UI components
+                    this.loadUserProfile();
+                }
+            }
+            this.nextStep();
+        } catch (error) {
+            console.error("Error in saveLogisticsDetails:", error);
+            alert("An error occurred while saving logistics details. Please check the console.");
         }
-        
-        placeOrderBtn.disabled = false;
+    },
+
+    async runAsyncDeliveryFeeCalculation() {
+        try {
+            if (this.orderData.logistics !== 'Doorstep Delivery') {
+                this.orderData.deliveryFee = 0;
+                this.orderData.priorityFee = 0;
+                this.orderData.distancePremium = 0;
+                this.orderData.peakHourSurcharge = 0;
+                this.orderData.bulkWeightSurcharge = 0;
+                this.orderData.isManualReview = false;
+                this.orderData.deliveryZone = 'Self-Pickup';
+                this._isCalculatingFee = false;
+                this.updateTotal();
+                this.updatePaymentSummary();
+                return;
+            }
+
+            this._isCalculatingFee = true;
+            
+            // Show calculating state in payment summary
+            const deliveryEl = document.getElementById('payment-delivery-fee');
+            if (deliveryEl) {
+                deliveryEl.innerText = 'Calculating...';
+            }
+            
+            const btn = document.getElementById('btn-finish-order');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Calculating delivery fee...';
+            }
+
+            // Call the safe calculation function
+            await this.calculateDeliveryFee();
+
+            this._isCalculatingFee = false;
+            
+            // Re-render payment summary with calculated values
+            this.updatePaymentSummary();
+
+            // Restore the payment button state based on selected method
+            if (this.orderData.payment) {
+                const selectedElement = document.querySelector('#step-payment .card.selected');
+                if (selectedElement) {
+                    this.selectPayment(this.orderData.payment, selectedElement);
+                }
+            }
+        } catch (error) {
+            console.error("Error in runAsyncDeliveryFeeCalculation:", error);
+            this._isCalculatingFee = false;
+            this.orderData.isManualReview = true;
+            this.orderData.deliveryZone = 'Manual Review (Calculation Error)';
+            this.orderData.distancePremium = 0;
+            this.orderData.peakHourSurcharge = 0;
+            this.orderData.bulkWeightSurcharge = 0;
+            this.updatePaymentSummary();
+        }
     },
 
     async fetchRoutingDistance(destinationStr) {
@@ -4187,22 +4423,33 @@ const app = {
         }
 
         const deliveryEl = document.getElementById('payment-delivery-fee');
-        const priorityEl = document.getElementById('payment-priority-fee');
+        const breakdownEl = document.getElementById('payment-delivery-breakdown');
         const priorityRow = document.getElementById('payment-priority-fee-row');
+
+        // Sum of three: distance premium + peak surcharge + bulk weight surcharge
+        const totalDelivery = (this.orderData.deliveryFee || 0) + (this.orderData.priorityFee || 0);
 
         if (deliveryEl) {
             deliveryEl.innerText = this.orderData.logistics === 'Doorstep Delivery' ? 
-                (this.orderData.isManualReview ? 'TBD' : `₱${(this.orderData.deliveryFee || 0)}`) : '₱0';
+                (this.orderData.isManualReview ? 'TBD' : `₱${totalDelivery}`) : '₱0';
         }
 
-        const priorityFee = parseFloat(this.orderData.priorityFee) || 0;
-        if (priorityEl && priorityRow) {
-            if (priorityFee > 0) {
-                priorityRow.style.display = 'flex';
-                priorityEl.innerText = `₱${priorityFee.toFixed(2)}`;
+        if (breakdownEl) {
+            if (this.orderData.logistics !== 'Doorstep Delivery') {
+                breakdownEl.innerText = 'Self-Pickup';
+            } else if (this.orderData.isManualReview) {
+                breakdownEl.innerText = 'Pending review';
             } else {
-                priorityRow.style.display = 'none';
+                const distPremium = this.orderData.distancePremium || 0;
+                const peakSurcharge = this.orderData.peakHourSurcharge || 0;
+                const weightSurcharge = this.orderData.bulkWeightSurcharge || 0;
+                breakdownEl.innerText = `₱${distPremium} Dist + ₱${peakSurcharge} Peak + ₱${weightSurcharge} Weight`;
             }
+        }
+
+        // Hide separate priority fee row since it's merged into delivery fee
+        if (priorityRow) {
+            priorityRow.style.display = 'none';
         }
 
         const totalEl = document.getElementById('payment-total');
@@ -4333,6 +4580,12 @@ const app = {
             btn.disabled = false;
             codBox.classList.remove('active');
             poBox.classList.remove('active');
+        }
+
+        // If delivery fee is currently calculating, keep button disabled
+        if (this._isCalculatingFee) {
+            btn.disabled = true;
+            btn.innerText = 'Calculating delivery fee...';
         }
     },
 
@@ -6676,6 +6929,44 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
             fullDice: { '1kg': 0, '3kg': 0 },
             halfDice: { '1kg': 0, '3kg': 0 }
         };
+        
+        // Reset logistics coordinates and temporary address/lat/lng references
+        this._tempLat = null;
+        this._tempLng = null;
+        this._tempAddress = null;
+        this._tempEstablishment = null;
+        this._tempFullAddress = null;
+        
+        this.orderData.deliveryDetails = {
+            location: '',
+            maps: '',
+            lat: null,
+            lng: null
+        };
+        
+        // Reset DOM inputs for doorstep delivery to ensure fresh autofills on the next order
+        const delLoc = document.getElementById('delivery-location');
+        const delPer = document.getElementById('delivery-person');
+        const delCon = document.getElementById('delivery-contact');
+        const delInst = document.getElementById('delivery-instructions');
+        const delMaps = document.getElementById('delivery-maps');
+        if (delLoc) delLoc.value = '';
+        if (delPer) delPer.value = '';
+        if (delCon) delCon.value = '';
+        if (delInst) delInst.value = '';
+        if (delMaps) {
+            delMaps.value = '';
+            delMaps.classList.remove('populated');
+        }
+
+        // Reset DOM inputs for pickup
+        const pickEst = document.getElementById('pickup-establishment');
+        const pickPer = document.getElementById('pickup-person');
+        const pickNum = document.getElementById('pickup-contact');
+        if (pickEst) pickEst.value = '';
+        if (pickPer) pickPer.value = '';
+        if (pickNum) pickNum.value = '';
+
         this.updateTotal();
         this.updateCreditUI(); // Refresh dispatch panel immediately
     },
@@ -6793,6 +7084,77 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     saveOrderWithStatus(status) {
         console.log(`Order saved with status: ${status}`);
         // In a real app, this would persist to a database (e.g., Supabase)
+    },
+
+    async restoreProfileFromCloud(psid) {
+        if (!psid) return;
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            console.warn('Supabase not configured. Cloud profile restoration skipped.');
+            return;
+        }
+
+        try {
+            console.log(`☁️ [Cloud Sync] Fetching profile defaults from Supabase for PSID: ${psid}...`);
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?messenger_id=eq.${psid}&is_real=eq.true&order=created_at.desc&limit=1`, {
+                method: 'GET',
+                headers: {
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const orders = await response.json();
+            if (orders && orders.length > 0) {
+                const lastOrder = orders[0];
+                
+                // Clean up instructions / delivery notes
+                let notes = lastOrder.delivery_notes || '';
+                if (notes.startsWith('[⚡ QUICK REORDER] ')) {
+                    notes = notes.replace('[⚡ QUICK REORDER] ', '');
+                }
+                if (notes === 'No special notes.') {
+                    notes = '';
+                }
+
+                // If the user address is Store Pickup, clear it for doorstep
+                let addr = lastOrder.delivery_address || '';
+                if (addr === 'Store Pickup' || addr === 'Self-Pickup @ Macabalan Hub') {
+                    addr = '';
+                }
+
+                const profile = {
+                    establishment: lastOrder.customer_name || '',
+                    contactPerson: lastOrder.receiver_name || '',
+                    contactNumber: lastOrder.contact_number || '',
+                    address: addr,
+                    instructions: notes,
+                    lat: lastOrder.delivery_lat || null,
+                    lng: lastOrder.delivery_lng || null,
+                    messengerId: psid,
+                    messengerEnabled: true,
+                    updatedAt: new Date().toISOString()
+                };
+
+                localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+                this.loadUserProfile();
+                console.log(`✅ [Cloud Sync] Profile successfully restored for: ${profile.establishment}`);
+                this.showToast(`✨ Profile sync complete: Welcome back ${profile.establishment}!`, 'success');
+                
+                // If they are currently on index 2 (Logistics), force-repopulate the inputs
+                if (this.currentStep === 2) {
+                    this.showStep(2);
+                }
+            } else {
+                console.log(`ℹ️ [Cloud Sync] No prior orders found for PSID: ${psid}`);
+            }
+        } catch (e) {
+            console.error('❌ [Cloud Sync] Failed to restore profile from cloud:', e);
+        }
     },
 
     // --- Profile Helpers ---
@@ -6976,6 +7338,27 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         if (pickPer) pickPer.value = contactPerson;
         if (pickNum) pickNum.value = contactNumber;
 
+        // Also sync to Doorstep Delivery fields if they exist
+        const delLoc = document.getElementById('delivery-location');
+        const delPer = document.getElementById('delivery-person');
+        const delCon = document.getElementById('delivery-contact');
+        const delInst = document.getElementById('delivery-instructions');
+        const delMaps = document.getElementById('delivery-maps');
+        
+        if (delLoc) delLoc.value = establishment;
+        if (delPer) delPer.value = contactPerson;
+        if (delCon) delCon.value = this.formatPhone(contactNumber);
+        if (delInst) delInst.value = instructions;
+        if (delMaps && address) {
+            delMaps.value = `📍 ${address}`;
+            delMaps.classList.add('populated');
+            if (this.orderData && this.orderData.deliveryDetails) {
+                this.orderData.deliveryDetails.maps = `https://www.google.com/maps?q=${lat || 0},${lng || 0}`;
+                this.orderData.deliveryDetails.lat = lat;
+                this.orderData.deliveryDetails.lng = lng;
+            }
+        }
+
         this.updateMessengerStatusUI();
         this.updateDiscountsUI();
         this.updateProfileMapPreview();
@@ -7131,6 +7514,25 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         if (msgIdHidden) msgIdHidden.value = this.user.messengerId;
         
         this.updateMessengerStatusUI();
+
+        // If a valid Facebook PSID (14-25 digit numeric value) is typed/pasted
+        // and the current profile is default or empty, trigger cloud restoration
+        if (/^\d{14,25}$/.test(cleanVal) && cleanVal !== this._lastFetchedPsid) {
+            const existing = localStorage.getItem('iceqube_user_profile');
+            let isDefaultOrEmpty = true;
+            if (existing) {
+                try {
+                    const parsed = JSON.parse(existing);
+                    if (parsed.establishment && parsed.establishment !== 'Guest Customer') {
+                        isDefaultOrEmpty = false;
+                    }
+                } catch(e) {}
+            }
+            if (isDefaultOrEmpty) {
+                this._lastFetchedPsid = cleanVal;
+                this.restoreProfileFromCloud(cleanVal);
+            }
+        }
     },
 
     async testMessengerNotification() {

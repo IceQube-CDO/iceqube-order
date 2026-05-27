@@ -602,7 +602,7 @@ const app = {
         logo.addEventListener('mouseleave', endPress);
         logo.addEventListener('touchend', endPress);
     },
-    steps: ['start', 'qty', 'schedule', 'logistics', 'payment', 'complete', 'automate', 'automate-success'],
+    steps: ['start', 'qty', 'logistics', 'schedule', 'payment', 'complete', 'automate', 'automate-success'],
     logisticsState: 'selection',
     autoData: {
         schedules: {}
@@ -1639,9 +1639,9 @@ const app = {
         // Apply defaults and flag
         this.applyQuickReorderDefaults();
 
-        // Jump straight to Schedule step (Index 2)
+        // Jump straight to Schedule step (Index 3)
         const fromStep = 0; 
-        this.currentStep = 2;
+        this.currentStep = 3;
         this.showStep(this.currentStep, 'next', fromStep);
     },
 
@@ -1781,6 +1781,22 @@ const app = {
             if (poCard) poCard.style.display = 'none';
         }
 
+        if (index === 4) {
+            if (this.orderData.logistics === 'Doorstep Delivery') {
+                this._calculatingDeliveryFee = true;
+                this.updatePaymentSummary();
+                this.calculateDeliveryFee().then(() => {
+                    this._calculatingDeliveryFee = false;
+                    this.updatePaymentSummary();
+                });
+            } else {
+                this.orderData.deliveryFee = 0;
+                this.orderData.isManualReview = false;
+                this._calculatingDeliveryFee = false;
+                this.updatePaymentSummary();
+            }
+        }
+
         // Ensure the step container and the app shell scroll to the top
         const appEl = document.getElementById('app');
         if (appEl) appEl.scrollTop = 0;
@@ -1801,7 +1817,7 @@ const app = {
         }
 
         // --- Step-Specific Initialization ---
-        if (index === 3) { // Logistics Step
+        if (index === 2) { // Logistics Step
             const perInput = document.getElementById('delivery-person');
             const conInput = document.getElementById('delivery-contact');
             
@@ -1813,6 +1829,7 @@ const app = {
             if (conInput && !conInput.value && this.user.contactNumber) {
                 conInput.value = this.formatPhone(this.user.contactNumber);
             }
+            this.validateLogisticsForm();
         }
     },
 
@@ -1820,8 +1837,8 @@ const app = {
         if (this.currentStep < this.steps.length - 1) {
             const from = this.currentStep;
             
-            // Skip Logistics (Step 3) and possibly Payment (Step 4) if it's a Quick Reorder
-            if (this.isQuickReorder && this.currentStep === 2) {
+            // Skip Logistics (Step 2) and possibly Payment (Step 4) if it's a Quick Reorder
+            if (this.isQuickReorder && this.currentStep === 3) {
                 // Ensure fees are computed before skipping logistics for ANYONE
                 if (this.orderData.logistics === 'Doorstep Delivery') {
                     if (this.orderData.deliveryDetails && (this.orderData.deliveryDetails.lat || this.orderData.deliveryDetails.maps)) {
@@ -2316,7 +2333,7 @@ const app = {
         }
 
         if (target === 'delivery') {
-            this.calculateDeliveryFee();
+            this.validateLogisticsForm();
         }
     },
 
@@ -2634,7 +2651,7 @@ const app = {
                     mapsInput.title = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
                     this.orderData.deliveryDetails.maps = `https://www.google.com/maps/@${this._tempLat},${this._tempLng},17z`;
                 }
-                this.calculateDeliveryFee();
+                this.validateLogisticsForm();
             }
             
             this.hideSearchSuggestions();
@@ -3167,9 +3184,9 @@ const app = {
                 return;
             }
 
-            // Skip Logistics (Step 3) backwards if it's a Quick Reorder
+            // Skip Logistics (Step 2) backwards if it's a Quick Reorder
             if (this.isQuickReorder && this.currentStep === 4) {
-                this.currentStep = 2; // Jump back to Schedule
+                this.currentStep = 3; // Jump back to Schedule
             } else {
                 this.currentStep--;
             }
@@ -3601,33 +3618,91 @@ const app = {
         } else if (state === 'delivery') {
             document.getElementById('logistics-delivery').classList.add('active');
             // Re-validate if pin link or coordinates are already present
-            this.calculateDeliveryFee();
+            this.validateLogisticsForm();
         } else if (state === 'pickup') {
             document.getElementById('logistics-pickup').classList.add('active');
             setTimeout(() => this.initPickupMap(), 100);
         }
     },
 
+    validateLogisticsForm() {
+        const placeOrderBtn = document.getElementById('btn-payment-delivery');
+        if (!placeOrderBtn) return;
+
+        if (this.logisticsState === 'delivery') {
+            const name = document.getElementById('delivery-location')?.value || '';
+            const person = document.getElementById('delivery-person')?.value || '';
+            const contact = document.getElementById('delivery-contact')?.value || '';
+            const pinLink = document.getElementById('delivery-maps')?.value || '';
+            const lat = this.orderData.deliveryDetails.lat;
+
+            const digits = contact.replace(/\D/g, '');
+            const isContactValid = digits.length === 11 && digits.startsWith('09');
+            const isLocationValid = name.trim().length > 0;
+            const isPersonValid = person.trim().length > 0;
+            const isMapValid = pinLink.trim().length > 0 || lat;
+
+            if (isContactValid && isLocationValid && isPersonValid && isMapValid) {
+                placeOrderBtn.disabled = false;
+            } else {
+                placeOrderBtn.disabled = true;
+            }
+        } else {
+            // Pickup is always allowed to proceed
+            placeOrderBtn.disabled = false;
+        }
+    },
+
+    saveLogisticsDetails() {
+        if (!this.isQuickReorder) {
+            if (this.logisticsState === 'delivery') {
+                this.orderData.deliveryDetails = {
+                    establishment: document.getElementById('delivery-location').value,
+                    physical_address: this._tempAddress || document.getElementById('delivery-location').value,
+                    person: document.getElementById('delivery-person').value,
+                    contact: document.getElementById('delivery-contact').value,
+                    instructions: document.getElementById('delivery-instructions').value,
+                    maps: document.getElementById('delivery-maps').value,
+                    lat: this._tempLat,
+                    lng: this._tempLng
+                };
+            } else if (this.logisticsState === 'pickup') {
+                this.orderData.deliveryDetails = {
+                    establishment: document.getElementById('pickup-establishment').value,
+                    person: document.getElementById('pickup-person').value,
+                    contact: document.getElementById('pickup-contact').value,
+                    physical_address: 'Self-Pickup @ Macabalan Hub',
+                    instructions: 'Customer Pickup',
+                    maps: '',
+                    lat: null,
+                    lng: null
+                };
+            }
+        }
+        this.nextStep();
+    },
+
     async calculateDeliveryFee() {
-        const pinLink = document.getElementById('delivery-maps').value;
+        const pinLink = this.orderData.deliveryDetails.maps || (document.getElementById('delivery-maps') ? document.getElementById('delivery-maps').value : '');
         const lat = this.orderData.deliveryDetails.lat;
         const lng = this.orderData.deliveryDetails.lng;
-        const contact = document.getElementById('delivery-contact').value;
-        const summaryDiv = document.getElementById('delivery-summary');
+        const contact = this.orderData.deliveryDetails.contact || (document.getElementById('delivery-contact') ? document.getElementById('delivery-contact').value : '');
+        const summaryDiv = document.getElementById('delivery-summary'); // May be null if removed from logistics
         const placeOrderBtn = document.getElementById('btn-payment-delivery');
 
         const digits = contact.replace(/\D/g, '');
         const isContactValid = digits.length === 11 && digits.startsWith('09');
 
         if ((!pinLink.trim() && !lat) || !isContactValid) {
-            summaryDiv.style.display = 'none';
-            placeOrderBtn.disabled = true;
+            if (summaryDiv) summaryDiv.style.display = 'none';
+            if (placeOrderBtn) placeOrderBtn.disabled = true;
             return;
         }
 
         // Simulate a tiny loading delay for realism while typing
-        placeOrderBtn.disabled = true;
-        document.getElementById('summary-delivery-fee').innerText = 'Calculating route...';
+        if (placeOrderBtn) placeOrderBtn.disabled = true;
+        const summaryFeeEl = document.getElementById('summary-delivery-fee');
+        if (summaryFeeEl) summaryFeeEl.innerText = 'Calculating route...';
 
         const { distanceKm, routeTimeMins } = await this.fetchRoutingDistance(lat && lng ? `${lng},${lat}` : pinLink);
 
@@ -3726,23 +3801,27 @@ const app = {
         this.orderData.isManualReview = isManualReview;
         this.orderData.deliveryZone = zone;
 
-        summaryDiv.style.display = 'block';
-        document.getElementById('summary-subtotal').innerText = `₱${this.orderData.total}`;
-        document.getElementById('summary-zone').innerText = zone;
-        
-        let feeText = `₱${fee}`;
-        document.getElementById('summary-delivery-fee').innerText = isManualReview ? 'Manual Review' : feeText;
-        
-        const manualReviewNotice = document.getElementById('summary-manual-review');
-        if (isManualReview) {
-            manualReviewNotice.style.display = 'block';
-            document.getElementById('summary-total').innerText = `₱${this.orderData.total} + TBD`;
-        } else {
-            manualReviewNotice.style.display = 'none';
-            document.getElementById('summary-total').innerText = `₱${this.orderData.total + this.orderData.deliveryFee}`;
+        if (summaryDiv) {
+            summaryDiv.style.display = 'block';
+            const subtotalEl = document.getElementById('summary-subtotal');
+            const zoneEl = document.getElementById('summary-zone');
+            const feeEl = document.getElementById('summary-delivery-fee');
+            const totalEl = document.getElementById('summary-total');
+            const manualReviewNotice = document.getElementById('summary-manual-review');
+            if (subtotalEl) subtotalEl.innerText = `₱${this.orderData.total}`;
+            if (zoneEl) zoneEl.innerText = zone;
+            let feeText = `₱${fee}`;
+            if (feeEl) feeEl.innerText = isManualReview ? 'Manual Review' : feeText;
+            if (isManualReview) {
+                if (manualReviewNotice) manualReviewNotice.style.display = 'block';
+                if (totalEl) totalEl.innerText = `₱${this.orderData.total} + TBD`;
+            } else {
+                if (manualReviewNotice) manualReviewNotice.style.display = 'none';
+                if (totalEl) totalEl.innerText = `₱${this.orderData.total + this.orderData.deliveryFee}`;
+            }
         }
         
-        placeOrderBtn.disabled = false;
+        if (placeOrderBtn) placeOrderBtn.disabled = false;
     },
 
     async fetchRoutingDistance(destinationStr) {
@@ -3925,34 +4004,29 @@ const app = {
             displayTotalStr = `₱${totalBase.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + TBD`;
         }
         
-        document.getElementById('btn-finish-order').innerText = `Place Order & Pay ${displayTotalStr}`;
+        const btn = document.getElementById('btn-finish-order');
+        if (btn) {
+            if (this._calculatingDeliveryFee) {
+                if (deliveryEl) deliveryEl.innerText = 'Calculating...';
+                if (totalEl) totalEl.innerText = 'Calculating...';
+                btn.innerText = 'Calculating total...';
+                btn.disabled = true;
+            } else {
+                if (this.orderData.payment) {
+                    const selectedCard = document.querySelector('#step-payment .card.selected');
+                    if (selectedCard) {
+                        this.selectPayment(this.orderData.payment, selectedCard);
+                    } else {
+                        btn.innerText = `Place Order & Pay ${displayTotalStr}`;
+                    }
+                } else {
+                    btn.innerText = `Place Order & Pay ${displayTotalStr}`;
+                }
+            }
+        }
     },
 
     goToPayment() {
-        if (this.logisticsState === 'delivery') {
-            this.orderData.deliveryDetails = {
-                establishment: document.getElementById('delivery-location').value,
-                physical_address: this._tempAddress || document.getElementById('delivery-location').value,
-                person: document.getElementById('delivery-person').value,
-                contact: document.getElementById('delivery-contact').value,
-                instructions: document.getElementById('delivery-instructions').value,
-                maps: document.getElementById('delivery-maps').value,
-                lat: this._tempLat,
-                lng: this._tempLng
-            };
-        } else if (this.logisticsState === 'pickup') {
-            this.orderData.deliveryDetails = {
-                establishment: document.getElementById('pickup-establishment').value,
-                person: document.getElementById('pickup-person').value,
-                contact: document.getElementById('pickup-contact').value,
-                physical_address: 'Self-Pickup @ Macabalan Hub',
-                instructions: 'Customer Pickup',
-                maps: '',
-                lat: null,
-                lng: null
-            };
-        }
-        
         // Populate the Payment Summary container added in index.html
         this.updatePaymentSummary();
         this.nextStep();
@@ -4027,6 +4101,11 @@ const app = {
             btn.disabled = false;
             codBox.classList.remove('active');
             poBox.classList.remove('active');
+        }
+
+        if (this._calculatingDeliveryFee) {
+            btn.innerText = 'Calculating total...';
+            btn.disabled = true;
         }
     },
 
