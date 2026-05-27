@@ -1945,7 +1945,7 @@ var admin = {
             const cleanCustName = (o.customer_name || '').trim();
             const isElite = eliteList.some(name => (name || '').trim().toLowerCase() === cleanCustName.toLowerCase()) || o.account_type === 'Elite';
             return `
-                <div style="padding: 14px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid ${isElite ? '#eab308' : '#0ea5e9'}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="padding: 14px 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 4px solid ${isElite ? '#eab308' : '#0ea5e9'}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: background 0.2s;" onclick="admin.goToOrder('${o.order_id}')" onmouseenter="this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.background='rgba(255,255,255,0.03)'">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                         <span style="font-size: 0.8rem; font-weight: 700; color: #f8fafc; font-family: 'Outfit', sans-serif;">
                             New Order <span style="color: ${isElite ? '#eab308' : '#38bdf8'};">${o.order_id}</span>
@@ -1965,6 +1965,33 @@ var admin = {
                 </div>
             `;
         }).join('') + '</div>';
+    },
+
+    goToOrder(orderId) {
+        // Switch to Order Queue view
+        this.switchView('orders');
+
+        // Wait for the view to render, then find and highlight the order row
+        setTimeout(() => {
+            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+            if (row) {
+                // Expand the row on mobile (minimized view)
+                const ordersView = document.getElementById('orders-view');
+                if (ordersView && ordersView.classList.contains('minimized-orders')) {
+                    row.classList.add('expanded');
+                }
+
+                // Scroll into view
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Flash highlight effect
+                row.style.transition = 'background 0.3s';
+                row.style.background = 'rgba(14, 165, 233, 0.15)';
+                setTimeout(() => {
+                    row.style.background = '';
+                }, 2000);
+            }
+        }, 300);
     },
 
     renderMockStats() {
