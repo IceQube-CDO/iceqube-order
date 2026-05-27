@@ -2522,7 +2522,11 @@ var admin = {
                 if (methodLower.includes('gcash') || methodLower.includes('online') || methodLower.includes('bank') || methodLower.includes('po') || methodLower.includes('purchase order') || methodLower.includes('wallet') || methodLower.includes('topup')) {
                     screenshotContainer.style.display = 'block';
                     
-                    let imgSrc = order.payment_receipt_url || order.payment_screenshot || (order.items && (order.items.payment_receipt_url || order.items.payment_screenshot));
+                    let parsedItems = order.items;
+                    if (typeof parsedItems === 'string') {
+                        try { parsedItems = JSON.parse(parsedItems); } catch (e) { parsedItems = null; }
+                    }
+                    let imgSrc = order.payment_receipt_url || order.payment_screenshot || (parsedItems && (parsedItems.payment_receipt_url || parsedItems.payment_screenshot));
                     // Fallback for previous orders that didn't save the base64 string
                     if (!imgSrc && order.order_id && order.order_id.includes('85251')) {
                         imgSrc = './assets/mock_gcash_receipt.png';
@@ -6867,7 +6871,11 @@ admin.renderPaymentVerification = function(orders) {
     }
     
     listEl.innerHTML = pendingOrders.map(o => {
-        let imgSrc = o.payment_screenshot || (o.items && o.items.payment_screenshot);
+        let parsedItems = o.items;
+        if (typeof parsedItems === 'string') {
+            try { parsedItems = JSON.parse(parsedItems); } catch (e) { parsedItems = null; }
+        }
+        let imgSrc = o.payment_screenshot || (parsedItems && parsedItems.payment_screenshot);
         if (!imgSrc && o.order_id === '#IQ-85251') {
             imgSrc = './assets/mock_gcash_receipt.png';
         } else if (!imgSrc || imgSrc === 'null') {
@@ -6959,7 +6967,11 @@ admin.openFlaggedArchive = function() {
         listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 10px;">Archive is empty</div>';
     } else {
         listEl.innerHTML = archive.map(o => {
-            let imgSrc = o.payment_screenshot || (o.items && o.items.payment_screenshot);
+            let parsedItems = o.items;
+            if (typeof parsedItems === 'string') {
+                try { parsedItems = JSON.parse(parsedItems); } catch (e) { parsedItems = null; }
+            }
+            let imgSrc = o.payment_screenshot || (parsedItems && parsedItems.payment_screenshot);
             if (!imgSrc || imgSrc === 'null') {
                 imgSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjYwMCIgdmlld0JveD0iMCAwIDQwMCA2MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9IiNlMmU4ZjAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iIzY0NzQ4YiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBTY3JlZW5zaG90IFVwbG9hZGVkPC90ZXh0Pjwvc3ZnPg==';
             }
