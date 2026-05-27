@@ -2005,16 +2005,20 @@
                 color: #ffffff !important;
             }
             /* Address & Note (Multi-line fields) */
-            #orders-view .cashflow-table td:nth-child(4),
-            #orders-view .cashflow-table td:nth-child(5) {
+            #pending-dispatch-body tr td:nth-child(4),
+            #pending-dispatch-body tr td:nth-child(5),
+            #pickup-ledger-body tr td:nth-child(4),
+            #order-ledger-body tr td:nth-child(4) {
                 align-items: flex-start !important;
                 font-size: 0.78rem !important;
                 line-height: 1.35 !important;
                 max-width: none !important;
                 width: 100% !important;
             }
-            #orders-view .cashflow-table td:nth-child(4) > *,
-            #orders-view .cashflow-table td:nth-child(5) > span {
+            #pending-dispatch-body tr td:nth-child(4) > *,
+            #pending-dispatch-body tr td:nth-child(5) > span,
+            #pickup-ledger-body tr td:nth-child(4) > *,
+            #order-ledger-body tr td:nth-child(4) > * {
                 max-width: 62% !important;
                 white-space: normal !important;
                 overflow: visible !important;
@@ -2022,53 +2026,68 @@
                 text-align: right !important;
                 display: block !important;
             }
-            #orders-view .cashflow-table td:nth-child(5) > span {
+            #pending-dispatch-body tr td:nth-child(5) > span,
+            #pickup-ledger-body tr td:nth-child(4) > span {
                 color: #cbd5e1 !important;
                 font-style: italic !important;
             }
-            /* Schedule */
-            #orders-view .cashflow-table td:nth-child(6) {
+            /* Schedules */
+            #pending-dispatch-body tr td:nth-child(6),
+            #pickup-ledger-body tr td:nth-child(5),
+            #order-ledger-body tr td:nth-child(5) {
                 font-size: 0.78rem !important;
             }
             /* Items */
-            #orders-view .cashflow-table td:nth-child(7) {
+            #pending-dispatch-body tr td:nth-child(7),
+            #pickup-ledger-body tr td:nth-child(6),
+            #order-ledger-body tr td:nth-child(8) {
                 align-items: flex-start !important;
                 font-size: 0.78rem !important;
                 color: #cbd5e1 !important;
                 line-height: 1.35 !important;
-            }
-            #orders-view .cashflow-table td:nth-child(7) {
                 max-width: 100% !important;
                 white-space: normal !important;
             }
             /* Custom wrapper for items list content to limit width and right-align */
-            #orders-view .cashflow-table td:nth-child(7) br {
+            #pending-dispatch-body tr td:nth-child(7) br,
+            #pickup-ledger-body tr td:nth-child(6) br,
+            #order-ledger-body tr td:nth-child(8) br {
                 display: block;
                 content: "";
                 margin-top: 2px;
             }
-            /* Payment */
-            #orders-view .cashflow-table td:nth-child(8) {
+            /* Payments */
+            #pending-dispatch-body tr td:nth-child(8),
+            #pickup-ledger-body tr td:nth-child(7),
+            #order-ledger-body tr td:nth-child(9) {
                 font-size: 0.78rem !important;
                 font-weight: 600 !important;
                 color: #f1f5f9 !important;
             }
             /* Financial/Numeric columns */
-            #orders-view .cashflow-table td:nth-child(9),
-            #orders-view .cashflow-table td:nth-child(10),
-            #orders-view .cashflow-table td:nth-child(11) {
+            #pending-dispatch-body tr td:nth-child(9),
+            #pending-dispatch-body tr td:nth-child(10),
+            #pending-dispatch-body tr td:nth-child(11),
+            #pickup-ledger-body tr td:nth-child(8),
+            #order-ledger-body tr td:nth-child(10),
+            #order-ledger-body tr td:nth-child(11),
+            #order-ledger-body tr td:nth-child(12) {
                 font-family: 'Inter', sans-serif !important;
                 font-weight: 700 !important;
                 font-size: 0.8rem !important;
             }
-            #orders-view .cashflow-table td:nth-child(9) {
+            #pending-dispatch-body tr td:nth-child(9),
+            #pickup-ledger-body tr td:nth-child(8),
+            #order-ledger-body tr td:nth-child(10) {
                 color: #38bdf8 !important;
                 font-size: 0.86rem !important;
             }
-            #orders-view .cashflow-table td:nth-child(10) {
+            #pending-dispatch-body tr td:nth-child(10),
+            #order-ledger-body tr td:nth-child(11) {
                 color: #cbd5e1 !important;
             }
-            #orders-view .cashflow-table td:nth-child(11) {
+            #pending-dispatch-body tr td:nth-child(11),
+            #order-ledger-body tr td:nth-child(12) {
                 color: #94a3b8 !important;
             }
             #orders-view .cashflow-table td::before {
@@ -2103,16 +2122,17 @@
             #order-ledger-body tr td:nth-child(2)::before { content: "ORDER ID"; }
             #order-ledger-body tr td:nth-child(3)::before { display: none !important; }
             #order-ledger-body tr td:nth-child(4)::before { content: "ADDRESS"; }
-            #order-ledger-body tr td:nth-child(5)::before { content: "GEOTAG FILE"; }
-            #order-ledger-body tr td:nth-child(6)::before { content: "TIME DELIVERED"; }
-            #order-ledger-body tr td:nth-child(7)::before { content: "ITEMS"; }
-            #order-ledger-body tr td:nth-child(8)::before { content: "PAYMENT"; }
-            #order-ledger-body tr td:nth-child(9)::before { content: "ITEM TOTAL"; }
-            #order-ledger-body tr td:nth-child(10)::before { content: "DELIVERY FEE"; }
-            #order-ledger-body tr td:nth-child(11)::before { content: "BULK WEIGHT"; }
-            #order-ledger-body tr td:nth-child(12)::before { content: "RIDER"; }
-            #order-ledger-body tr td:nth-child(13)::before { content: "STATUS"; }
-            #order-ledger-body tr td:nth-child(14) { display: none !important; }
+            #order-ledger-body tr td:nth-child(5)::before { content: "SCHEDULE"; }
+            #order-ledger-body tr td:nth-child(6)::before { content: "GEOTAG FILE"; }
+            #order-ledger-body tr td:nth-child(7)::before { content: "TIME DELIVERED"; }
+            #order-ledger-body tr td:nth-child(8)::before { content: "ITEMS"; }
+            #order-ledger-body tr td:nth-child(9)::before { content: "PAYMENT"; }
+            #order-ledger-body tr td:nth-child(10)::before { content: "ITEM TOTAL"; }
+            #order-ledger-body tr td:nth-child(11)::before { content: "DELIVERY FEE"; }
+            #order-ledger-body tr td:nth-child(12)::before { content: "BULK WEIGHT"; }
+            #order-ledger-body tr td:nth-child(13)::before { content: "RIDER"; }
+            #order-ledger-body tr td:nth-child(14)::before { content: "STATUS"; }
+            #order-ledger-body tr td:nth-child(15) { display: none !important; }
             
             /* Labels for Pickup Ledger Table */
             #pickup-ledger-body tr td:nth-child(1)::before { content: "TIME"; }
@@ -2672,6 +2692,7 @@
                                 <th>ORDER ID</th>
                                 <th>CUSTOMER</th>
                                 <th>DELIVERY ADDRESS</th>
+                                <th>DELIVERY SCHEDULE</th>
                                 <th style="width: 80px; text-align: center;" title="Geotag File">GEOTAG FILE</th>
                                 <th>TIME DELIVERED</th>
                                 <th>ITEMS</th>
@@ -4082,7 +4103,7 @@
 
     <script src="js/app_header.js?v=2.4.0"></script>
     <script src="js/sync.js?v=2.4.0"></script>
-    <script src="js/admin_v24.js?v=2.5.3"></script>
+    <script src="js/admin_v24.js?v=2.5.4"></script>
 
 
     <!-- PWA Install Prompt -->
