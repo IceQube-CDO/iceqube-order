@@ -2107,16 +2107,19 @@ var admin = {
     openPhotoModal(photoUrl, orderId) {
         console.log(`🖼️ Viewing Payment Screenshot for Order: ${orderId}`);
         const modal = document.getElementById('modal-photo-preview');
-        const img = document.getElementById('preview-img');
         const caseIdEl = document.getElementById('photo-preview-id');
-        const loadingText = document.getElementById('photo-loading-text');
         
         const receiptPane = document.getElementById('verification-receipt-pane');
         const actionsDiv = document.getElementById('verification-actions');
         const verifyBtn = document.getElementById('btn-verify-modal');
         const flagBtn = document.getElementById('btn-flag-modal');
         
-        if (!modal || !img) return;
+        const photoContainer = document.getElementById('photo-preview-container');
+        
+        if (!modal) return;
+
+        // Hide photo container since payment screenshot is already shown inside the receipt at the bottom.
+        if (photoContainer) photoContainer.style.display = 'none';
 
         if (caseIdEl) caseIdEl.innerText = `Order ID: ${orderId}`;
         
@@ -2152,65 +2155,55 @@ var admin = {
             receiptPane.style.display = 'none';
             actionsDiv.style.display = 'none';
         }
+        
+        modal.classList.add('active');
+    },
 
+    viewPhoto(caseId, photoUrl) {
+        console.log(`🖼️ Viewing Photo for Case: ${caseId}`);
+        const modal = document.getElementById('modal-photo-preview');
+        const img = document.getElementById('preview-img');
+        const caseIdEl = document.getElementById('photo-preview-id');
+        const loadingText = document.getElementById('photo-loading-text');
+        const photoContainer = document.getElementById('photo-preview-container');
+        const receiptPane = document.getElementById('verification-receipt-pane');
+        const actionsDiv = document.getElementById('verification-actions');
+        
+        if (!modal || !img) return;
+
+        // Hide receipt pane and verification actions
+        if (receiptPane) receiptPane.style.display = 'none';
+        if (actionsDiv) actionsDiv.style.display = 'none';
+
+        // Show photo container
+        if (photoContainer) photoContainer.style.display = 'flex';
+
+        if (caseIdEl) caseIdEl.innerText = `Case ID: ${caseId}`;
         if (loadingText) {
             loadingText.style.display = 'block';
             loadingText.innerText = 'Loading High-Res Evidence...';
             loadingText.style.animation = 'pulse 2s infinite';
         }
-        
-        img.style.opacity = '0';
-        img.src = ''; // Clear previous
-        
-        let finalUrl = photoUrl;
-        if (photoUrl && photoUrl.startsWith('iceqube-storage.app')) {
-            finalUrl = 'https://images.unsplash.com/photo-1551717727-463e260907a7?q=80&w=1200&auto=format&fit=crop';
-        } else if (photoUrl && !photoUrl.startsWith('http') && !photoUrl.startsWith('data:') && !photoUrl.startsWith('./')) {
-            finalUrl = `https://${photoUrl}`;
-        }
-
-        img.src = finalUrl;
-        modal.classList.add('active');
-
-        setTimeout(() => {
-            if (loadingText && loadingText.style.display !== 'none') {
-                loadingText.innerText = 'Storage Link Secured';
-                loadingText.style.animation = 'none';
-            }
-        }, 5000);
-    },
-
-    viewPhoto(caseId, photoUrl) {
-        console.log(`\ud83d\uddbc\ufe0f Viewing Photo for Case: ${caseId}`);
-        const modal = document.getElementById('modal-photo-preview');
-        const img = document.getElementById('preview-img');
-        const caseIdEl = document.getElementById('photo-preview-id');
-        const loadingText = document.getElementById('photo-loading-text');
-        
-        if (!modal || !img) return;
-
-        caseIdEl.innerText = `Case ID: ${caseId}`;
-        if (loadingText) loadingText.style.display = 'block';
         img.style.opacity = '0';
         img.src = ''; // Clear previous
         
         // Handle mock vs real URLs
         let finalUrl = photoUrl;
-        if (photoUrl.startsWith('iceqube-storage.app')) {
+        if (photoUrl && photoUrl.startsWith('iceqube-storage.app')) {
             // For demo, fallback to a high-quality ice related image if it's the mock storage URL
             finalUrl = 'https://images.unsplash.com/photo-1551717727-463e260907a7?q=80&w=1200&auto=format&fit=crop';
-        } else if (!photoUrl.startsWith('http') && !photoUrl.startsWith('data:')) {
+        } else if (photoUrl && !photoUrl.startsWith('http') && !photoUrl.startsWith('data:') && !photoUrl.startsWith('./')) {
             finalUrl = `https://${photoUrl}`;
         }
 
-        console.log(`\ud83d\udd17 Final URL: ${finalUrl}`);
+        console.log(`🔗 Final URL: ${finalUrl}`);
         img.src = finalUrl;
         modal.classList.add('active');
 
         // Safety timeout: if image hasn't loaded in 5 seconds, hide loading text anyway
         setTimeout(() => {
             if (loadingText && loadingText.style.display !== 'none') {
-                console.log('\u23f3 Photo loading timed out, forcing UI update.');
+                console.log('⏳ Photo loading timed out, forcing UI update.');
                 loadingText.innerText = 'Storage Link Secured (Evidence Ready)';
                 loadingText.style.animation = 'none';
             }

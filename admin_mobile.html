@@ -4309,6 +4309,14 @@
                 <div id="verification-receipt-pane" style="width: 100%; background: #020617; border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); overflow-y: auto; max-height: 70vh; display: none;">
                     <!-- Injected by JS -->
                 </div>
+
+                <!-- Photo Pane -->
+                <div id="photo-preview-container" style="width: 100%; min-height: 300px; background: #020617; border-radius: 16px; display: none; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.05);">
+                    <div id="photo-loading-text" style="position: absolute; color: #64748b; font-size: 0.8rem; font-weight: 600; animation: pulse 2s infinite;">Loading High-Res Evidence...</div>
+                    <img id="preview-img" src="" alt="Evidence" style="max-width: 100%; max-height: 60vh; object-fit: contain; z-index: 5; opacity: 0; transition: opacity 0.3s ease;" 
+                         onload="document.getElementById('photo-loading-text').style.display='none'; this.style.opacity='1';"
+                         onerror="document.getElementById('photo-loading-text').style.display='none'; this.style.opacity='1'; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwZWE1ZTkiIHN0cm9rZS13aWR0aD0iMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxwYXRoIGQ9Ik03IDdoMTB2MTBINyIvPjx0ZXh0IHg9IjUiIHk9IjE1IiBmaWxsPSIjMGVhNWU5IiBzdHlsZT0iZm9udC1zaXplOiAycHg7IGZvbnQtZmFtaWx5OiBzYW5zLXNlcmlmOyI+SU5TUEVDVElPTjwvdGV4dD48L3N2Zz4=';">
+                </div>
             </div>
             
             <div style="margin-top: 1rem; padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
