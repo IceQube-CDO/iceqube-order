@@ -347,6 +347,167 @@ serve(async (req) => {
           status: 200,
         });
       }
+
+      if (body.action === 'check_scheduled_reminders') {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        
+        if (!supabaseUrl || !supabaseAnonKey) {
+          return new Response(JSON.stringify({ error: "Missing Supabase credentials" }), {
+            headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+            status: 500,
+          });
+        }
+        
+        const queryUrl = `${supabaseUrl}/rest/v1/orders?delivery_schedule=neq.Immediate&or=%28reminder_sent.is.null,reminder_sent.eq.false%29`;
+        
+        let orders: any[] = [];
+        try {
+          const res = await fetch(queryUrl, {
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Authorization': `Bearer ${supabaseAnonKey}`
+            }
+          });
+          if (res.ok) {
+            orders = await res.json();
+          } else {
+            const errText = await res.text();
+            console.error("[Reminder] Failed to fetch orders:", res.status, errText);
+            if (errText.includes("reminder_sent") || errText.includes("column does not exist")) {
+              return new Response(JSON.stringify({ 
+                success: false, 
+                error: "Missing database column: reminder_sent. Please run the SQL statement: ALTER TABLE orders ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN DEFAULT false;" 
+              }), {
+                headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+                status: 400,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[Reminder] Fetch orders error:", err);
+        }
+        
+        let activeAdmins: string[] = [];
+        try {
+          const res = await fetch(`${supabaseUrl}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_TEAM_MEMBERS&select=items`, {
+            headers: { 'apikey': supabaseAnonKey, 'Authorization': `Bearer ${supabaseAnonKey}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            let itemsData = data[0]?.items;
+            if (typeof itemsData === 'string') {
+              try { itemsData = JSON.parse(itemsData); } catch (e) {}
+            }
+            if (Array.isArray(itemsData)) {
+              activeAdmins = itemsData
+                .filter((m: any) => m.status === 'Active' && 
+                              (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
+                              m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger))
+                .map((m: any) => m.messenger);
+            }
+          }
+        } catch (err) {
+          console.warn("[Reminder] Failed to fetch team members:", err);
+        }
+        
+        if (activeAdmins.length === 0) {
+          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"];
+        }
+        
+        const parseScheduleToDate = (scheduleStr: string): Date | null => {
+          if (!scheduleStr || scheduleStr === 'Immediate') return null;
+          let parsed = new Date(scheduleStr);
+          if (!isNaN(parsed.getTime())) return parsed;
+          const parts = scheduleStr.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            const dateStr = parts[0];
+            const timeStr = parts[1];
+            const ymd = dateStr.split('-');
+            const hm = timeStr.split(':');
+            if (ymd.length === 3) {
+              const year = parseInt(ymd[0], 10);
+              const month = parseInt(ymd[1], 10) - 1;
+              const day = parseInt(ymd[2], 10);
+              const hour = hm[0] ? parseInt(hm[0], 10) : 0;
+              const minute = hm[1] ? parseInt(hm[1], 10) : 0;
+              const second = hm[2] ? parseInt(hm[2], 10) : 0;
+              parsed = new Date(year, month, day, hour, minute, second);
+              if (!isNaN(parsed.getTime())) return parsed;
+            }
+          }
+          return null;
+        };
+        
+        const now = new Date();
+        const triggeredReminders: any[] = [];
+        const activeStatuses = ['Pending', 'Awaiting Acceptance', 'Dispatched'];
+        
+        for (const order of orders) {
+          if (order.is_real === false || order.order_id === 'CONFIG_ICEQUBE_TEAM_MEMBERS' || order.customer_name === 'SYSTEM_CONFIG') {
+            continue;
+          }
+          
+          if (!activeStatuses.includes(order.delivery_status)) {
+            continue;
+          }
+          
+          const schedDate = parseScheduleToDate(order.delivery_schedule);
+          if (!schedDate) continue;
+          
+          const diffMinutes = (schedDate.getTime() - now.getTime()) / (1000 * 60);
+          
+          if (diffMinutes >= 45 && diffMinutes <= 75) {
+            const itemsText = formatItems(order.items);
+            const totalGross = Number(order.total_price || 0);
+            const scheduleTimeStr = schedDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+            const scheduleDateStr = schedDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            
+            const adminMsg = `⏰ 1-HOUR SCHEDULED DELIVERY REMINDER ⏰\n` +
+                             `---------------------------------------------\n` +
+                             `👤 Customer: ${order.customer_name}\n` +
+                             `📍 Address: ${order.delivery_address || 'N/A'}\n` +
+                             `📦 Items: ${itemsText}\n` +
+                             `💵 Total: ₱${totalGross.toFixed(2)} (${order.payment_method || 'Cash'})\n` +
+                             `⏰ Scheduled For: ${scheduleDateStr}, ${scheduleTimeStr}\n` +
+                             `🛵 Rider: ${order.rider || 'Unassigned'}.`;
+            
+            const adminPromises = activeAdmins.map(async (adminPsid) => {
+              try {
+                await sendFBMessage(adminPsid, adminMsg);
+              } catch (err) {
+                console.error(`[Reminder] Failed to send to admin ${adminPsid}:`, err);
+              }
+            });
+            await Promise.all(adminPromises);
+            
+            try {
+              const patchRes = await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${order.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'apikey': supabaseAnonKey,
+                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ reminder_sent: true })
+              });
+              if (!patchRes.ok) {
+                console.error(`[Reminder] Failed to mark order ${order.order_id} as sent:`, patchRes.status, await patchRes.text());
+              }
+            } catch (err) {
+              console.error(`[Reminder] Error patching order ${order.order_id}:`, err);
+            }
+            
+            triggeredReminders.push({ order_id: order.order_id, customer: order.customer_name, schedule: order.delivery_schedule });
+          }
+        }
+        
+        return new Response(JSON.stringify({ success: true, processed: triggeredReminders.length, reminders: triggeredReminders }), {
+          headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+          status: 200,
+        });
+      }
       
       recipientId = body.recipientId;
       message = body.message;
