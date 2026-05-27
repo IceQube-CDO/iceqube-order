@@ -268,11 +268,6 @@ const app = {
             this.updateMessengerStatusUI();
             const msgIdInput = document.getElementById('profile-messenger-id');
             if (msgIdInput) msgIdInput.value = psid;
-            
-            // Show success toast
-            setTimeout(() => {
-                this.showToast('✅ Messenger Account Linked Automatically!', 'success');
-            }, 1000);
         } else {
             // Fallback 1: Last known technical PSID
             const storedPsid = localStorage.getItem('ice_messenger_psid');

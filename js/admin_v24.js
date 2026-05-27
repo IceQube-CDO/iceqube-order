@@ -264,62 +264,85 @@ var admin = {
 
     async toggleRealStatus(type, id) {
         console.log(`🛡️ Toggling Real Status for ${type}:${id}`);
-        let key = '';
-        if (type === 'order') key = 'ice_orders';
-        else if (type === 'cashflow') key = 'ice_cashflow';
-        else return;
-
-        // 1. Detect current status
-        const localData = JSON.parse(localStorage.getItem(key) || '[]');
-        const localIdx = localData.findIndex(item => (item.id || item.order_id || item.timestamp) == id);
         
-        let currentStatus = true; // Default to REAL for legacy data
-        if (localIdx > -1) {
-            const val = localData[localIdx].is_real;
-            currentStatus = (val === undefined || val === null) ? true : !!val;
-        } else {
-            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
-            if (memoryItem) {
-                const val = memoryItem.is_real;
-                currentStatus = (val === undefined || val === null) ? true : !!val;
+        if (type === 'cashflow') {
+            // Find if it is a MANUAL cashflow entry
+            const localIdx = this.manualEntries.findIndex(item => item.timestamp == id);
+            if (localIdx > -1) {
+                const currentStatus = this.manualEntries[localIdx].is_real !== false;
+                const newStatus = !currentStatus;
+                this.manualEntries[localIdx].is_real = newStatus;
+                this.saveManualEntries();
+                this.updateDashboardUI(this.allOrders);
+                return;
+            }
+            
+            // Otherwise, it must be an AUTO cashflow entry (backed by an order)
+            // Let's find the corresponding order using created_at
+            const order = this.allOrders.find(o => o.created_at === id || (o.created_at && new Date(o.created_at).getTime() === new Date(id).getTime()));
+            if (order) {
+                await this.toggleRealStatus('order', order.id || order.order_id);
+                return;
+            } else {
+                console.warn(`Could not find manual entry or order matching timestamp: ${id}`);
+                return;
             }
         }
 
-        const newStatus = !currentStatus;
-
-        // 2. Update Local State
-        if (localIdx > -1) {
-            localData[localIdx].is_real = newStatus;
-            localStorage.setItem(key, JSON.stringify(localData));
-        }
-
-        // 3. Update Memory State & UI Immediately
-        const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
-        if (memoryItem) memoryItem.is_real = newStatus;
-        this.updateOrderQueue(this.allOrders);
-
-        // 4. Cloud Sync
-        if (type === 'order' && !id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
-            try {
-                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-                const isInt = /^\d+$/.test(id);
-                const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ is_real: newStatus })
-                });
-                if (response.ok) {
-                    console.log('✅ Real Status Synced to Cloud');
-                } else {
-                    console.error('❌ Cloud Sync Failed:', response.status);
+        if (type === 'order') {
+            const key = 'ice_orders';
+            const localData = JSON.parse(localStorage.getItem(key) || '[]');
+            const localIdx = localData.findIndex(item => (item.id || item.order_id) == id);
+            
+            let currentStatus = true; // Default to REAL for legacy data
+            if (localIdx > -1) {
+                const val = localData[localIdx].is_real;
+                currentStatus = (val === undefined || val === null) ? true : !!val;
+            } else {
+                const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
+                if (memoryItem) {
+                    const val = memoryItem.is_real;
+                    currentStatus = (val === undefined || val === null) ? true : !!val;
                 }
-            } catch (err) {
-                console.warn('Could not sync Real Status to cloud:', err);
+            }
+
+            const newStatus = !currentStatus;
+
+            // 2. Update Local State
+            if (localIdx > -1) {
+                localData[localIdx].is_real = newStatus;
+                localStorage.setItem(key, JSON.stringify(localData));
+            }
+
+            // 3. Update Memory State & UI Immediately
+            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
+            if (memoryItem) memoryItem.is_real = newStatus;
+            
+            this.updateDashboardUI(this.allOrders);
+
+            // 4. Cloud Sync
+            if (!id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                try {
+                    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                    const isInt = /^\d+$/.test(id);
+                    const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+                    const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ is_real: newStatus })
+                    });
+                    if (response.ok) {
+                        console.log('✅ Real Status Synced to Cloud');
+                    } else {
+                        console.error('❌ Cloud Sync Failed:', response.status);
+                    }
+                } catch (err) {
+                    console.warn('Could not sync Real Status to cloud:', err);
+                }
             }
         }
     },
@@ -1447,25 +1470,20 @@ var admin = {
         this.updateOrderQueue(orders);
 
         // 2. Stats Calculation
-        const today = new Date();
-        const todayStr = today.toDateString();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toDateString();
+        const realOrders = orders.filter(o => o.is_real !== false);
+        const todaysOrders = realOrders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === todayStr);
+        const yesterdaysOrders = realOrders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === yesterdayStr);
 
-        const todaysOrders = orders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === todayStr);
-        const yesterdaysOrders = orders.filter(o => new Date(o.created_at || o.timestamp || Date.now()).toDateString() === yesterdayStr);
-
-        const pending = orders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
-        const dispatched = orders.filter(o => o.delivery_status === 'Dispatched').length;
-        const delivered = orders.filter(o => o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up').length;
+        const pending = realOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
+        const dispatched = realOrders.filter(o => o.delivery_status === 'Dispatched').length;
+        const delivered = realOrders.filter(o => o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up').length;
         
         let revenue = todaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
         let yesterdayRevenue = yesterdaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
 
         if (this.manualEntries) {
             this.manualEntries.forEach(entry => {
-                if (entry.category === 'Sales' && entry.type === 'IN') {
+                if (entry.is_real !== false && entry.category === 'Sales' && entry.type === 'IN') {
                     const entryDateStr = new Date(entry.timestamp).toDateString();
                     if (entryDateStr === todayStr) {
                         revenue += (parseFloat(entry.amount) || 0);
@@ -2631,7 +2649,7 @@ var admin = {
         const manualEntries = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
         
         // 1. Process Automatic Entries from Orders (Revenue)
-        const autoEntries = syncedOrders.map(o => {
+        const autoEntries = syncedOrders.filter(o => o.is_real !== false).map(o => {
             let amount = parseFloat(o.total_price) || 0;
             return {
                 timestamp: o.created_at,
@@ -2641,7 +2659,8 @@ var admin = {
             };
         });
 
-        const allEntries = [...autoEntries, ...manualEntries];
+        const activeManualEntries = manualEntries.filter(e => e.is_real !== false);
+        const allEntries = [...autoEntries, ...activeManualEntries];
         
         // 2. Filter by period
         const now = new Date();
@@ -3027,7 +3046,8 @@ var admin = {
                 description: `Order ${o.order_id} - ${o.customer_name}`,
                 type: 'IN',
                 amount: amount,
-                source: 'AUTO'
+                source: 'AUTO',
+                is_real: o.is_real
             };
         });
 
@@ -3055,6 +3075,7 @@ var admin = {
         let totalIn = 0;
         let totalOut = 0;
         filteredEntries.forEach(entry => {
+            if (entry.is_real === false) return; // Skip test entries for actual business totals!
             const amount = entry.amount || 0;
             if (entry.type === 'IN') totalIn += amount;
             else totalOut += amount;
@@ -5760,8 +5781,25 @@ function openCustomerDrawer(customerId) {
         const messengerInput = document.getElementById('drawer-messenger-input');
         if (messengerInput) messengerInput.value = messengerVal;
 
+        const nameInput = document.getElementById('drawer-customer-name-input');
+        if (nameInput) nameInput.value = cleanName;
+
+        const mergeSelect = document.getElementById('merge-target-select');
+        if (mergeSelect) {
+            let optionsHtml = '<option value="">Select Target Account...</option>';
+            if (admin.customerData) {
+                admin.customerData.forEach(c => {
+                    if (c.name && c.name.trim() !== cleanName) {
+                        optionsHtml += `<option value="${c.name.replace(/"/g, '&quot;')}">${c.name}</option>`;
+                    }
+                });
+            }
+            mergeSelect.innerHTML = optionsHtml;
+        }
+
         // Reset profile edit mode back to default display
         toggleProfileEdit(false);
+        if (typeof toggleMergeSection === 'function') toggleMergeSection(false);
         
         // Load Discounts & Tier
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
@@ -6029,6 +6067,14 @@ function toggleProfileEdit(isEditing) {
 
     if (!displayMode || !editMode || !editBtn) return;
 
+    const fuseSection = document.getElementById('fuse-section-container');
+    if (fuseSection) {
+        fuseSection.style.display = isEditing ? 'block' : 'none';
+    }
+    if (!isEditing && typeof toggleMergeSection === 'function') {
+        toggleMergeSection(false);
+    }
+
     if (isEditing) {
         displayMode.style.display = 'none';
         editMode.style.display = 'flex';
@@ -6058,26 +6104,288 @@ function toggleProfileEdit(isEditing) {
     }
 }
 
-function saveCustomerProfile() {
-    const customerName = document.getElementById('drawer-customer-name').innerText.trim();
+async function syncCustomerRenameToCloud(originalName, newName) {
+    if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+        try {
+            const queryStr = `customer_name=eq.${encodeURIComponent(originalName)}`;
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ customer_name: newName })
+            });
+
+            if (response.ok) {
+                console.log(`✅ Successfully updated orders on Supabase from '${originalName}' to '${newName}'`);
+                return true;
+            } else {
+                console.error(`❌ Failed to update orders on Supabase:`, response.status);
+                return false;
+            }
+        } catch (err) {
+            console.error(`❌ Network error updating orders on Supabase:`, err);
+            return false;
+        }
+    }
+    return true;
+}
+
+async function renameCustomer(originalName, newName) {
+    if (!newName || newName === originalName) return true;
+
+    // Check if newName already exists in profiles or customerData (except it's case variation)
+    if (admin.customerData) {
+        const targetExists = admin.customerData.some(c => c.name.toLowerCase() === newName.toLowerCase() && c.name !== originalName);
+        if (targetExists) {
+            const proceed = confirm(`An account named '${newName}' already exists. Do you want to FUSE '${originalName}' into '${newName}' instead?`);
+            if (proceed) {
+                // Set the select element value and run merge
+                const mergeSelect = document.getElementById('merge-target-select');
+                if (mergeSelect) {
+                    mergeSelect.value = newName;
+                    await mergeCustomerAccount();
+                }
+                return false;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    const confirmRename = confirm(`Rename customer from '${originalName}' to '${newName}'? This will update all of their order history and customer details.`);
+    if (!confirmRename) return false;
+
+    console.log(`[SYSTEM] Renaming customer '${originalName}' to '${newName}'...`);
+
+    // 1. Update orders in localStorage
+    let localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+    let countUpdated = 0;
+    localOrders.forEach(o => {
+        if (o.customer_name && o.customer_name.trim().toLowerCase() === originalName.toLowerCase()) {
+            o.customer_name = newName;
+            countUpdated++;
+        }
+    });
+    localStorage.setItem('ice_orders', JSON.stringify(localOrders));
+
+    // 2. Cloud Sync (Supabase)
+    await syncCustomerRenameToCloud(originalName, newName);
+
+    // 3. Rename Profiles
+    const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+    if (profiles[originalName]) {
+        const oldProfile = profiles[originalName];
+        profiles[newName] = {
+            ...oldProfile,
+            establishment: newName
+        };
+        delete profiles[originalName];
+    } else {
+        profiles[newName] = {
+            establishment: newName,
+            contactPerson: newName
+        };
+    }
+    localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
+
+    // Broadcast profile update
+    if (window.IceQubeSync && typeof window.IceQubeSync.publishProfileUpdate === 'function') {
+        window.IceQubeSync.publishProfileUpdate(profiles[newName]);
+    } else {
+        const channel = new BroadcastChannel('iceqube_sync_channel');
+        channel.postMessage({
+            type: 'PROFILE_UPDATED',
+            payload: profiles[newName]
+        });
+        channel.close();
+    }
+
+    // 4. Rename Discounts
+    const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+    if (discounts[originalName]) {
+        discounts[newName] = discounts[originalName];
+        delete discounts[originalName];
+        localStorage.setItem('iceqube_customer_discounts', JSON.stringify(discounts));
+    }
+
+    // 5. Rename in Elite list
+    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+    if (eliteList.includes(originalName)) {
+        eliteList = eliteList.map(name => name === originalName ? newName : name);
+        localStorage.setItem('iceqube_elite_customers', JSON.stringify(eliteList));
+    }
+
+    // Force sync and storage events
+    localStorage.setItem('iceqube_system_purged', Date.now());
+    if (window.IceQubeSync && typeof window.IceQubeSync.publishPurge === 'function') {
+        window.IceQubeSync.publishPurge();
+    }
+
+    alert(`Customer renamed to '${newName}'.\n${countUpdated} orders updated.`);
+    return true;
+}
+
+async function mergeCustomerAccount() {
+    const sourceName = document.getElementById('drawer-customer-name').innerText.trim();
+    const targetName = document.getElementById('merge-target-select').value;
+
+    if (!targetName) {
+        alert("Please select a target account to fuse this account into.");
+        return;
+    }
+
+    if (sourceName === targetName) {
+        alert("Cannot fuse an account into itself.");
+        return;
+    }
+
+    const confirmMerge = confirm(`Are you sure you want to fuse '${sourceName}' into '${targetName}'?\n\nThis will:\n1. Rename all orders for '${sourceName}' to '${targetName}'.\n2. Consolidate profile & contact info.\n3. Combine lifetime value stats.\n4. Delete the '${sourceName}' customer record.\n\nThis action cannot be undone.`);
+    if (!confirmMerge) return;
+
+    console.log(`[SYSTEM] Merging customer '${sourceName}' into '${targetName}'...`);
+
+    // 1. Update orders in localStorage
+    let localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+    let countUpdated = 0;
+    localOrders.forEach(o => {
+        if (o.customer_name && o.customer_name.trim().toLowerCase() === sourceName.toLowerCase()) {
+            o.customer_name = targetName;
+            countUpdated++;
+        }
+    });
+    localStorage.setItem('ice_orders', JSON.stringify(localOrders));
+
+    // Cloud Sync (Supabase)
+    await syncCustomerRenameToCloud(sourceName, targetName);
+
+    // 2. Merge Profiles
+    const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+    const sourceProfile = profiles[sourceName] || {};
+    const targetProfile = profiles[targetName] || {};
+
+    const mergedProfile = {
+        establishment: targetName,
+        contactPerson: targetProfile.contactPerson || sourceProfile.contactPerson || targetName,
+        contactNumber: targetProfile.contactNumber || sourceProfile.contactNumber || '',
+        address: targetProfile.address || sourceProfile.address || '',
+        messengerId: targetProfile.messengerId || sourceProfile.messengerId || ''
+    };
+
+    profiles[targetName] = mergedProfile;
+    delete profiles[sourceName];
+    localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
+
+    // Broadcast profile update
+    if (window.IceQubeSync && typeof window.IceQubeSync.publishProfileUpdate === 'function') {
+        window.IceQubeSync.publishProfileUpdate(mergedProfile);
+    } else {
+        const channel = new BroadcastChannel('iceqube_sync_channel');
+        channel.postMessage({
+            type: 'PROFILE_UPDATED',
+            payload: mergedProfile
+        });
+        channel.close();
+    }
+
+    // 3. Merge Discounts
+    const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+    const sourceDiscount = discounts[sourceName] || {};
+    const targetDiscount = discounts[targetName] || {};
+
+    const mergedDiscount = {
+        tier: targetDiscount.tier && targetDiscount.tier !== 'Standard' ? targetDiscount.tier : (sourceDiscount.tier || 'Standard'),
+        percent: targetDiscount.percent || sourceDiscount.percent || 0,
+        fixed: targetDiscount.fixed || sourceDiscount.fixed || 0,
+        creditLimit: targetDiscount.creditLimit || sourceDiscount.creditLimit || 0
+    };
+
+    discounts[targetName] = mergedDiscount;
+    delete discounts[sourceName];
+    localStorage.setItem('iceqube_customer_discounts', JSON.stringify(discounts));
+
+    // 4. Merge Elite list
+    let eliteList = JSON.parse(localStorage.getItem('iceqube_elite_customers') || '[]');
+    const sourceInElite = eliteList.includes(sourceName);
+    const targetInElite = eliteList.includes(targetName);
+
+    if (sourceInElite || targetInElite) {
+        if (!eliteList.includes(targetName)) {
+            eliteList.push(targetName);
+        }
+    }
+    eliteList = eliteList.filter(name => name !== sourceName);
+    localStorage.setItem('iceqube_elite_customers', JSON.stringify(eliteList));
+
+    // Force sync and storage events
+    localStorage.setItem('iceqube_system_purged', Date.now());
+    if (window.IceQubeSync && typeof window.IceQubeSync.publishPurge === 'function') {
+        window.IceQubeSync.publishPurge();
+    }
+
+    alert(`Fusing complete!\nMerged '${sourceName}' into '${targetName}'.\n${countUpdated} orders updated.`);
+    
+    // Close drawer and refresh
+    closeCustomerDrawer();
+    if (typeof admin !== 'undefined' && typeof admin.fetchRealStats === 'function') {
+        await admin.fetchRealStats();
+    }
+}
+
+function toggleMergeSection(show) {
+    const btn = document.getElementById('fuse-toggle-btn');
+    const container = document.getElementById('fuse-details-container');
+    if (!btn || !container) return;
+    
+    if (show) {
+        btn.style.display = 'none';
+        container.style.display = 'block';
+    } else {
+        btn.style.display = 'flex';
+        container.style.display = 'none';
+    }
+}
+
+async function saveCustomerProfile() {
+    const originalName = document.getElementById('drawer-customer-name').innerText.trim();
+    const customerNameInput = document.getElementById('drawer-customer-name-input');
+    const customerName = customerNameInput ? customerNameInput.value.trim() : originalName;
     const contactPerson = document.getElementById('drawer-contact-person-input').value.trim();
     const contactNumber = document.getElementById('drawer-phone-input').value.trim();
     const address = document.getElementById('drawer-address-input').value.trim();
     const messengerId = document.getElementById('drawer-messenger-input').value.trim();
 
+    if (!customerName) {
+        alert("Establishment name cannot be empty.");
+        return;
+    }
+
+    let activeName = originalName;
+
+    // Handle Rename if changed
+    if (customerName !== originalName) {
+        const renameSuccess = await renameCustomer(originalName, customerName);
+        if (!renameSuccess) {
+            return;
+        }
+        activeName = customerName;
+    }
+
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    const currentProfile = profiles[customerName] || {};
+    const currentProfile = profiles[activeName] || {};
     
     const updatedProfile = {
         ...currentProfile,
-        establishment: customerName,
+        establishment: activeName,
         contactPerson,
         contactNumber,
         address,
         messengerId
     };
 
-    profiles[customerName] = updatedProfile;
+    profiles[activeName] = updatedProfile;
     localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
     
     // Broadcast updating profile to other tabs
@@ -6092,13 +6400,16 @@ function saveCustomerProfile() {
         channel.close();
     }
 
-    console.log(`[SYSTEM] Profile updated for ${customerName}`);
-    alert(`Profile details saved for ${customerName}.`);
+    console.log(`[SYSTEM] Profile updated for ${activeName}`);
+    alert(`Profile details saved for ${activeName}.`);
 
     toggleProfileEdit(false);
 
-    if (typeof admin !== 'undefined' && typeof admin.loadCustomers === 'function') {
-        admin.loadCustomers();
+    // Reopen drawer with updated name so layout stays correct
+    openCustomerDrawer(activeName);
+
+    if (typeof admin !== 'undefined' && typeof admin.fetchRealStats === 'function') {
+        await admin.fetchRealStats();
     }
 }
 

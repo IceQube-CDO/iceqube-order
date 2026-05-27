@@ -149,59 +149,85 @@ var admin = {
 
     async toggleRealStatus(type, id) {
         console.log(`🛡️ Toggling Real Status for ${type}:${id}`);
-        let key = '';
-        if (type === 'order') key = 'ice_orders';
-        else if (type === 'cashflow') key = 'ice_cashflow';
-        else return;
-
-        // 1. Detect current status
-        const localData = JSON.parse(localStorage.getItem(key) || '[]');
-        const localIdx = localData.findIndex(item => (item.id || item.order_id || item.timestamp) === id);
         
-        let currentStatus = true; // Default to REAL for legacy data
-        if (localIdx > -1) {
-            const val = localData[localIdx].is_real;
-            currentStatus = (val === undefined || val === null) ? true : !!val;
-        } else {
-            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
-            if (memoryItem) {
-                const val = memoryItem.is_real;
-                currentStatus = (val === undefined || val === null) ? true : !!val;
+        if (type === 'cashflow') {
+            // Find if it is a MANUAL cashflow entry
+            const localIdx = this.manualEntries.findIndex(item => item.timestamp == id);
+            if (localIdx > -1) {
+                const currentStatus = this.manualEntries[localIdx].is_real !== false;
+                const newStatus = !currentStatus;
+                this.manualEntries[localIdx].is_real = newStatus;
+                this.saveManualEntries();
+                this.updateDashboardUI(this.allOrders);
+                return;
+            }
+            
+            // Otherwise, it must be an AUTO cashflow entry (backed by an order)
+            // Let's find the corresponding order using created_at
+            const order = this.allOrders.find(o => o.created_at === id || (o.created_at && new Date(o.created_at).getTime() === new Date(id).getTime()));
+            if (order) {
+                await this.toggleRealStatus('order', order.id || order.order_id);
+                return;
+            } else {
+                console.warn(`Could not find manual entry or order matching timestamp: ${id}`);
+                return;
             }
         }
 
-        const newStatus = !currentStatus;
-
-        // 2. Update Local State
-        if (localIdx > -1) {
-            localData[localIdx].is_real = newStatus;
-            localStorage.setItem(key, JSON.stringify(localData));
-        }
-
-        // 3. Update Memory State & UI Immediately
-        const memoryItem = this.allOrders.find(o => (o.id || o.order_id) === id);
-        if (memoryItem) memoryItem.is_real = newStatus;
-        this.updateOrderQueue(this.allOrders);
-
-        // 4. Cloud Sync
-        if (type === 'order' && !id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
-            try {
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?id=eq.${id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ is_real: newStatus })
-                });
-                if (response.ok) {
-                    console.log('✅ Real Status Synced to Cloud');
-                } else {
-                    console.error('❌ Cloud Sync Failed:', response.status);
+        if (type === 'order') {
+            const key = 'ice_orders';
+            const localData = JSON.parse(localStorage.getItem(key) || '[]');
+            const localIdx = localData.findIndex(item => (item.id || item.order_id) == id);
+            
+            let currentStatus = true; // Default to REAL for legacy data
+            if (localIdx > -1) {
+                const val = localData[localIdx].is_real;
+                currentStatus = (val === undefined || val === null) ? true : !!val;
+            } else {
+                const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
+                if (memoryItem) {
+                    const val = memoryItem.is_real;
+                    currentStatus = (val === undefined || val === null) ? true : !!val;
                 }
-            } catch (err) {
-                console.warn('Could not sync Real Status to cloud:', err);
+            }
+
+            const newStatus = !currentStatus;
+
+            // 2. Update Local State
+            if (localIdx > -1) {
+                localData[localIdx].is_real = newStatus;
+                localStorage.setItem(key, JSON.stringify(localData));
+            }
+
+            // 3. Update Memory State & UI Immediately
+            const memoryItem = this.allOrders.find(o => (o.id || o.order_id) == id);
+            if (memoryItem) memoryItem.is_real = newStatus;
+            
+            this.updateDashboardUI(this.allOrders);
+
+            // 4. Cloud Sync
+            if (!id.toString().startsWith('mock') && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                try {
+                    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                    const isInt = /^\d+$/.test(id);
+                    const queryStr = (isUuid || isInt) ? `id=eq.${id}` : `order_id=eq.${encodeURIComponent(id)}`;
+                    const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${queryStr}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ is_real: newStatus })
+                    });
+                    if (response.ok) {
+                        console.log('✅ Real Status Synced to Cloud');
+                    } else {
+                        console.error('❌ Cloud Sync Failed:', response.status);
+                    }
+                } catch (err) {
+                    console.warn('Could not sync Real Status to cloud:', err);
+                }
             }
         }
     },
@@ -1071,11 +1097,12 @@ var admin = {
         this.updateOrderQueue(orders);
 
         // 2. Stats Calculation
-        const pending = orders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
-        const dispatched = orders.filter(o => o.delivery_status === 'Dispatched').length;
-        const delivered = orders.filter(o => o.delivery_status === 'Delivered').length;
+        const realOrders = orders.filter(o => o.is_real !== false);
+        const pending = realOrders.filter(o => o.delivery_status === 'Pending' || o.delivery_status === 'Awaiting Acceptance').length;
+        const dispatched = realOrders.filter(o => o.delivery_status === 'Dispatched').length;
+        const delivered = realOrders.filter(o => o.delivery_status === 'Delivered').length;
         
-        const revenue = orders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        const revenue = realOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
         const revenueEl = document.getElementById('ops-revenue') || document.querySelector('.metric-value');
         if (revenueEl) revenueEl.innerText = `₱${revenue.toLocaleString()}`;
         
@@ -1718,7 +1745,7 @@ var admin = {
         const manualEntries = JSON.parse(localStorage.getItem('ice_cashflow') || '[]');
         
         // 1. Process Automatic Entries from Orders (Revenue)
-        const autoEntries = syncedOrders.map(o => {
+        const autoEntries = syncedOrders.filter(o => o.is_real !== false).map(o => {
             let amount = parseFloat(o.total_price) || 0;
             // COD Adjustment: Business only receives (Item Total - Priority Fee) 
             // because Delivery + Priority goes directly to the rider.
@@ -1733,7 +1760,8 @@ var admin = {
             };
         });
 
-        const allEntries = [...autoEntries, ...manualEntries];
+        const activeManualEntries = manualEntries.filter(e => e.is_real !== false);
+        const allEntries = [...autoEntries, ...activeManualEntries];
         
         // 2. Filter by period
         const now = new Date();
@@ -2067,7 +2095,8 @@ var admin = {
                 description: `Order ${o.order_id} - ${o.customer_name}`,
                 type: 'IN',
                 amount: amount,
-                source: 'AUTO'
+                source: 'AUTO',
+                is_real: o.is_real
             };
         });
 
@@ -2098,8 +2127,10 @@ var admin = {
         // 6. Render Rows
         tbody.innerHTML = filteredEntries.map(entry => {
             const amount = entry.amount || 0;
-            if (entry.type === 'IN') totalIn += amount;
-            else totalOut += amount;
+            if (entry.is_real !== false) {
+                if (entry.type === 'IN') totalIn += amount;
+                else totalOut += amount;
+            }
 
             const timeStr = new Date(entry.timestamp).toLocaleString([], { 
                 month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
