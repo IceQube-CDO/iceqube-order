@@ -2484,15 +2484,17 @@ var admin = {
                 }
             }
 
+            const priorityRow = document.getElementById('receipt-priority-fee-row');
             if (priorityRow) priorityRow.style.display = 'none'; // Always hide since it's merged
 
             if (deliveryEl) {
                 const totalDelivery = delivery + priority;
                 const parent = deliveryEl.parentElement;
                 
-                const isDelivery = order.delivery_address && 
-                                   !order.delivery_address.toLowerCase().includes('pickup') && 
-                                   !order.delivery_address.toLowerCase().includes('self-pickup');
+                const deliveryAddrText = order.delivery_address || order.address || '';
+                const isDelivery = deliveryAddrText && 
+                                   !deliveryAddrText.toLowerCase().includes('pickup') && 
+                                   !deliveryAddrText.toLowerCase().includes('self-pickup');
                 
                 if (isDelivery && totalDelivery > 0) {
                     // Derive components for breakdown
