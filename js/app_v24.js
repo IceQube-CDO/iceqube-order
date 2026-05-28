@@ -6341,16 +6341,13 @@ const app = {
         document.body.classList.add('soa-active');
         document.getElementById('soa-overlay').style.display = 'flex';
         
-        // Initialize Panzoom if not already done
         if (!this.soaPanzoom) {
             const elem = document.getElementById('printable-soa-document');
             this.soaPanzoom = Panzoom(elem, {
                 maxScale: 6,
                 minScale: 0.1,
-                contain: 'inside',
                 origin: 'top center'
             });
-
             // Robust manual wheel zooming
             elem.parentElement.addEventListener('wheel', (e) => {
                 e.preventDefault();
