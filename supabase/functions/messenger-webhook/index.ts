@@ -417,8 +417,16 @@ serve(async (req) => {
         
         const parseScheduleToDate = (scheduleStr: string): Date | null => {
           if (!scheduleStr || scheduleStr === 'Immediate') return null;
-          let parsed = new Date(scheduleStr);
+          
+          let cleanStr = scheduleStr.trim();
+          // If the string does not end with a timezone (e.g. +08:00, Z), assume Asia/Manila (UTC+8)
+          if (!/([+-]\d{2}:?\d{2}|Z)$/i.test(cleanStr)) {
+            cleanStr += " +08:00";
+          }
+          
+          let parsed = new Date(cleanStr);
           if (!isNaN(parsed.getTime())) return parsed;
+          
           const parts = scheduleStr.trim().split(/\s+/);
           if (parts.length >= 2) {
             const dateStr = parts[0];
@@ -432,7 +440,9 @@ serve(async (req) => {
               const hour = hm[0] ? parseInt(hm[0], 10) : 0;
               const minute = hm[1] ? parseInt(hm[1], 10) : 0;
               const second = hm[2] ? parseInt(hm[2], 10) : 0;
-              parsed = new Date(year, month, day, hour, minute, second);
+              // Construct using Date.UTC and then subtract 8 hours since it's local time (UTC+8)
+              const utcMs = Date.UTC(year, month, day, hour, minute, second);
+              parsed = new Date(utcMs - 8 * 60 * 60 * 1000);
               if (!isNaN(parsed.getTime())) return parsed;
             }
           }
@@ -460,8 +470,8 @@ serve(async (req) => {
           if (diffMinutes >= 45 && diffMinutes <= 75) {
             const itemsText = formatItems(order.items);
             const totalGross = Number(order.total_price || 0);
-            const scheduleTimeStr = schedDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
-            const scheduleDateStr = schedDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            const scheduleTimeStr = schedDate.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+            const scheduleDateStr = schedDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' });
             
             const adminMsg = `⏰ 1-HOUR SCHEDULED DELIVERY REMINDER ⏰\n` +
                              `---------------------------------------------\n` +

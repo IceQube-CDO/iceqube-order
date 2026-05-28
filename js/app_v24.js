@@ -6346,7 +6346,37 @@ const app = {
             this.soaPanzoom = Panzoom(elem, {
                 maxScale: 6,
                 minScale: 0.1,
-                origin: 'top center'
+                origin: 'top center',
+                setTransform: (elem, { scale, x, y }) => {
+                    const viewport = document.getElementById('soa-viewport');
+                    const containerWidth = viewport ? viewport.clientWidth : 375;
+                    const containerHeight = viewport ? viewport.clientHeight : 600;
+                    
+                    const docWidth = elem.offsetWidth || 794;
+                    const docHeight = elem.offsetHeight || 1123;
+                    
+                    const scaledWidth = docWidth * scale;
+                    const scaledHeight = docHeight * scale;
+                    
+                    // Clamp X (horizontal) - restrict so it can never expose empty space
+                    let maxX = 0;
+                    let minX = 0;
+                    if (scaledWidth > containerWidth) {
+                        maxX = (scaledWidth - containerWidth) / 2;
+                        minX = -maxX;
+                    }
+                    const clampedX = Math.max(minX, Math.min(maxX, x));
+                    
+                    // Clamp Y (vertical) - restrict so it can never expose empty space
+                    let maxY = 0;
+                    let minY = 0;
+                    if (scaledHeight > containerHeight) {
+                        minY = containerHeight - scaledHeight;
+                    }
+                    const clampedY = Math.max(minY, Math.min(maxY, y));
+                    
+                    elem.style.transform = `scale(${scale}) translate(${clampedX}px, ${clampedY}px)`;
+                }
             });
             // Robust manual wheel zooming
             elem.parentElement.addEventListener('wheel', (e) => {
