@@ -742,6 +742,7 @@ const app = {
 
                 localStorage.setItem('ice_orders', JSON.stringify(merged.slice(0, 100)));
                 this.renderOrderHistory();
+                this.recalculateLiveBalance();
             }
         } catch (err) {
             console.error('❌ [Cloud Sync] Failed to sync orders:', err);
@@ -1505,7 +1506,7 @@ const app = {
         const maxLimitAmt = document.getElementById('max-limit-amt');
         const batteryFill = document.getElementById('battery-fill');
         const batteryPercent = document.getElementById('battery-percent');
-        const currentDebtAmt = document.getElementById('current-debt-amt');
+        const currentDebtAmt = document.getElementById('total-debt-text') || document.getElementById('current-debt-amt');
         const creditCard = document.getElementById('credit-card');
         const powerTag = document.getElementById('power-tag');
         const powerTitle = document.getElementById('power-title');
@@ -1602,6 +1603,118 @@ const app = {
             btn.innerText = isElite ? "Settle Balance" : "Recharge Now";
             btn.classList.add('critical');
         }
+    },
+
+    getAllChronologicalTransactions() {
+        // Base transactions
+        let txs = [
+            { date: new Date('2026-05-01T00:00:00Z'), type: 'opening', ref: 'Opening Balance (Forwarded)', charge: 0, payment: 0 },
+            { date: new Date('2026-05-12T10:00:00Z'), type: 'order', ref: 'Order #IQ-8583 (PO #8815)', charge: 1402.00, payment: 0 },
+            { date: new Date('2026-05-19T14:30:00Z'), type: 'payment', ref: 'Payment - GCash Receipt #7721', charge: 0, payment: 3060.00 },
+            { date: new Date('2026-05-20T11:15:00Z'), type: 'order', ref: 'Order #IQ-8780 (PO #8821) - Less 10% Disc', charge: 2610.00, payment: 0 },
+            { date: new Date('2026-05-22T09:45:00Z'), type: 'order', ref: 'Order #IQ-8812 (PO #8821)', charge: 850.00, payment: 0 }
+        ];
+
+        const companyName = (this.user.companyName || "").trim().toLowerCase();
+        if (companyName && companyName !== 'guest customer') {
+            // Load real orders from localStorage
+            let orders = [];
+            try {
+                orders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+            } catch (e) {
+                console.error("Failed to parse ice_orders:", e);
+            }
+
+            // Exclude historical base orders to prevent double counting
+            const baseOrderIds = ['#IQ-8812', '#IQ-8780', '#IQ-8583', 'IQ-8812', 'IQ-8780', 'IQ-8583'];
+            const userOrders = orders.filter(o => {
+                const name = (o.customer_name || "").trim().toLowerCase();
+                const oid = (o.order_id || "").trim();
+                return name === companyName && !baseOrderIds.includes(oid);
+            });
+
+            // Map user orders to tx items
+            userOrders.forEach(o => {
+                const poStr = o.po_number ? ` (PO #${o.po_number})` : '';
+                txs.push({
+                    date: new Date(o.created_at || o.date || Date.now()),
+                    type: 'order',
+                    ref: `Order ${o.order_id || 'N/A'}${poStr}`,
+                    charge: parseFloat(o.total_price || 0),
+                    payment: 0
+                });
+            });
+
+            // Load real payments from localStorage
+            let payments = [];
+            try {
+                payments = JSON.parse(localStorage.getItem('ice_payments') || '[]');
+            } catch (e) {
+                console.error("Failed to parse ice_payments:", e);
+            }
+
+            const userPayments = payments.filter(p => {
+                const name = (p.companyName || "").trim().toLowerCase();
+                return name === companyName;
+            });
+
+            // Map user payments to tx items
+            userPayments.forEach(p => {
+                txs.push({
+                    date: new Date(p.date || Date.now()),
+                    type: 'payment',
+                    ref: p.ref || `Payment - GCash Receipt #${p.id || 'N/A'}`,
+                    charge: 0,
+                    payment: parseFloat(p.amount || 0)
+                });
+            });
+        }
+
+        // Sort chronologically (oldest first)
+        txs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Compute running balance
+        let runningBalance = 0;
+        txs.forEach((tx, idx) => {
+            if (idx === 0) {
+                runningBalance = -137.00;
+                tx.balance = runningBalance;
+            } else {
+                runningBalance = runningBalance + tx.charge - tx.payment;
+                tx.balance = runningBalance;
+            }
+        });
+
+        return txs;
+    },
+
+    recalculateLiveBalance() {
+        console.log("🔄 Recalculating live balance for customer:", this.user.companyName);
+        const txs = this.getAllChronologicalTransactions();
+        
+        let finalBalance = 0;
+        if (txs.length > 0) {
+            finalBalance = txs[txs.length - 1].balance;
+        } else {
+            finalBalance = -137.00;
+        }
+
+        this.user.balance = finalBalance;
+        
+        // Update user profile in local storage
+        const saved = localStorage.getItem('iceqube_user_profile');
+        if (saved) {
+            try {
+                const profile = JSON.parse(saved);
+                profile.balance = finalBalance;
+                localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
+            } catch (e) {
+                console.error("Error saving updated balance to profile:", e);
+            }
+        }
+
+        console.log("✅ Final computed balance/debt:", finalBalance);
+        this.updateCreditUI();
     },
 
     loadGoogleMaps() {
@@ -5518,6 +5631,7 @@ const app = {
                 localStorage.setItem('ice_orders', JSON.stringify(localOrders.slice(0, 100)));
                 console.log("💾 Order persisted to local storage.");
                 this.renderOrderHistory();
+                this.recalculateLiveBalance();
             }
         } catch (e) {
             console.error("Failed to save order to local storage:", e);
@@ -6319,7 +6433,14 @@ const app = {
         const clientLabelElem = document.getElementById('soa-client-label');
         
         if (clientNameElem) clientNameElem.innerText = this.user.companyName || 'Guest';
-        if (clientTierElem) clientTierElem.innerText = `Account Type: ${this.user.accountType || 'Standard'}`;
+        
+        if (clientTierElem) {
+            let typeStr = this.user.accountType || 'Standard';
+            if ((this.user.companyName || '').trim().toLowerCase() === 'studio.e') {
+                typeStr = 'Standard';
+            }
+            clientTierElem.innerText = `Account Type: ${typeStr}`;
+        }
         
         if (clientLabelElem) {
             const isElite = this.user.accountType === 'Elite' || this.user.accountType === 'PO';
@@ -6355,50 +6476,100 @@ const app = {
             timestamp.innerText = `Generated: ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} @ ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
         }
 
-        // Mock data based on the period
-        let data = [];
-        if (period === 'current') {
-            data = [
-                { date: 'May 22, 2026', ref: 'Order #IQ-9812 (PO #8821)', charge: 850, payment: 0, balance: 1665 },
-                { date: 'May 20, 2026', ref: 'Order #IQ-9750 (PO #8821) - Less 10% Disc', charge: 2142, payment: 0, balance: 815 },
-                { date: 'May 15, 2026', ref: 'Payment - GCash Receipt #7721', charge: 0, payment: 3000, balance: -1735 },
-                { date: 'May 12, 2026', ref: 'Order #IQ-9688 (PO #8815)', charge: 1700, payment: 0, balance: 1265 },
-                { date: 'May 01, 2026', ref: 'Opening Balance (Forwarded)', charge: 0, payment: 0, balance: -435 }
+        let displayTxs = [];
+        let limit = this.user.creditLimit || 0;
+        let finalDebt = this.user.balance || 0;
+
+        if (period === 'last_month') {
+            // April 2026 hardcoded mock data
+            displayTxs = [
+                { dateDisplay: 'Apr 28, 2026', ref: 'Order #IQ-9521 (PO #8792)', charge: 3400, payment: 0, balance: -435, isForward: false },
+                { dateDisplay: 'Apr 15, 2026', ref: 'Payment - GCash Receipt #7601', charge: 0, payment: 4000, balance: -3835, isForward: false },
+                { dateDisplay: 'Apr 10, 2026', ref: 'Order #IQ-9488 (PO #8780)', charge: 2100, payment: 0, balance: 165, isForward: false },
+                { dateDisplay: 'Apr 01, 2026', ref: 'Opening Balance', charge: 0, payment: 0, balance: -1935, isForward: true }
             ];
-        } else if (period === 'last_month') {
-            data = [
-                { date: 'Apr 28, 2026', ref: 'Order #IQ-9521 (PO #8792)', charge: 3400, payment: 0, balance: -435 },
-                { date: 'Apr 15, 2026', ref: 'Payment - GCash Receipt #7601', charge: 0, payment: 4000, balance: -3835 },
-                { date: 'Apr 10, 2026', ref: 'Order #IQ-9488 (PO #8780)', charge: 2100, payment: 0, balance: 165 },
-                { date: 'Apr 01, 2026', ref: 'Opening Balance', charge: 0, payment: 0, balance: -1935 }
-            ];
-        } else if (period === 'custom') {
-            const start = document.getElementById('soa-start-date').value;
-            const end = document.getElementById('soa-end-date').value;
+            limit = 2500.00;
+            finalDebt = -435.00;
+        } else {
+            // Get all chronological transactions
+            const txs = this.getAllChronologicalTransactions();
             
-            if (!start || !end) {
-                this.showToast('Please select both start and end dates.', 'error');
-                return;
+            let startLimit = null;
+            let endLimit = null;
+            
+            if (period === 'current') {
+                // May 1, 2026 to May 31, 2026 Month-to-Date
+                startLimit = new Date('2026-05-01T00:00:00');
+                endLimit = new Date('2026-05-31T23:59:59');
+            } else if (period === 'custom') {
+                const startStr = document.getElementById('soa-start-date').value;
+                const endStr = document.getElementById('soa-end-date').value;
+                if (!startStr || !endStr) {
+                    this.showToast('Please select both start and end dates.', 'error');
+                    return;
+                }
+                startLimit = new Date(startStr + 'T00:00:00');
+                endLimit = new Date(endStr + 'T23:59:59');
             }
 
-            // Generate mock custom range data
-            data = [
-                { date: end, ref: 'Custom Range Finalized Order', charge: 1200, payment: 0, balance: 1665 },
-                { date: start, ref: 'Opening Balance for Range', charge: 0, payment: 0, balance: 465 }
-            ];
-        } else {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: #64748b;">Please select a date range to generate the ledger.</td></tr>';
-            return;
+            // Filter transactions inside the range
+            const inRange = txs.filter(tx => tx.date >= startLimit && tx.date <= endLimit);
+
+            // Find the balance right before startLimit
+            let priorBalance = -137.00;
+            for (let i = 0; i < txs.length; i++) {
+                if (txs[i].date < startLimit) {
+                    priorBalance = txs[i].balance;
+                } else {
+                    break;
+                }
+            }
+
+            // Add the opening balance forwarded row
+            const forwardRow = {
+                date: startLimit,
+                dateDisplay: startLimit.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                ref: 'Opening Balance (Forwarded)',
+                charge: 0,
+                payment: 0,
+                balance: priorBalance,
+                isForward: true
+            };
+
+            displayTxs = [forwardRow, ...inRange];
+
+            // Format dates for display on in-range transactions
+            displayTxs.forEach(tx => {
+                if (!tx.dateDisplay) {
+                    tx.dateDisplay = tx.date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                }
+            });
+
+            // Sort newest first, with Opening Balance always at the bottom
+            displayTxs.sort((a, b) => {
+                if (a.isForward) return 1;
+                if (b.isForward) return -1;
+                return b.date - a.date;
+            });
+
+            // Determine final debt/balance at the end of the selected period range
+            if (inRange.length > 0) {
+                // Since txs is chronologically sorted, the last inRange item has the ending balance
+                finalDebt = inRange[inRange.length - 1].balance;
+            } else {
+                finalDebt = priorBalance;
+            }
         }
 
-        tbody.innerHTML = data.map(row => {
+        // Render rows
+        tbody.innerHTML = displayTxs.map(row => {
             const isPayment = row.payment > 0;
-            const isForward = row.ref.toLowerCase().includes('opening balance') || row.ref.toLowerCase().includes('forwarded');
+            const isForward = row.isForward || row.ref.toLowerCase().includes('opening balance') || row.ref.toLowerCase().includes('forwarded');
             const rowClass = isPayment ? 'payment-row' : (isForward ? 'balance-forward-row' : '');
             
             return `
                 <tr class="${rowClass}">
-                    <td>${row.date}</td>
+                    <td>${row.dateDisplay}</td>
                     <td><strong>${row.ref}</strong></td>
                     <td class="align-right">${row.charge > 0 ? '₱' + row.charge.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</td>
                     <td class="align-right">${row.payment > 0 ? '₱' + row.payment.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</td>
@@ -6410,8 +6581,19 @@ const app = {
         }).join('');
 
         // Update Summary Stats
-        document.getElementById('soa-debt').innerText = '₱1,665.00';
-        document.getElementById('soa-available').innerText = '₱835.00';
+        const limitBox = document.getElementById('soa-credit-limit');
+        const availableBox = document.getElementById('soa-available');
+        const debtBox = document.getElementById('soa-debt');
+
+        const availablePower = Math.max(0, limit - finalDebt);
+
+        if (limitBox) limitBox.innerText = `₱${limit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (availableBox) availableBox.innerText = `₱${availablePower.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        if (debtBox) {
+            debtBox.innerText = finalDebt > 0 
+                ? `₱${finalDebt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : `₱${Math.abs(finalDebt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (CR)`;
+        }
 
         // Re-scale to fit the new content
         setTimeout(() => {
@@ -7323,13 +7505,20 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 console.log(`🔍 [Sync] Checking tier for: "${companyName}". Available keys:`, discountKeys);
                 const matchKey = discountKeys.find(k => k.trim().toLowerCase() === companyName);
                 
-                if (matchKey) {
+                if (companyName === 'studio.e') {
+                    this.user.accountType = 'PO';
+                    this.user.tier = 'Standard';
+                    this.user.creditLimit = 2500;
+                    console.log(`✅ [Sync] Special override for Studio.E: Tier: ${this.user.tier}, Type: ${this.user.accountType}, Limit: ${this.user.creditLimit}`);
+                } else if (matchKey) {
                     custPricing = discounts[matchKey];
                 }
                 
                 console.log(`🔍 [Sync] Checking tier for: "${companyName}" (Matched Key: "${matchKey}")`, { hasPricing: !!custPricing });
 
-                if (custPricing) {
+                if (companyName === 'studio.e') {
+                    // Handled above
+                } else if (custPricing) {
                     this.user.tier = custPricing.tier || 'Standard';
                     this.user.creditLimit = custPricing.creditLimit || 0;
                     this.user.accountType = (this.user.tier !== 'Standard') ? 'Elite' : 'Standard';
@@ -7393,6 +7582,17 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 console.error("Error parsing profile:", e);
             }
         }
+
+        // General override/fallback check for Studio.E
+        const currentCompName = (this.user.companyName || "").trim().toLowerCase();
+        if (currentCompName === 'studio.e') {
+            this.user.accountType = 'PO';
+            this.user.tier = 'Standard';
+            this.user.creditLimit = 2500;
+        }
+
+        // Always recalculate balance and sync UI after loading profile
+        this.recalculateLiveBalance();
     },
 
     updateProfileMapPreview() {
@@ -7771,8 +7971,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("🚀 IceQube DOM Ready. Initializing App...");
     if (typeof app !== 'undefined' && typeof app.init === 'function') {
         await app.init();
-        // Mocking initial state for demonstration
-        app.updateBillingStatus('unpaid', '₱2,550.00');
+        // Dynamically initialize billing status based on recalculated user balance
+        if (app.user.balance <= 0) {
+            app.updateBillingStatus('paid', '₱0.00');
+        } else {
+            app.updateBillingStatus('unpaid', `₱${app.user.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        }
         console.log("✅ IceQube Initialized Successfully");
 
     } else {
@@ -8022,6 +8226,24 @@ async function processTopUpPayment(userId, amountPaid) {
     // 3. Save to Database (Mock)
     await saveInvoiceUpdatesToDatabase(updatedInvoices);
 
+    // Record payment locally
+    try {
+        const localPayments = JSON.parse(localStorage.getItem('ice_payments') || '[]');
+        const receiptNo = Math.floor(1000 + Math.random() * 9000); // 4-digit GCash receipt mock
+        const newPayment = {
+            id: `GC-${receiptNo}`,
+            date: new Date().toISOString(),
+            amount: parseFloat(amountPaid),
+            companyName: app.user.companyName || 'Studio.E',
+            ref: `Payment - GCash Receipt #${receiptNo}`
+        };
+        localPayments.unshift(newPayment);
+        localStorage.setItem('ice_payments', JSON.stringify(localPayments));
+        console.log("💾 GCash Payment persisted to local storage:", newPayment);
+    } catch(e) {
+        console.error("Failed to save payment to local storage:", e);
+    }
+
     // 4. Update the Master Battery/Credit Limit
     await increaseUserAvailablePower(userId, amountPaid);
 
@@ -8048,13 +8270,15 @@ async function saveInvoiceUpdatesToDatabase(updates) {
 }
 
 async function increaseUserAvailablePower(userId, amount) {
-    console.log(`[MOCK DB] Increasing available power by ₱${amount}`);
-    app.user.balance -= parseFloat(amount); // In this app, balance is debt
-    if (app.user.balance < 0) app.user.balance = 0;
-    
-    // Update UI
-    if (typeof app.updateCreditUI === 'function') {
-        app.updateCreditUI();
+    console.log(`[MOCK DB] Recalculating dynamic balance after payment of ₱${amount}`);
+    if (typeof app.recalculateLiveBalance === 'function') {
+        app.recalculateLiveBalance();
+    } else {
+        app.user.balance -= parseFloat(amount);
+        if (app.user.balance < 0) app.user.balance = 0;
+        if (typeof app.updateCreditUI === 'function') {
+            app.updateCreditUI();
+        }
     }
     return new Promise(resolve => setTimeout(resolve, 300));
 }
@@ -8170,7 +8394,7 @@ function activateProvisionalCredit() {
     
     // Set Global Flags for Order Generation
     app.isOverdraftActive = true;
-    app.totalDebtToCollect = 1665.00;
+    app.totalDebtToCollect = app.user.balance;
     
     // Unlock the "Quick Reorder" button if it was disabled
     const reorderBtn = document.querySelector('.power-reorder-btn');
@@ -8507,7 +8731,7 @@ function saveQRToGallery() {
 }
 
 // Function called when the AI returns 'approved'
-function executeOptimisticUnlock(paidAmount) {
+function executeOptimisticUnlock() {
     const confirmBtn = document.getElementById('confirm-finish-btn');
     const loadingUI = document.getElementById('ai-scanner-loading');
 
@@ -8520,18 +8744,47 @@ function executeOptimisticUnlock(paidAmount) {
     confirmBtn.innerHTML = '✅ Payment Verified!';
     confirmBtn.classList.remove('active');
 
+    // Determine paid amount dynamically
+    const customAmtVal = document.getElementById('custom-pay-amount').value;
+    const paidAmount = customAmtVal && parseFloat(customAmtVal) > 0 
+        ? parseFloat(customAmtVal) 
+        : (app.user.balance || 0);
+
+    // Record the payment in local storage payments
+    try {
+        const localPayments = JSON.parse(localStorage.getItem('ice_payments') || '[]');
+        const receiptNo = Math.floor(1000 + Math.random() * 9000); // 4-digit GCash receipt mock
+        const newPayment = {
+            id: `GC-${receiptNo}`,
+            date: new Date().toISOString(),
+            amount: parseFloat(paidAmount),
+            companyName: app.user.companyName || 'Studio.E',
+            ref: `Payment - GCash Receipt #${receiptNo}`
+        };
+        localPayments.unshift(newPayment);
+        localStorage.setItem('ice_payments', JSON.stringify(localPayments));
+        console.log("💾 GCash Scanner Payment persisted to local storage:", newPayment);
+        
+        // Clear the custom pay input
+        document.getElementById('custom-pay-amount').value = '';
+    } catch(e) {
+        console.error("Failed to save payment to local storage:", e);
+    }
+
+    // Recalculate dynamic balance
+    app.recalculateLiveBalance();
+
     // STEP 2 & 3: The Dashboard Reset (After a short delay for the user to read it)
     setTimeout(() => {
         // Hide the checkout overlay smoothly
         const overlay = document.getElementById('secure-checkout-overlay');
-        overlay.style.opacity = '0';
-        setTimeout(() => { 
-            overlay.style.display = 'none'; 
-            overlay.style.opacity = '1'; // Reset for next time
-        }, 300);
-
-        // Reset Dashboard Variables
-        updateDashboardUI(2500, 0); // Max Power, Zero Debt
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => { 
+                overlay.style.display = 'none'; 
+                overlay.style.opacity = '1'; // Reset for next time
+            }, 300);
+        }
 
         // Apply Success Surge Animation
         const battery = document.querySelector('.battery-outer.standalone');
