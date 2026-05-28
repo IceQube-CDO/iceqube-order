@@ -2484,16 +2484,77 @@ var admin = {
                 }
             }
 
-            if (deliveryEl) deliveryEl.innerText = `₱${delivery.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            
-            const priorityRow = document.getElementById('receipt-priority-fee-row');
-            const priorityEl = document.getElementById('receipt-priority-fee');
-            if (priorityRow && priorityEl) {
-                if (priority > 0) {
-                    priorityRow.style.display = 'flex';
-                    priorityEl.innerText = `₱${priority.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            if (priorityRow) priorityRow.style.display = 'none'; // Always hide since it's merged
+
+            if (deliveryEl) {
+                const totalDelivery = delivery + priority;
+                const parent = deliveryEl.parentElement;
+                
+                const isDelivery = order.delivery_address && 
+                                   !order.delivery_address.toLowerCase().includes('pickup') && 
+                                   !order.delivery_address.toLowerCase().includes('self-pickup');
+                
+                if (isDelivery && totalDelivery > 0) {
+                    // Derive components for breakdown
+                    const matrix = parsedItems._matrix || this.pricingMatrix;
+                    const deliveryConfig = matrix.delivery || {};
+                    const peakHoursFee = parseFloat(deliveryConfig.peakHoursFee) || 0;
+                    const lateNightFee = parseFloat(deliveryConfig.lateNightFee) || 0;
+                    
+                    const getOrderEffectiveHour = (o) => {
+                        try {
+                            if (o.delivery_schedule && o.delivery_schedule !== 'Immediate') {
+                                const parts = o.delivery_schedule.split(' ');
+                                const timePart = parts[parts.length - 1];
+                                if (timePart && timePart.includes(':')) {
+                                    return parseInt(timePart.split(':')[0]);
+                                }
+                            }
+                            if (o.created_at) {
+                                return new Date(o.created_at).getHours();
+                            }
+                        } catch (e) {
+                            console.error("Error parsing effective hour:", e);
+                        }
+                        return new Date().getHours();
+                    };
+                    
+                    const effHour = getOrderEffectiveHour(order);
+                    let peakSurcharge = 0;
+                    const isPeak = (effHour >= 12 && effHour <= 14) || (effHour >= 17 && effHour <= 19);
+                    if (isPeak) {
+                        peakSurcharge = peakHoursFee;
+                    } else if (effHour >= 21) {
+                        peakSurcharge = lateNightFee;
+                    }
+                    
+                    const distPremium = Math.max(0, delivery - peakSurcharge);
+                    const weightSurcharge = priority;
+                    
+                    if (parent) {
+                        parent.style.flexDirection = 'column';
+                        parent.style.alignItems = 'stretch';
+                        parent.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+                                <div style="display: flex; flex-direction: column;">
+                                    <span>Delivery Fee</span>
+                                    <span style="font-size: 0.65rem; color: #64748b; margin-top: 2px; font-weight: 500;">
+                                        ₱${distPremium} Dist + ₱${peakSurcharge} Peak + ₱${weightSurcharge} Weight
+                                    </span>
+                                </div>
+                                <span id="receipt-delivery" style="font-weight: 700;">₱${totalDelivery.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+                        `;
+                    }
                 } else {
-                    priorityRow.style.display = 'none';
+                    if (parent) {
+                        parent.style.flexDirection = 'row';
+                        parent.style.alignItems = 'center';
+                        parent.innerHTML = `
+                            <span>Delivery Fee</span>
+                            <span id="receipt-delivery">₱${totalDelivery.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        `;
+                    }
                 }
             }
 

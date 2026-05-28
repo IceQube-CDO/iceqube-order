@@ -359,6 +359,7 @@ const app = {
         // --- Profile Management (Must run BEFORE UI rendering) ---
         try {
             this.loadUserProfile();
+            this.syncOrdersFromCloud();
         } catch (e) {
             console.error("❌ Profile Load Failed:", e);
         }
@@ -681,6 +682,72 @@ const app = {
             `;
         }).join('');
     },
+
+    async syncOrdersFromCloud() {
+        if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            return;
+        }
+
+        const psid = this.user.messengerId;
+        const companyName = this.user.companyName;
+
+        let query = '';
+        if (psid && psid !== 'GUEST_WEB') {
+            query = `messenger_id=eq.${psid}`;
+        } else if (companyName && companyName !== 'Guest Customer') {
+            query = `customer_name=eq.${encodeURIComponent(companyName)}`;
+        } else {
+            return;
+        }
+
+        try {
+            console.log(`☁️ [Cloud Sync] Syncing orders from Supabase for: ${query}...`);
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?${query}&is_real=eq.true&order=created_at.desc&limit=50`, {
+                method: 'GET',
+                headers: {
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const cloudOrders = await response.json();
+            if (cloudOrders) {
+                let localOrders = [];
+                try {
+                    localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                } catch (e) {
+                    console.error('Failed to parse local orders:', e);
+                }
+
+                // Merge: keep local orders but insert cloud orders if they don't exist
+                const merged = [...localOrders];
+                cloudOrders.forEach(co => {
+                    const exists = merged.some(lo => {
+                        const loId = lo.order_id || lo.id || '';
+                        const coId = co.order_id || co.id || '';
+                        return loId.replace('#', '') === coId.replace('#', '');
+                    });
+                    if (!exists) {
+                        merged.push(co);
+                    }
+                });
+
+                // Sort by created_at descending
+                merged.sort((a, b) => new Date(b.created_at || b.date || 0) - new Date(a.created_at || a.date || 0));
+
+                localStorage.setItem('ice_orders', JSON.stringify(merged.slice(0, 100)));
+                this.renderOrderHistory();
+            }
+        } catch (err) {
+            console.error('❌ [Cloud Sync] Failed to sync orders:', err);
+        }
+    },
+
 
     initAdminSecret() {
         const logo = document.querySelector('.brand-logo');
@@ -1796,9 +1863,9 @@ const app = {
         // Apply defaults and flag
         this.applyQuickReorderDefaults();
 
-        // Jump straight to Schedule step (Index 2)
+        // Jump straight to Schedule step (Index 3)
         const fromStep = 0; 
-        this.currentStep = 2;
+        this.currentStep = 3;
         this.showStep(this.currentStep, 'next', fromStep);
     },
 
@@ -3996,7 +4063,8 @@ const app = {
                 }
                 
                 let surcharge = 0;
-                if (effectiveHour >= 17 && effectiveHour <= 19) {
+                const isPeakHour = (effectiveHour >= 12 && effectiveHour <= 14) || (effectiveHour >= 17 && effectiveHour <= 19);
+                if (isPeakHour) {
                     surcharge += peakHoursFee;
                 }
                 if (effectiveHour >= 21) {
@@ -4025,7 +4093,8 @@ const app = {
                     if (timeSurcharge > 0) {
                         fee += timeSurcharge;
                         let effectiveHour = this.orderData.schedule && this.orderData.schedule.time ? parseInt(this.orderData.schedule.time.split(':')[0]) : new Date().getHours();
-                        if (effectiveHour >= 17 && effectiveHour <= 19) {
+                        const isPeakHour = (effectiveHour >= 12 && effectiveHour <= 14) || (effectiveHour >= 17 && effectiveHour <= 19);
+                        if (isPeakHour) {
                             zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
                         } else if (effectiveHour >= 21) {
                             zone += ` + ₱${parseFloat(delivery.lateNightFee) || 0} Late`;
@@ -5448,6 +5517,7 @@ const app = {
                 localOrders.unshift(payload);
                 localStorage.setItem('ice_orders', JSON.stringify(localOrders.slice(0, 100)));
                 console.log("💾 Order persisted to local storage.");
+                this.renderOrderHistory();
             }
         } catch (e) {
             console.error("Failed to save order to local storage:", e);
@@ -6042,17 +6112,80 @@ const app = {
             document.getElementById('receipt-subtotal').innerText = '₱' + grossSubtotal.toLocaleString();
 
             const deliveryFee = order.delivery || 0;
-            document.getElementById('receipt-delivery').innerText = '₱' + deliveryFee.toLocaleString();
-            
             const priorityFee = order.priorityFee || 0;
+            const deliveryEl = document.getElementById('receipt-delivery');
             const priorityRow = document.getElementById('receipt-priority-fee-row');
-            const priorityEl = document.getElementById('receipt-priority-fee');
-            if (priorityRow && priorityEl) {
-                if (priorityFee > 0) {
-                    priorityRow.style.display = 'flex';
-                    priorityEl.innerText = '₱' + priorityFee.toLocaleString();
+            
+            if (priorityRow) priorityRow.style.display = 'none'; // Always hide since it's merged
+
+            if (deliveryEl) {
+                const totalDelivery = deliveryFee + priorityFee;
+                const parent = deliveryEl.parentElement;
+                
+                const isDelivery = order.address && 
+                                   !order.address.toLowerCase().includes('pickup') && 
+                                   !order.address.toLowerCase().includes('self-pickup');
+                
+                if (isDelivery && totalDelivery > 0) {
+                    // Derive components for breakdown
+                    const deliveryConfig = matrix.delivery || {};
+                    const peakHoursFee = parseFloat(deliveryConfig.peakHoursFee) || 0;
+                    const lateNightFee = parseFloat(deliveryConfig.lateNightFee) || 0;
+                    
+                    const getOrderEffectiveHour = (o) => {
+                        try {
+                            if (rawOrder.delivery_schedule && rawOrder.delivery_schedule !== 'Immediate') {
+                                const parts = rawOrder.delivery_schedule.split(' ');
+                                const timePart = parts[parts.length - 1];
+                                if (timePart && timePart.includes(':')) {
+                                    return parseInt(timePart.split(':')[0]);
+                                }
+                            }
+                            if (rawOrder.created_at) {
+                                return new Date(rawOrder.created_at).getHours();
+                            }
+                        } catch (e) {
+                            console.error("Error parsing effective hour:", e);
+                        }
+                        return new Date().getHours();
+                    };
+                    
+                    const effHour = getOrderEffectiveHour(order);
+                    let peakSurcharge = 0;
+                    const isPeak = (effHour >= 12 && effHour <= 14) || (effHour >= 17 && effHour <= 19);
+                    if (isPeak) {
+                        peakSurcharge = peakHoursFee;
+                    } else if (effHour >= 21) {
+                        peakSurcharge = lateNightFee;
+                    }
+                    
+                    const distPremium = Math.max(0, deliveryFee - peakSurcharge);
+                    const weightSurcharge = priorityFee;
+                    
+                    if (parent) {
+                        parent.style.flexDirection = 'column';
+                        parent.style.alignItems = 'stretch';
+                        parent.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%;">
+                                <div style="display: flex; flex-direction: column;">
+                                    <span>Delivery Fee</span>
+                                    <span style="font-size: 0.65rem; color: #64748b; margin-top: 2px; font-weight: 500;">
+                                        ₱${distPremium} Dist + ₱${peakSurcharge} Peak + ₱${weightSurcharge} Weight
+                                    </span>
+                                </div>
+                                <span id="receipt-delivery" style="font-weight: 700;">₱${totalDelivery.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+                        `;
+                    }
                 } else {
-                    priorityRow.style.display = 'none';
+                    if (parent) {
+                        parent.style.flexDirection = 'row';
+                        parent.style.alignItems = 'center';
+                        parent.innerHTML = `
+                            <span>Delivery Fee</span>
+                            <span id="receipt-delivery">₱${totalDelivery.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        `;
+                    }
                 }
             }
             
@@ -6567,6 +6700,11 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                     const pfp = document.getElementById('user-pfp');
                     if (pfp) pfp.style.background = (this.user.companyName === 'Guest Customer') ? '#94a3b8' : '#4285F4';
                 }
+            }
+
+            if (panelId === 'history') {
+                this.renderOrderHistory();
+                this.syncOrdersFromCloud();
             }
         } else {
             if (panelId && panelId !== 'all') {
@@ -7142,6 +7280,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
                 localStorage.setItem('iceqube_user_profile', JSON.stringify(profile));
                 this.loadUserProfile();
+                this.syncOrdersFromCloud();
                 console.log(`✅ [Cloud Sync] Profile successfully restored for: ${profile.establishment}`);
                 this.showToast(`✨ Profile sync complete: Welcome back ${profile.establishment}!`, 'success');
                 
