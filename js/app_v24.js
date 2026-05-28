@@ -161,6 +161,8 @@ const app = {
         });
 
         this.renderProducts();
+        this.updateAboutDeliveryUI();
+        this.updateAboutIcePricingUI();
     },
 
     showToast(message, type = 'info') {
@@ -3635,6 +3637,110 @@ const app = {
 
         fullDiceContainer.innerHTML = renderType('fullDice');
         halfDiceContainer.innerHTML = renderType('halfDice');
+    },
+
+    updateAboutDeliveryUI() {
+        const delivery = this.pricingMatrix.delivery || {};
+        
+        // 1. Base Fare
+        const baseFareEl = document.getElementById('about-delivery-base');
+        if (baseFareEl) {
+            baseFareEl.textContent = `₱${delivery.baseFare !== undefined ? delivery.baseFare : 30}`;
+        }
+        
+        // 2. Distance rates
+        const shortKmEl = document.getElementById('about-delivery-short');
+        if (shortKmEl) {
+            shortKmEl.textContent = `₱${delivery.perKmShort !== undefined ? delivery.perKmShort : 15}/km`;
+        }
+        const longKmEl = document.getElementById('about-delivery-long');
+        if (longKmEl) {
+            longKmEl.textContent = `₱${delivery.perKmLong !== undefined ? delivery.perKmLong : 20}/km`;
+        }
+        
+        // 3. Peak hours
+        const peakValEl = document.getElementById('about-delivery-peak-hours');
+        if (peakValEl) {
+            peakValEl.textContent = delivery.peakHoursFee !== undefined ? delivery.peakHoursFee : 15;
+        }
+        
+        // 4. Late night
+        const lateValEl = document.getElementById('about-delivery-late-night');
+        if (lateValEl) {
+            lateValEl.textContent = delivery.lateNightFee !== undefined ? delivery.lateNightFee : 25;
+        }
+        
+        // 5. Free Delivery threshold
+        const freeContainer = document.getElementById('about-delivery-free-container');
+        const freeValEl = document.getElementById('about-delivery-free-val');
+        if (freeContainer && freeValEl) {
+            const threshold = parseFloat(delivery.freeThreshold) || 0;
+            if (threshold > 0) {
+                freeValEl.textContent = threshold.toLocaleString();
+                freeContainer.style.display = 'flex';
+            } else {
+                freeContainer.style.display = 'none';
+            }
+        }
+
+        // 6. Heavy Load surcharges
+        const t1Container = document.getElementById('about-delivery-heavy-t1-container');
+        const t1WeightEl = document.getElementById('about-delivery-heavy-t1-weight');
+        const t1FeeEl = document.getElementById('about-delivery-heavy-t1-fee');
+        if (t1Container && t1WeightEl && t1FeeEl) {
+            const t1Weight = parseFloat(delivery.heavyLoadT1Weight) || 0;
+            const t1Fee = parseFloat(delivery.heavyLoadT1Fee) || 0;
+            if (t1Weight > 0 && t1Fee > 0) {
+                t1WeightEl.textContent = t1Weight;
+                t1FeeEl.textContent = t1Fee;
+                t1Container.style.display = 'flex';
+            } else {
+                t1Container.style.display = 'none';
+            }
+        }
+
+        const t2Container = document.getElementById('about-delivery-heavy-t2-container');
+        const t2WeightEl = document.getElementById('about-delivery-heavy-t2-weight');
+        const t2FeeEl = document.getElementById('about-delivery-heavy-t2-fee');
+        if (t2Container && t2WeightEl && t2FeeEl) {
+            const t2Weight = parseFloat(delivery.heavyLoadT2Weight) || 0;
+            const t2Fee = parseFloat(delivery.heavyLoadT2Fee) || 0;
+            if (t2Weight > 0 && t2Fee > 0) {
+                t2WeightEl.textContent = t2Weight;
+                t2FeeEl.textContent = t2Fee;
+                t2Container.style.display = 'flex';
+            } else {
+                t2Container.style.display = 'none';
+            }
+        }
+    },
+
+    updateAboutIcePricingUI() {
+        const products = this.pricingMatrix.products || [];
+        const bag3kg = products.find(p => p.id === 'bag3kg');
+        const bag1kg = products.find(p => p.id === 'bag1kg');
+        
+        if (bag3kg) {
+            ['full', 'half'].forEach(type => {
+                const stdEl = document.getElementById(`${type}-3kg-standard`);
+                const bulkEl = document.getElementById(`${type}-3kg-wholesale`);
+                const threshEl = document.getElementById(`${type}-3kg-threshold`);
+                if (stdEl) stdEl.textContent = `₱${bag3kg.standard}`;
+                if (bulkEl) bulkEl.textContent = `₱${bag3kg.bulk}`;
+                if (threshEl) threshEl.textContent = `${bag3kg.threshold}+ bags`;
+            });
+        }
+        
+        if (bag1kg) {
+            ['full', 'half'].forEach(type => {
+                const stdEl = document.getElementById(`${type}-1kg-standard`);
+                const bulkEl = document.getElementById(`${type}-1kg-wholesale`);
+                const threshEl = document.getElementById(`${type}-1kg-threshold`);
+                if (stdEl) stdEl.textContent = `₱${bag1kg.standard}`;
+                if (bulkEl) bulkEl.textContent = `₱${bag1kg.bulk}`;
+                if (threshEl) threshEl.textContent = `${bag1kg.threshold}+ bags`;
+            });
+        }
     },
 
     updateQty(iceType, product, delta) {
