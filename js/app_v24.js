@@ -5947,6 +5947,83 @@ const app = {
             }
 
             console.log('✅ Order successfully synced to Supabase Cloud.');
+            
+            // --- DIRECT MESSENGER NOTIFICATION (Reliable fallback) ---
+            // The DB webhook trigger is unreliable, so we call the edge function directly.
+            try {
+                const itemsText = (() => {
+                    try {
+                        const raw = payload.items;
+                        let parts = [];
+                        const f = raw.fullDice || {};
+                        const h = raw.halfDice || {};
+                        if ((f.bag3kg || f['3kg'] || 0) > 0) parts.push(`${f.bag3kg || f['3kg']}x 3kg Full`);
+                        if ((f.bag1kg || f['1kg'] || 0) > 0) parts.push(`${f.bag1kg || f['1kg']}x 1kg Full`);
+                        if ((h.bag3kg || h['3kg'] || 0) > 0) parts.push(`${h.bag3kg || h['3kg']}x 3kg Half`);
+                        if ((h.bag1kg || h['1kg'] || 0) > 0) parts.push(`${h.bag1kg || h['1kg']}x 1kg Half`);
+                        return parts.length > 0 ? parts.join(', ') : 'Ice Products';
+                    } catch (e) { return 'Ice Products'; }
+                })();
+
+                const totalGross = Number(payload.total_price || 0);
+                const dFee = Number(payload.delivery_fee || 0);
+                const pFee = Number(payload.priority_fee || 0);
+
+                const adminMsg = `🚨 NEW ORDER ALERT!\n\n` +
+                    `Deliver to: ${payload.customer_name}\n` +
+                    `Item: ${itemsText}\n` +
+                    `Total: ₱${totalGross.toFixed(2)}\n` +
+                    `Payment: ${payload.payment_method || 'Cash'}\n\n` +
+                    `Check the Control Room!`;
+
+                const custMsg = `❄️ ICEQUBE ORDER CONFIRMED!\n\n` +
+                    `Deliver to: ${payload.customer_name}\n` +
+                    `Item: ${itemsText}\n` +
+                    `Subtotal: ₱${Math.max(0, totalGross - dFee - pFee).toFixed(2)}\n` +
+                    `Delivery fee: ₱${dFee.toFixed(2)}\n` +
+                    (pFee > 0 ? `Bulk Weight Fee: ₱${pFee.toFixed(2)}\n` : '') +
+                    `Total: ₱${totalGross.toFixed(2)}\n` +
+                    `Payment: ${payload.payment_method || 'Cash'}\n\n` +
+                    `Thank you for your order!`;
+
+                // Send admin broadcast
+                fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        action: 'broadcast_to_admins',
+                        customerId: payload.messenger_id || '',
+                        message: adminMsg
+                    })
+                }).then(r => console.log('📡 Admin Messenger broadcast sent:', r.status))
+                  .catch(e => console.warn('⚠️ Admin broadcast failed:', e));
+
+                // Send customer confirmation (if they have a Messenger ID)
+                const custPsid = payload.messenger_id;
+                if (custPsid && custPsid !== 'GUEST_WEB' && custPsid !== '61557321703652') {
+                    fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                        },
+                        body: JSON.stringify({
+                            recipientId: custPsid,
+                            message: custMsg
+                        })
+                    }).then(r => console.log('📡 Customer Messenger confirmation sent:', r.status))
+                      .catch(e => console.warn('⚠️ Customer confirmation failed:', e));
+                }
+                
+                console.log('✅ Direct Messenger notifications dispatched.');
+            } catch (messengerErr) {
+                console.warn('⚠️ Messenger direct notification failed (non-blocking):', messengerErr);
+            }
         } catch (err) {
             console.error('❌ Supabase Cloud Sync Failed:', err);
             // Show toast for non-blocking error feedback

@@ -1318,8 +1318,54 @@ var admin = {
             }
         }, 10000);
         
+        // --- SCHEDULED DELIVERY REMINDER CHECK (every 5 minutes) ---
+        // Calls the edge function to check for deliveries coming up in ~1 hour
+        // and sends Messenger alerts to all admins. Replaces unreliable pg_cron.
+        if (SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            // Run initial check after 30 seconds (let the page settle first)
+            setTimeout(() => this.checkScheduledReminders(), 30000);
+            
+            // Then check every 5 minutes
+            this._reminderIntervalId = setInterval(() => {
+                this.checkScheduledReminders();
+            }, 5 * 60 * 1000);
+        }
+        
         // Add entrance animation
         this.animateCards();
+    },
+
+    async checkScheduledReminders() {
+        try {
+            console.log('⏰ [Reminder] Checking for upcoming scheduled deliveries...');
+            const res = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({ action: 'check_scheduled_reminders' })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.processed > 0) {
+                    console.log(`✅ [Reminder] Sent ${data.processed} delivery reminder(s):`, data.reminders);
+                    this.showNotification(
+                        `⏰ ${data.processed} Scheduled Delivery Reminder(s) Sent`,
+                        data.reminders.map(r => `${r.customer} @ ${r.schedule}`).join(', ')
+                    );
+                } else {
+                    console.log('⏰ [Reminder] No upcoming deliveries in the next hour.');
+                }
+            } else {
+                const errText = await res.text();
+                console.warn('⚠️ [Reminder] Check failed:', res.status, errText);
+            }
+        } catch (err) {
+            console.warn('⚠️ [Reminder] Scheduled reminder check failed (non-blocking):', err);
+        }
     },
 
     async fetchRealStats() {
