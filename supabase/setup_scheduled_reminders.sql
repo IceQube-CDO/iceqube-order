@@ -9,13 +9,13 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- 4. Schedule the job to run every 5 minutes and check scheduled deliveries
 -- Replace YOUR_SUPABASE_ANON_KEY with your actual anonymous API key.
--- Replace YOUR_PROJECT_REF with your actual project reference (e.g. tbbezmpobjdkpoflfcs).
+-- Replace YOUR_PROJECT_REF with your actual project reference (e.g. tbbezmpobjdkwpoflfcs).
 SELECT cron.schedule(
   'send-delivery-reminders-every-5m',
   '*/5 * * * *',
   $$
   SELECT net.http_post(
-    url := 'https://tbbezmpobjdkpoflfcs.supabase.co/functions/v1/messenger-webhook',
+    url := 'https://tbbezmpobjdkwpoflfcs.supabase.co/functions/v1/messenger-webhook',
     headers := '{"Content-Type": "application/json", "Authorization": "Bearer YOUR_SUPABASE_ANON_KEY"}'::jsonb,
     body := '{"action": "check_scheduled_reminders"}'::jsonb
   );
