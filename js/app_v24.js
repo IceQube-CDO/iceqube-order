@@ -600,6 +600,187 @@ const app = {
         printWindow.document.close();
     },
 
+    printSOA() {
+        const soaContent = document.getElementById('printable-soa-document').innerHTML;
+        const printWindow = window.open('', '_blank', 'width=900,height=990');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Statement of Account</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+                    <style>
+                        body { 
+                            font-family: 'Inter', sans-serif; 
+                            padding: 40px; 
+                            background: white; 
+                            color: #0f172a; 
+                            line-height: 1.5;
+                        }
+                        .soa-paper {
+                            width: 100%;
+                            background: white;
+                            color: #0f172a;
+                        }
+                        .soa-header { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: flex-start;
+                            border-bottom: 3px solid #f1f5f9; 
+                            padding-bottom: 30px; 
+                            margin-bottom: 40px; 
+                            width: 100%;
+                        }
+                        .brand-block p {
+                            margin: 4px 0;
+                            font-size: 0.9rem;
+                        }
+                        .brand-block .meta-text {
+                            font-size: 0.75rem;
+                            color: #64748b;
+                        }
+                        .client-block {
+                            text-align: right;
+                        }
+                        .client-block p {
+                            margin: 2px 0;
+                            font-size: 0.85rem;
+                            color: #475569;
+                        }
+                        .client-block h3 {
+                            margin: 5px 0;
+                            font-size: 1.2rem;
+                            color: #0f172a;
+                            font-weight: 800;
+                        }
+                        .logo-text { 
+                            font-size: 28px; 
+                            font-weight: 800; 
+                            letter-spacing: -0.04em; 
+                            margin: 0; 
+                            color: #0f172a;
+                        }
+                        .dynamic-summary { 
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 20px;
+                            background: #f8fafc; 
+                            border: 1px solid #e2e8f0; 
+                            border-radius: 12px; 
+                            padding: 24px; 
+                            margin-bottom: 40px; 
+                        }
+                        .stat-box { 
+                            padding: 0 20px; 
+                            border-right: 1px solid #e2e8f0; 
+                        }
+                        .stat-box:last-child { border-right: none; }
+                        .stat-box span { 
+                            display: block; 
+                            font-size: 10px; 
+                            font-weight: 800; 
+                            color: #94a3b8; 
+                            text-transform: uppercase; 
+                            letter-spacing: 0.1em;
+                            margin-bottom: 8px; 
+                        }
+                        .stat-box strong { 
+                            font-size: 24px; 
+                            font-weight: 800; 
+                            color: #0f172a;
+                            letter-spacing: -0.02em;
+                        }
+                        .ledger-table { 
+                            width: 100%; 
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            font-size: 13px; 
+                            margin-bottom: 50px; 
+                        }
+                        .ledger-table th { 
+                            background: #f8fafc; 
+                            padding: 14px 16px; 
+                            text-align: left; 
+                            font-weight: 700; 
+                            color: #64748b;
+                            border-bottom: 2px solid #e2e8f0; 
+                            text-transform: uppercase;
+                            font-size: 11px;
+                            letter-spacing: 0.05em;
+                        }
+                        .ledger-table td { 
+                            padding: 16px; 
+                            border-bottom: 1px solid #f1f5f9; 
+                            color: #334155;
+                        }
+                        .align-right { text-align: right; }
+                        .payment-row { background: #f0fdf4; color: #16a34a !important; font-weight: 600; }
+                        .payment-row td { color: #16a34a !important; }
+                        .balance-forward-row { background: #fffbeb; font-weight: 700; font-style: italic; }
+                        .soa-footer { border-top: 1px solid #f1f5f9; padding-top: 25px; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.6; }
+                        .hide-on-print { display: none !important; }
+                        
+                        /* Navigation Button Styles */
+                        .no-print {
+                            position: fixed;
+                            bottom: 30px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            z-index: 10000;
+                        }
+                        .back-app-btn {
+                            background: #0f172a;
+                            color: white;
+                            border: none;
+                            padding: 14px 28px;
+                            border-radius: 50px;
+                            font-family: 'Inter', sans-serif;
+                            font-size: 1rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            transition: all 0.2s ease;
+                            text-decoration: none;
+                        }
+                        .back-app-btn:hover {
+                            transform: scale(1.05);
+                            background: #1e293b;
+                        }
+                        .back-app-btn:active {
+                            transform: scale(0.95);
+                        }
+                        @media print {
+                            .no-print { display: none !important; }
+                            body { padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print">
+                        <button onclick="window.close()" class="back-app-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            Close Print View
+                        </button>
+                    </div>
+                    <div class="soa-paper">
+                        ${soaContent}
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            if (!window.matchMedia('print').matches) {
+                                window.print();
+                                window.onafterprint = function() { window.close(); };
+                            }
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    },
+
     renderOrderHistory() {
         const container = document.getElementById('history-list-container');
         if (!container) return;
@@ -6281,6 +6462,10 @@ const app = {
         setTimeout(() => {
             // Populate Modal
             document.getElementById('receipt-order-id').innerText = '#' + order.order_id;
+            const reportBtn = panel.querySelector('.ghost-link');
+            if (reportBtn) {
+                reportBtn.setAttribute('onclick', `app.reportIssue('${order.order_id}')`);
+            }
             document.getElementById('receipt-date').innerText = order.date;
             document.getElementById('receipt-customer-name').innerText = displayCustomer;
             document.getElementById('receipt-customer-address').innerText = this.user.savedAddress || order.address;
@@ -6464,24 +6649,18 @@ const app = {
                     const scaledWidth = docWidth * scale;
                     const scaledHeight = docHeight * scale;
                     
-                    // Clamp X (horizontal) - restrict so it can never expose empty space
-                    let maxX = 0;
-                    let minX = 0;
-                    if (scaledWidth > containerWidth) {
-                        maxX = (scaledWidth - containerWidth) / 2;
-                        minX = -maxX;
-                    }
+                    // Relaxed clamping - allows the document to be dragged freely while ensuring at least 150px remains visible
+                    const visibleMargin = 150;
+                    
+                    const minX = visibleMargin - (scaledWidth + containerWidth) / 2;
+                    const maxX = (scaledWidth + containerWidth) / 2 - visibleMargin;
                     const clampedX = Math.max(minX, Math.min(maxX, x));
                     
-                    // Clamp Y (vertical) - restrict so it can never expose empty space
-                    let maxY = 0;
-                    let minY = 0;
-                    if (scaledHeight > containerHeight) {
-                        minY = containerHeight - scaledHeight;
-                    }
+                    const minY = visibleMargin - scaledHeight;
+                    const maxY = containerHeight - visibleMargin;
                     const clampedY = Math.max(minY, Math.min(maxY, y));
                     
-                    elem.style.transform = `scale(${scale}) translate(${clampedX}px, ${clampedY}px)`;
+                    elem.style.transform = `translate(${clampedX}px, ${clampedY}px) scale(${scale})`;
                 }
             });
             // Robust manual wheel zooming
@@ -7627,6 +7806,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 this.user.savedInstructions = profile.instructions || '';
                 this.user.savedLat = profile.lat || null;
                 this.user.savedLng = profile.lng || null;
+                this.user.role = profile.role || 'Owner';
                 
                 // Sync Elite Status & Tier from Admin
                 const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
@@ -7682,6 +7862,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 // Pre-fill Edit Modal
                 const estInput = document.getElementById('profile-establishment');
                 const perInput = document.getElementById('profile-contact-person');
+                const roleInput = document.getElementById('profile-role');
                 const numInput = document.getElementById('profile-contact-number');
                 const addrInput = document.getElementById('profile-address');
                 const latInput = document.getElementById('profile-lat');
@@ -7690,6 +7871,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
                 if (estInput) estInput.value = this.user.companyName;
                 if (perInput) perInput.value = this.user.contactPerson;
+                if (roleInput) roleInput.value = this.user.role;
                 const instInput = document.getElementById('profile-instructions');
                 if (numInput) numInput.value = this.user.contactNumber;
                 if (addrInput) addrInput.value = this.user.savedAddress;
@@ -7731,29 +7913,45 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     updateProfileMapPreview() {
         const previewEl = document.getElementById('profile-map-preview');
         const placeholderEl = document.getElementById('profile-map-placeholder');
+        const btnTextEl = document.getElementById('profile-map-btn-text');
         if (!previewEl) return;
 
         if (this.user.savedLat && this.user.savedLng) {
+            if (btnTextEl) {
+                btnTextEl.innerText = "Location Pinned (Tap to Edit)";
+                previewEl.style.setProperty('border', '1px solid #10b981', 'important');
+                previewEl.style.setProperty('color', '#10b981', 'important');
+            }
             if (placeholderEl) placeholderEl.style.display = 'none';
-            const lat = this.user.savedLat;
-            const lng = this.user.savedLng;
-            const apiKey = 'AIzaSyC6JwFLApTP1XlzZVn_E7SAl2ezmrm2_zg';
-            const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=17&size=600x200&scale=2&maptype=roadmap&markers=color:0x4285F4|${lat},${lng}&key=${apiKey}`;
-            
-            previewEl.style.backgroundImage = `url('${staticUrl}')`;
-            previewEl.style.backgroundSize = 'cover';
-            previewEl.style.backgroundPosition = 'center';
-            previewEl.style.border = '1px solid var(--accent)';
+            if (previewEl.classList.contains('map-preview')) {
+                const lat = this.user.savedLat;
+                const lng = this.user.savedLng;
+                const apiKey = 'AIzaSyC6JwFLApTP1XlzZVn_E7SAl2ezmrm2_zg';
+                const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=17&size=600x200&scale=2&maptype=roadmap&markers=color:0x4285F4|${lat},${lng}&key=${apiKey}`;
+                
+                previewEl.style.backgroundImage = `url('${staticUrl}')`;
+                previewEl.style.backgroundSize = 'cover';
+                previewEl.style.backgroundPosition = 'center';
+                previewEl.style.border = '1px solid var(--accent)';
+            }
         } else {
+            if (btnTextEl) {
+                btnTextEl.innerText = "Open & Edit Map";
+                previewEl.style.setProperty('border', '1px dashed var(--accent)', 'important');
+                previewEl.style.setProperty('color', 'var(--accent)', 'important');
+            }
             if (placeholderEl) placeholderEl.style.display = 'flex';
-            previewEl.style.backgroundImage = 'none';
-            previewEl.style.border = '1px solid var(--border)';
+            if (previewEl.classList.contains('map-preview')) {
+                previewEl.style.backgroundImage = 'none';
+                previewEl.style.border = '1px solid var(--border)';
+            }
         }
     },
 
     saveUserProfile() {
         const establishment = document.getElementById('profile-establishment').value.trim();
         const contactPerson = document.getElementById('profile-contact-person').value.trim();
+        const role = document.getElementById('profile-role')?.value || 'Owner';
         const contactNumber = document.getElementById('profile-contact-number').value.trim();
         const messengerId = document.getElementById('profile-messenger-id').value.trim();
         const address = document.getElementById('profile-address').value.trim();
@@ -7769,6 +7967,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         const profile = {
             establishment,
             contactPerson,
+            role,
             contactNumber,
             messengerId,
             messengerEnabled: this.user.messengerEnabled || false,
@@ -7795,12 +7994,16 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         // Update live state
         this.user.companyName = establishment;
         this.user.contactPerson = contactPerson;
+        this.user.role = role;
         this.user.contactNumber = contactNumber;
         this.user.messengerId = messengerId;
         this.user.savedAddress = address;
         this.user.savedInstructions = instructions;
         this.user.savedLat = lat;
         this.user.savedLng = lng;
+        
+        // Update header UI role status immediately
+        this.renderDashboard(this.user.role);
 
         // Also sync to Pickup fields if they exist
         const pickEst = document.getElementById('pickup-establishment');
