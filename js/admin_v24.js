@@ -3624,7 +3624,6 @@ var admin = {
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
                     <td style="font-family: 'Inter', sans-serif;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'Inter', sans-serif; font-weight: 700; color: #94a3b8;">₱${(o.priority_fee || 0).toLocaleString()}</td>
                     <td>
                         <div style="display: flex; gap: 6px; align-items: center;">
                             <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 80px;">
@@ -3777,7 +3776,6 @@ var admin = {
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
                     <td style="font-family: 'Inter', sans-serif; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
-                    <td style="font-family: 'Inter', sans-serif; color: #64748b;">₱${(parseFloat(o.priority_fee) || 0).toLocaleString()}</td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div class="rider-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">${(o.rider || 'U')[0]}</div>

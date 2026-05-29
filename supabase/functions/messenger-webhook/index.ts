@@ -3,7 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
-const FB_API_URL = "https://graph.facebook.com/v19.0/me/messages"
+const FB_API_URL = "https://graph.facebook.com/v21.0/me/messages"
 
 function formatItems(itemsStr: string): string {
   try {
@@ -32,25 +32,52 @@ function formatItems(itemsStr: string): string {
 }
 
 async function sendFBMessage(recipientId: string, text: string) {
-  const payload = {
+  // Strategy: Try standard messaging first (works within 24h window),
+  // then fall back to MESSAGE_TAG if outside window.
+  // This avoids the HUMAN_AGENT approval issue from deprecated tags.
+  
+  const standardPayload = {
+    recipient: { id: recipientId },
+    message: { text: text },
+    messaging_type: "UPDATE"
+  };
+  
+  console.log(`[Messenger] Sending to FB (standard): ${recipientId}`);
+  const response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(standardPayload),
+  });
+  
+  const result = await response.json();
+  
+  if (response.ok) {
+    return result;
+  }
+  
+  // If standard messaging failed (outside 24h window), retry with tag
+  const errorCode = result?.error?.code;
+  const errorSubcode = result?.error?.error_subcode;
+  console.warn(`[Messenger] Standard send failed for ${recipientId} (code: ${errorCode}, subcode: ${errorSubcode}). Retrying with POST_PURCHASE_UPDATE tag...`);
+  
+  const taggedPayload = {
     recipient: { id: recipientId },
     message: { text: text },
     messaging_type: "MESSAGE_TAG",
     tag: "POST_PURCHASE_UPDATE"
   };
   
-  console.log(`[Messenger] Sending to FB: ${recipientId}`);
-  const response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+  const taggedResponse = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(taggedPayload),
   });
   
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(JSON.stringify(result));
+  const taggedResult = await taggedResponse.json();
+  if (!taggedResponse.ok) {
+    throw new Error(JSON.stringify(taggedResult));
   }
-  return result;
+  return taggedResult;
 }
 
 serve(async (req) => {
@@ -272,6 +299,58 @@ serve(async (req) => {
           }
         });
         await Promise.all(adminPromises);
+        
+        return new Response(JSON.stringify({ success: true, results }), {
+          headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+          status: 200,
+        });
+      }
+      if (body.action === 'test_tags') {
+        const recipientId = body.recipientId;
+        if (!recipientId) {
+          return new Response(JSON.stringify({ error: "Missing recipientId" }), {
+            headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
+            status: 400
+          });
+        }
+        
+        const tags = ["CONFIRMED_EVENT_UPDATE", "POST_PURCHASE_UPDATE", "ACCOUNT_UPDATE"];
+        const results: any = {};
+        
+        // 1. Try standard UPDATE
+        try {
+          const res = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipient: { id: recipientId },
+              message: { text: "Test: Standard UPDATE messaging" },
+              messaging_type: "UPDATE"
+            })
+          });
+          results["UPDATE"] = { status: res.status, body: await res.json() };
+        } catch (e) {
+          results["UPDATE"] = { error: e.message };
+        }
+        
+        // 2. Try each tag
+        for (const tag of tags) {
+          try {
+            const res = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recipient: { id: recipientId },
+                message: { text: `Test: Tagged send using ${tag}` },
+                messaging_type: "MESSAGE_TAG",
+                tag: tag
+              })
+            });
+            results[tag] = { status: res.status, body: await res.json() };
+          } catch (e) {
+            results[tag] = { error: e.message };
+          }
+        }
         
         return new Response(JSON.stringify({ success: true, results }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
@@ -532,33 +611,49 @@ serve(async (req) => {
       })
     }
 
-    // Default to MESSAGE_TAG to bypass the 24h standard messaging window
+    // Strategy: Try standard UPDATE first, fall back to tagged if outside 24h window
     if (!messagingType || messagingType === "RESPONSE") {
-      messagingType = "MESSAGE_TAG";
-      if (!tag) tag = "POST_PURCHASE_UPDATE";
+      messagingType = "UPDATE";
     }
 
     const payload: any = {
       recipient: { id: recipientId },
-      message: { text: message }
+      message: { text: message },
+      messaging_type: messagingType
     }
 
-    if (messagingType) {
-      payload.messaging_type = messagingType;
-    }
-    if (tag && tag !== "CONFIRMED_ORDER_UPDATE") {
+    // Only attach tag if explicitly provided (not the default)
+    if (tag && tag !== "CONFIRMED_ORDER_UPDATE" && messagingType === "MESSAGE_TAG") {
       payload.tag = tag;
     }
 
-    console.log(`[Messenger] Relaying to FB: ${recipientId} (messaging_type: ${messagingType}, tag: ${tag})`);
+    console.log(`[Messenger] Relaying to FB: ${recipientId} (messaging_type: ${messagingType}, tag: ${tag || 'none'})`);
     
-    const response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+    let response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
 
-    const result = await response.json()
+    let result = await response.json()
+
+    // If standard UPDATE failed, retry with MESSAGE_TAG + POST_PURCHASE_UPDATE
+    if (!response.ok && messagingType === "UPDATE") {
+      console.warn(`[Messenger] UPDATE failed for ${recipientId} (${result?.error?.code}). Retrying with POST_PURCHASE_UPDATE tag...`);
+      const taggedPayload = {
+        recipient: { id: recipientId },
+        message: { text: message },
+        messaging_type: "MESSAGE_TAG",
+        tag: "POST_PURCHASE_UPDATE"
+      };
+      
+      response = await fetch(`${FB_API_URL}?access_token=${FB_PAGE_ACCESS_TOKEN}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taggedPayload),
+      });
+      result = await response.json();
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { 

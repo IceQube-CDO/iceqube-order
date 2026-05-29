@@ -1810,11 +1810,11 @@
                 border: none !important;
                 padding: 4px !important;
             }
-            #pending-dispatch-body tr td:nth-child(13),
-            #orders-view th:nth-child(13) {
+            #pending-dispatch-body tr td:nth-child(12),
+            #orders-view th:nth-child(12) {
                 display: none !important;
             }
-            #pending-dispatch-body tr td:nth-child(12) {
+            #pending-dispatch-body tr td:nth-child(11) {
                 border-bottom: none !important;
             }
             .cc-title h1, .cc-header h1 {
@@ -2075,11 +2075,9 @@
             /* Financial/Numeric columns */
             #pending-dispatch-body tr td:nth-child(9),
             #pending-dispatch-body tr td:nth-child(10),
-            #pending-dispatch-body tr td:nth-child(11),
             #pickup-ledger-body tr td:nth-child(8),
             #order-ledger-body tr td:nth-child(10),
-            #order-ledger-body tr td:nth-child(11),
-            #order-ledger-body tr td:nth-child(12) {
+            #order-ledger-body tr td:nth-child(11) {
                 font-family: 'Inter', sans-serif !important;
                 font-weight: 700 !important;
                 font-size: 0.8rem !important;
@@ -2093,10 +2091,6 @@
             #pending-dispatch-body tr td:nth-child(10),
             #order-ledger-body tr td:nth-child(11) {
                 color: #cbd5e1 !important;
-            }
-            #pending-dispatch-body tr td:nth-child(11),
-            #order-ledger-body tr td:nth-child(12) {
-                color: #94a3b8 !important;
             }
             #orders-view .cashflow-table td::before {
                 font-family: 'Inter', sans-serif !important;
@@ -2121,9 +2115,8 @@
             #pending-dispatch-body tr td:nth-child(8)::before { content: "PAYMENT"; }
             #pending-dispatch-body tr td:nth-child(9)::before { content: "ITEM TOTAL"; }
             #pending-dispatch-body tr td:nth-child(10)::before { content: "DELIVERY FEE"; }
-            #pending-dispatch-body tr td:nth-child(11)::before { content: "BULK WEIGHT"; }
-            #pending-dispatch-body tr td:nth-child(12)::before { content: "ASSIGNMENT"; }
-            #pending-dispatch-body tr td:nth-child(13) { display: none !important; }
+            #pending-dispatch-body tr td:nth-child(11)::before { content: "ASSIGNMENT"; }
+            #pending-dispatch-body tr td:nth-child(12) { display: none !important; }
 
             /* Labels for Order Ledger Table */
             #order-ledger-body tr td:nth-child(1)::before { content: "TIME"; }
@@ -2137,10 +2130,9 @@
             #order-ledger-body tr td:nth-child(9)::before { content: "PAYMENT"; }
             #order-ledger-body tr td:nth-child(10)::before { content: "ITEM TOTAL"; }
             #order-ledger-body tr td:nth-child(11)::before { content: "DELIVERY FEE"; }
-            #order-ledger-body tr td:nth-child(12)::before { content: "BULK WEIGHT"; }
-            #order-ledger-body tr td:nth-child(13)::before { content: "RIDER"; }
-            #order-ledger-body tr td:nth-child(14)::before { content: "STATUS"; }
-            #order-ledger-body tr td:nth-child(15) { display: none !important; }
+            #order-ledger-body tr td:nth-child(12)::before { content: "RIDER"; }
+            #order-ledger-body tr td:nth-child(13)::before { content: "STATUS"; }
+            #order-ledger-body tr td:nth-child(14) { display: none !important; }
             
             /* Labels for Pickup Ledger Table */
             #pickup-ledger-body tr td:nth-child(1)::before { content: "TIME"; }
@@ -2642,7 +2634,6 @@
                                 <th>PAYMENT METHOD</th>
                                 <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
-                                <th>BULK WEIGHT FEE</th>
                                 <th>RIDER ASSIGNMENT</th>
                                 <th style="text-align: right;">ACTION</th>
                             </tr>
@@ -2707,7 +2698,6 @@
                                 <th>PAYMENT METHOD</th>
                                 <th>ITEM TOTAL</th>
                                 <th>DELIVERY FEE</th>
-                                <th>BULK WEIGHT FEE</th>
                                 <th>RIDER</th>
                                 <th>STATUS</th>
                                 <th style="text-align: center;">TYPE</th>
