@@ -446,6 +446,26 @@
                 align-items: center;
                 box-sizing: border-box;
                 border: 4px solid #0f172a;
+                transform: translateY(100px); /* Shift mockup significantly lower */
+                transform-origin: center center;
+                transition: transform 0.3s ease;
+            }
+
+            /* Auto-scale mockup on smaller screen heights to prevent vertical cutoff */
+            @media (max-height: 960px) {
+                .iphone-13-device {
+                    transform: scale(0.9) translateY(100px);
+                }
+            }
+            @media (max-height: 860px) {
+                .iphone-13-device {
+                    transform: scale(0.8) translateY(120px);
+                }
+            }
+            @media (max-height: 760px) {
+                .iphone-13-device {
+                    transform: scale(0.7) translateY(140px);
+                }
             }
             
             .iphone-13-screen {
@@ -3053,18 +3073,34 @@
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Force unregister old workers to clear any corruption
+                // Clean up old parameterized service workers to prevent origin conflicts
                 navigator.serviceWorker.getRegistrations().then(registrations => {
-                    for (let registration of registrations) {
-                        registration.unregister();
+                    for (let reg of registrations) {
+                        if (reg.active && reg.active.scriptURL.includes('?')) {
+                            console.log('Cleaning up old parameterized service worker:', reg.active.scriptURL);
+                            reg.unregister();
+                        }
                     }
-                    // Register the new worker with a cache-busting version parameter
-                    navigator.serviceWorker.register('./sw.js?v=10.7.7').then(reg => {
-                        console.log('Service Worker v10.7.7 registered successfully:', reg);
+                    
+                    // Register the main service worker
+                    navigator.serviceWorker.register('./sw.js').then(reg => {
+                        console.log('Service Worker registered:', reg);
+                        // Force update check on load to bypass browser 24-hour check window
+                        reg.update();
                     }).catch(err => {
                         console.log('Service Worker registration failed:', err);
                     });
                 });
+            });
+
+            // Listen for new service worker taking control, and reload to apply updates
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    console.log("New Service Worker activated! Reloading page...");
+                    window.location.reload();
+                }
             });
         }
         (function() {

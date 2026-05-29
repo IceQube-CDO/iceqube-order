@@ -14,6 +14,29 @@ var admin = {
         }
     },
     
+    forceReloadApp: async function() {
+        console.log("⚡ Purging all PWA caches and service workers...");
+        if ('serviceWorker' in navigator) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let reg of registrations) {
+                    await reg.unregister();
+                    console.log("Unregistered service worker:", reg.active ? reg.active.scriptURL : reg);
+                }
+            } catch (e) { console.error("Error unregistering service worker:", e); }
+        }
+        if ('caches' in window) {
+            try {
+                const keys = await caches.keys();
+                for (let key of keys) {
+                    await caches.delete(key);
+                    console.log("Deleted cache storage:", key);
+                }
+            } catch (e) { console.error("Error deleting cache storage:", e); }
+        }
+        window.location.reload(true);
+    },
+    
     applyCloudStates: function(cloudStates) {
         let needsUpdate = false;
         const stateMappings = {

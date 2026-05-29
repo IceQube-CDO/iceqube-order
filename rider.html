@@ -3110,11 +3110,34 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Service Worker registered:', reg);
-                }).catch(err => {
-                    console.log('Service Worker registration failed:', err);
+                // Clean up old parameterized service workers to prevent origin conflicts
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let reg of registrations) {
+                        if (reg.active && reg.active.scriptURL.includes('?')) {
+                            console.log('Cleaning up old parameterized service worker:', reg.active.scriptURL);
+                            reg.unregister();
+                        }
+                    }
+                    
+                    // Register the main service worker
+                    navigator.serviceWorker.register('./sw.js').then(reg => {
+                        console.log('Service Worker registered:', reg);
+                        // Force update check on load to bypass browser 24-hour check window
+                        reg.update();
+                    }).catch(err => {
+                        console.log('Service Worker registration failed:', err);
+                    });
                 });
+            });
+
+            // Listen for new service worker taking control, and reload to apply updates
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    console.log("New Service Worker activated! Reloading page...");
+                    window.location.reload();
+                }
             });
         }
     </script>

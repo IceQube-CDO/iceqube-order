@@ -1722,7 +1722,7 @@
         .btn-pricing-action:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
     </style>
     <style>
-        /* MOBILE APP OVERRIDES - Forced for all viewports */
+        /* MOBILE APP OVERRIDES - Default for mobile viewports */
             html {
                 background: #020617; /* Dark background outside the phone area */
             }
@@ -1733,7 +1733,7 @@
                 right: 0 !important;
                 bottom: 0 !important;
                 width: 100% !important;
-                max-width: 390px !important; /* iPhone 13 size */
+                max-width: 100% !important; /* Take full viewport width on mobile */
                 margin: 0 auto !important;
                 height: 100vh !important;
                 height: -webkit-fill-available !important;
@@ -1741,8 +1741,214 @@
                 overscroll-behavior: none !important;
                 padding: 0 !important;
                 transform: translateZ(0) !important; /* Create containing block for fixed elements */
-                box-shadow: 0 0 50px rgba(0,0,0,0.5); /* Optional: add shadow for depth */
+                box-shadow: none !important;
             }
+            
+        /* iPhone 13 Mockup Styles - Active only on screens wider than mobile */
+        @media (min-width: 480px) {
+            body.admin-mode {
+                background-color: #0b0f19 !important; /* Premium dark background */
+                background-image: radial-gradient(circle at center, #1e293b 0%, #0b0f19 100%) !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                height: 100vh !important;
+                height: 100dvh !important;
+                width: 100% !important;
+                max-width: none !important;
+                position: relative !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: none !important;
+                box-shadow: none !important;
+            }
+            
+            .iphone-13-device {
+                position: relative;
+                width: 414px; /* screen width 390 + 12px bezel * 2 */
+                height: 868px; /* screen height 844 + 12px bezel * 2 */
+                background: #1e293b;
+                border-radius: 54px;
+                box-shadow: 
+                    0px 25px 50px -12px rgba(0, 0, 0, 0.8),
+                    0px 0px 0px 4px #0f172a,
+                    0px 0px 0px 10px #1e293b,
+                    inset 0 0 4px 2px rgba(255,255,255,0.15);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                box-sizing: border-box;
+                border: 4px solid #0f172a;
+                transform: translateY(20px); /* Shift mockup slightly lower */
+                transform-origin: center center;
+                transition: transform 0.3s ease;
+            }
+
+            /* Auto-scale mockup on smaller screen heights to prevent vertical cutoff */
+            @media (max-height: 960px) {
+                .iphone-13-device {
+                    transform: scale(0.9) translateY(20px);
+                }
+            }
+            @media (max-height: 860px) {
+                .iphone-13-device {
+                    transform: scale(0.8) translateY(25px);
+                }
+            }
+            @media (max-height: 760px) {
+                .iphone-13-device {
+                    transform: scale(0.7) translateY(30px);
+                }
+            }
+            
+            .iphone-13-screen {
+                position: relative;
+                width: 390px;
+                height: 844px;
+                background: var(--admin-bg); /* #020617 */
+                border-radius: 42px;
+                overflow: hidden;
+                /* Essential containing block lock for position: fixed */
+                transform: translate3d(0, 0, 0); 
+                -webkit-transform: translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            }
+            
+            /* The Notch */
+            .iphone-13-notch {
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 150px;
+                height: 28px;
+                background: #0f172a;
+                border-bottom-left-radius: 18px;
+                border-bottom-right-radius: 18px;
+                z-index: 999999;
+                pointer-events: none;
+                box-shadow: inset 0 -1px 1px rgba(255,255,255,0.05);
+            }
+            
+            /* Speaker mesh & Camera lenses inside notch */
+            .iphone-13-notch::before {
+                content: '';
+                position: absolute;
+                top: 5px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 40px;
+                height: 3px;
+                background: #222;
+                border-radius: 2px;
+            }
+            
+            .iphone-13-notch::after {
+                content: '';
+                position: absolute;
+                top: 4px;
+                right: 32px;
+                width: 6px;
+                height: 6px;
+                background: #112244;
+                border-radius: 50%;
+                box-shadow: 0 0 1px #05f;
+            }
+
+            /* Home Indicator Bar */
+            .iphone-13-home-indicator {
+                position: absolute;
+                bottom: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 130px;
+                height: 5px;
+                background: #000000;
+                border-radius: 10px;
+                z-index: 999999;
+                pointer-events: none;
+                opacity: 0.8;
+            }
+            
+            /* Side Buttons */
+            .iphone-13-volume-up, .iphone-13-volume-down, .iphone-13-power {
+                position: absolute;
+                background: #0f172a;
+                border-radius: 2px;
+                z-index: -1;
+                border: 1px solid #1e293b;
+            }
+            
+            .iphone-13-volume-up {
+                left: -6px;
+                top: 170px;
+                width: 6px;
+                height: 50px;
+                box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+            }
+            
+            .iphone-13-volume-down {
+                left: -6px;
+                top: 235px;
+                width: 6px;
+                height: 50px;
+                box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+            }
+            
+            .iphone-13-power {
+                right: -6px;
+                top: 200px;
+                width: 6px;
+                height: 75px;
+                box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+            }
+
+            /* Overlays override to stay inside screen container */
+            .bottom-panel {
+                position: absolute !important;
+                left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 90% !important;
+                transform: translateY(100%) !important;
+            }
+            .bottom-panel.active {
+                transform: translateY(0) !important;
+            }
+            
+            .panel-overlay {
+                position: absolute !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+            /* Push elements down to clear the simulated iPhone 13 notch on desktop mockup */
+            .bottom-panel .panel-header {
+                padding-top: 35px !important;
+                min-height: 80px !important;
+            }
+            .cc-header {
+                padding-top: 35px !important;
+            }
+            .soa-controls {
+                padding-top: 35px !important;
+            }
+        }
+        
+        /* Mobile defaults: make sure mockup containers do not affect layout */
+        @media (max-width: 479px) {
+            .iphone-13-device {
+                display: contents;
+            }
+            .iphone-13-screen {
+                display: contents;
+            }
+            .iphone-13-notch, .iphone-13-home-indicator, .iphone-13-volume-up, .iphone-13-volume-down, .iphone-13-power {
+                display: none !important;
+            }
+        }
             #command-center {
                 position: absolute !important;
                 top: 0 !important;
@@ -1773,17 +1979,23 @@
                 font-size: 1.2rem !important;
             }
             .cc-header img {
-                height: 32px !important;
+                height: 28px !important;
             }
             .cc-header > div > div:first-child {
-                gap: 8px !important;
+                gap: 6px !important;
+            }
+            .cc-header > div > div:first-child h1 {
+                font-size: 0.95rem !important;
+            }
+            .cc-header > div > div:first-child > div > div {
+                font-size: 0.65rem !important;
             }
             .cc-header > div {
                 flex-direction: row !important;
                 align-items: center !important;
                 justify-content: space-between !important;
                 white-space: nowrap !important;
-                gap: 10px !important;
+                gap: 8px !important;
             }
             .cc-header > div > div:nth-child(2) {
                 display: none !important;
@@ -1792,11 +2004,17 @@
                 width: auto !important;
                 flex-wrap: nowrap !important;
                 justify-content: flex-end !important;
+                gap: 6px !important;
             }
             #buzzer-test-btn, 
-            #cloud-sync-badge, #purge-test-data-btn, 
-            #refresh-btn {
+            #cloud-sync-badge, #purge-test-data-btn {
                 display: none !important;
+            }
+            #buzzer-badge {
+                padding: 4px 8px !important;
+                border-radius: 8px !important;
+                font-size: 10px !important;
+                gap: 4px !important;
             }
             #buzzer-badge .hide-mobile {
                 display: none !important;
@@ -1805,10 +2023,21 @@
                 display: inline-block !important;
                 margin-left: 2px !important;
             }
-            #notif-bell {
-                background: transparent !important;
-                border: none !important;
-                padding: 4px !important;
+            #vacation-btn,
+            #diagnostics-btn,
+            #notif-bell,
+            #refresh-btn {
+                padding: 6px !important;
+                border-radius: 8px !important;
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            }
+            #vacation-btn svg,
+            #diagnostics-btn svg,
+            #notif-bell svg,
+            #refresh-btn svg {
+                width: 16px !important;
+                height: 16px !important;
             }
             #pending-dispatch-body tr td:nth-child(12),
             #orders-view th:nth-child(12) {
@@ -2179,7 +2408,14 @@
     </style>
 </head>
 <body class="admin-mode">
-    <!-- Notification Diagnostics Panel -->
+    <div class="iphone-13-device">
+        <div class="iphone-13-volume-up"></div>
+        <div class="iphone-13-volume-down"></div>
+        <div class="iphone-13-power"></div>
+        <div class="iphone-13-screen">
+            <div class="iphone-13-notch"></div>
+            <div class="iphone-13-home-indicator"></div>
+            <!-- Notification Diagnostics Panel -->
     <div id="diagnostics-overlay" class="panel-overlay" onclick="admin.toggleDiagnostics(false)"></div>
     <div id="diagnostics-panel" class="bottom-panel" style="background: #0f172a; color: white; border-top: 1px solid rgba(255,255,255,0.1);">
         <div class="bottom-panel-handle" style="background: rgba(255,255,255,0.2);"></div>
@@ -2436,7 +2672,7 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 </button>
 
-                <button id="refresh-btn" onclick="location.reload()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <button id="refresh-btn" onclick="admin.forceReloadApp()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                 </button>
             </div>
@@ -4241,11 +4477,34 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Service Worker registered:', reg);
-                }).catch(err => {
-                    console.log('Service Worker registration failed:', err);
+                // Clean up old parameterized service workers to prevent origin conflicts
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let reg of registrations) {
+                        if (reg.active && reg.active.scriptURL.includes('?')) {
+                            console.log('Cleaning up old parameterized service worker:', reg.active.scriptURL);
+                            reg.unregister();
+                        }
+                    }
+                    
+                    // Register the main service worker
+                    navigator.serviceWorker.register('./sw.js').then(reg => {
+                        console.log('Service Worker registered:', reg);
+                        // Force update check on load to bypass browser 24-hour check window
+                        reg.update();
+                    }).catch(err => {
+                        console.log('Service Worker registration failed:', err);
+                    });
                 });
+            });
+
+            // Listen for new service worker taking control, and reload to apply updates
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    console.log("New Service Worker activated! Reloading page...");
+                    window.location.reload();
+                }
             });
         }
     </script>
@@ -4398,6 +4657,8 @@
             <div id="flagged-archive-list" style="max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
                 <div style="text-align: center; color: #64748b; padding: 10px;">Archive is empty</div>
             </div>
+        </div>
+    </div>
         </div>
     </div>
     
