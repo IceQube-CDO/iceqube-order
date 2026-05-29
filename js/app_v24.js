@@ -5986,7 +5986,8 @@ const app = {
                     `Payment: ${payload.payment_method || 'Cash'}\n\n` +
                     `Thank you for your order!`;
 
-                // Send admin broadcast
+                // Send admin broadcast (Disabled: Handled automatically by database trigger webhook on INSERT)
+                /*
                 fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
                     method: 'POST',
                     headers: {
@@ -6001,8 +6002,10 @@ const app = {
                     })
                 }).then(r => console.log('📡 Admin Messenger broadcast sent:', r.status))
                   .catch(e => console.warn('⚠️ Admin broadcast failed:', e));
+                */
 
-                // Send customer confirmation (if they have a Messenger ID)
+                // Send customer confirmation (Disabled: Handled automatically by database trigger webhook on INSERT)
+                /*
                 const custPsid = payload.messenger_id;
                 if (custPsid && custPsid !== 'GUEST_WEB' && custPsid !== '61557321703652') {
                     fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
@@ -6019,8 +6022,9 @@ const app = {
                     }).then(r => console.log('📡 Customer Messenger confirmation sent:', r.status))
                       .catch(e => console.warn('⚠️ Customer confirmation failed:', e));
                 }
+                */
                 
-                console.log('✅ Direct Messenger notifications dispatched.');
+                console.log('✅ Messenger notifications deferred to database trigger webhook.');
             } catch (messengerErr) {
                 console.warn('⚠️ Messenger direct notification failed (non-blocking):', messengerErr);
             }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-cache-v10.8.1';
+const CACHE_NAME = 'iceqube-cache-v10.8.2';
 const ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,7 @@ const ASSETS = [
   './assets/logo2.png',
   './js/app_header.js',
   './js/sync.js',
-  './js/app_v10.js'
+  './js/app_v24.js'
 ];
 
 self.addEventListener('install', event => {
@@ -36,7 +36,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   // STRICT NETWORK-ONLY for these critical files to prevent stale caching
   if (event.request.url.includes('sync.js') || 
-      event.request.url.includes('app_v10.js') || 
+      event.request.url.includes('app_v24.js') || 
       event.request.url.includes('admin_v24.js') || 
       event.request.url.includes('admin.js') || 
       event.request.url.includes('app_header.js')) {
