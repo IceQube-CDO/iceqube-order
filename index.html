@@ -446,7 +446,7 @@
                 align-items: center;
                 box-sizing: border-box;
                 border: 4px solid #0f172a;
-                transform: translateY(100px); /* Shift mockup significantly lower */
+                transform: translateY(15px); /* Slight offset for comfortable view */
                 transform-origin: center center;
                 transition: transform 0.3s ease;
             }
@@ -454,17 +454,17 @@
             /* Auto-scale mockup on smaller screen heights to prevent vertical cutoff */
             @media (max-height: 960px) {
                 .iphone-13-device {
-                    transform: scale(0.9) translateY(100px);
+                    transform: scale(0.9) translateY(15px);
                 }
             }
             @media (max-height: 860px) {
                 .iphone-13-device {
-                    transform: scale(0.8) translateY(120px);
+                    transform: scale(0.8) translateY(20px);
                 }
             }
             @media (max-height: 760px) {
                 .iphone-13-device {
-                    transform: scale(0.7) translateY(140px);
+                    transform: scale(0.7) translateY(25px);
                 }
             }
             
@@ -627,6 +627,9 @@
             }
             .checkout-header {
                 padding-top: 35px !important;
+            }
+            .pwa-banner {
+                top: 32px !important; /* Push PWA banner below the simulated notch */
             }
             #step-start {
                 padding-top: 45px !important;
