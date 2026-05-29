@@ -1713,6 +1713,36 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body class="admin-mode">
+    <!-- Notification Diagnostics Panel -->
+    <div id="diagnostics-overlay" class="panel-overlay" onclick="admin.toggleDiagnostics(false)"></div>
+    <div id="diagnostics-panel" class="bottom-panel" style="background: #0f172a; color: white; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div class="bottom-panel-handle" style="background: rgba(255,255,255,0.2);"></div>
+        <div class="panel-header" style="background: #020617; border-bottom: 1px solid rgba(255,255,255,0.1); color: white;">
+            <button onclick="admin.toggleDiagnostics(false)" class="close-btn back-btn" style="background: rgba(255,255,255,0.05); color: #94a3b8;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 style="color: white; margin: 0;">Notification Center</h2>
+        </div>
+        <div class="panel-content" style="padding: 20px;">
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 1.1rem; font-weight: 800; color: #0ea5e9;">Messenger Bridge Diagnostics</h3>
+                <p style="color: #94a3b8; font-size: 0.75rem; margin: 0; line-height: 1.4;">Facebook enforces a strict 24-hour response window. To continue receiving alerts, you must have messaged the Page in the last 24 hours. Check status below:</p>
+            </div>
+            
+            <div id="diagnostics-admins-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
+                <!-- Dynamically filled with admin status -->
+            </div>
+            
+            <div id="diagnostics-backups-status" style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2); padding: 16px; border-radius: 16px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 700; color: #0ea5e9;">🔔 Backup Channels</h4>
+                <p style="color: #94a3b8; font-size: 0.75rem; margin: 0 0 10px 0; line-height: 1.4;">If Telegram/Discord are configured, backup alerts are sent in parallel. Telegram is 100% reliable and doesn't expire.</p>
+                <div id="backups-status-list" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.7rem; color: #64748b;">Checking backup configuration...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Digital Receipt System -->
     <div id="receipt-overlay" class="panel-overlay" onclick="admin.toggleReceipt(false)"></div>
     <div id="receipt-panel" class="bottom-panel receipt-panel">
@@ -1912,6 +1942,12 @@
                         <path d="M22 12a10.06 10.06 0 0 0-20 0Z"></path>
                         <path d="M12 12v8a2 2 0 0 0 4 0"></path>
                         <path d="M12 2v1"></path>
+                    </svg>
+                </button>
+                
+                <button id="diagnostics-btn" onclick="admin.toggleDiagnostics(true)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="Notification Diagnostics">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
                 </button>
                 

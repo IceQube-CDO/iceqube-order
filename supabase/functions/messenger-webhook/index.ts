@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
 const FB_API_URL = "https://graph.facebook.com/v21.0/me/messages"
+const ADMIN_PSIDS = ["26521276764196410", "32834231939557699", "712885031918698"];
 
 function formatItems(itemsStr: string): string {
   try {
@@ -29,6 +30,59 @@ function formatItems(itemsStr: string): string {
     console.warn('Items parse failed in Edge Function:', e);
   }
   return 'Ice Products';
+}
+
+async function sendTelegramMessage(text: string) {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  if (!token || !chatId) {
+    return null;
+  }
+  
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: text })
+    });
+    const data = await res.json();
+    console.log(`[Telegram] Send result:`, data);
+    return data;
+  } catch (e) {
+    console.error("[Telegram] Send failed:", e);
+    return { error: e.message };
+  }
+}
+
+async function sendDiscordMessage(text: string) {
+  const webhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL");
+  if (!webhookUrl) {
+    return null;
+  }
+  
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: text })
+    });
+    if (!res.ok) {
+      console.error("[Discord] Webhook returned status:", res.status, await res.text());
+    } else {
+      console.log("[Discord] Webhook notification sent successfully");
+    }
+    return { success: res.ok };
+  } catch (e) {
+    console.error("[Discord] Send failed:", e);
+    return { error: e.message };
+  }
+}
+
+async function broadcastToBackups(text: string) {
+  await Promise.allSettled([
+    sendTelegramMessage(text),
+    sendDiscordMessage(text)
+  ]);
 }
 
 async function sendFBMessage(recipientId: string, text: string) {
@@ -273,6 +327,7 @@ serve(async (req) => {
               if (Array.isArray(itemsData)) {
                 activeAdmins = itemsData
                   .filter((m: any) => m.status === 'Active' && 
+                                m.messengerAlertsEnabled !== false &&
                                 (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
                                 m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger) &&
                                 String(m.messenger) !== String(customerId))
@@ -285,7 +340,7 @@ serve(async (req) => {
         }
         
         if (activeAdmins.length === 0) {
-          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => String(id) !== String(customerId));
+          activeAdmins = ADMIN_PSIDS.filter(id => String(id) !== String(customerId));
         }
 
         // 2. Send to ALL Admins (except the customer who placed the order to avoid double receipt)
@@ -299,6 +354,9 @@ serve(async (req) => {
           }
         });
         await Promise.all(adminPromises);
+        
+        // Broadcast to backup channels (Telegram / Discord) in parallel
+        await broadcastToBackups(adminMsg).catch(err => console.error("Backup broadcast failed:", err));
         
         return new Response(JSON.stringify({ success: true, results }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
@@ -352,7 +410,15 @@ serve(async (req) => {
           }
         }
         
-        return new Response(JSON.stringify({ success: true, results }), {
+        const telegramConfigured = !!Deno.env.get("TELEGRAM_BOT_TOKEN") && !!Deno.env.get("TELEGRAM_CHAT_ID");
+        const discordConfigured = !!Deno.env.get("DISCORD_WEBHOOK_URL");
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          results,
+          telegram_configured: telegramConfigured,
+          discord_configured: discordConfigured
+        }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
           status: 200,
         });
@@ -379,6 +445,7 @@ serve(async (req) => {
               if (Array.isArray(itemsData)) {
                 activeAdmins = itemsData
                   .filter((m: any) => m.status === 'Active' && 
+                                m.messengerAlertsEnabled !== false &&
                                 (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
                                 m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger) &&
                                 m.messenger !== customerId)
@@ -392,7 +459,7 @@ serve(async (req) => {
         
         // Fallback to hardcoded list if fetch fails or no admins configured
         if (activeAdmins.length === 0) {
-          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"].filter(id => String(id) !== String(customerId));
+          activeAdmins = ADMIN_PSIDS.filter(id => String(id) !== String(customerId));
         }
         
         const results: any = {};
@@ -404,6 +471,9 @@ serve(async (req) => {
           }
         });
         await Promise.all(broadcastPromises);
+        
+        // Broadcast to backup channels (Telegram / Discord) in parallel
+        await broadcastToBackups(msgText).catch(err => console.error("Backup broadcast failed:", err));
         
         return new Response(JSON.stringify({ success: true, results }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
@@ -481,6 +551,7 @@ serve(async (req) => {
             if (Array.isArray(itemsData)) {
               activeAdmins = itemsData
                 .filter((m: any) => m.status === 'Active' && 
+                              m.messengerAlertsEnabled !== false &&
                               (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
                               m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger))
                 .map((m: any) => m.messenger);
@@ -491,7 +562,7 @@ serve(async (req) => {
         }
         
         if (activeAdmins.length === 0) {
-          activeAdmins = ["26521276764196410", "32834231939557699", "712885031918698"];
+          activeAdmins = [...ADMIN_PSIDS];
         }
         
         const parseScheduleToDate = (scheduleStr: string): Date | null => {
@@ -569,6 +640,9 @@ serve(async (req) => {
               }
             });
             await Promise.all(adminPromises);
+            
+            // Broadcast to backup channels (Telegram / Discord) in parallel
+            await broadcastToBackups(adminMsg).catch(err => console.error("[Reminder] Backup broadcast failed:", err));
             
             try {
               const patchRes = await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${order.id}`, {

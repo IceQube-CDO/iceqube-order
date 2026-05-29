@@ -7105,3 +7105,179 @@ admin.openFlaggedArchive = function() {
     
     document.getElementById('modal-flagged-archive').classList.add('active');
 };
+
+// --- Notification Diagnostics Support ---
+admin.toggleDiagnostics = function(show) {
+    const overlay = document.getElementById('diagnostics-overlay');
+    const panel = document.getElementById('diagnostics-panel');
+    if (!overlay || !panel) return;
+    
+    if (show) {
+        overlay.style.display = 'block';
+        setTimeout(() => overlay.style.opacity = '1', 10);
+        panel.classList.add('active');
+        admin.checkNotificationDiagnostics();
+    } else {
+        overlay.style.opacity = '0';
+        panel.classList.remove('active');
+        setTimeout(() => overlay.style.display = 'none', 300);
+    }
+};
+
+admin.checkNotificationDiagnostics = async function() {
+    const listEl = document.getElementById('diagnostics-admins-list');
+    if (!listEl) return;
+    
+    listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 15px; font-size: 0.75rem;">Running connection checks...</div>';
+    
+    // Fetch active admins from team data
+    let admins = [];
+    if (Array.isArray(admin.teamMembersData)) {
+        admins = admin.teamMembersData.filter(m => 
+            m.status === 'Active' && 
+            (m.roleCategory === 'Admin Officer' || m.roleCategory === 'Operations Manager' || m.roleCategory === 'Systems Manager' || m.roleCategory === 'Admin' || m.roleCategory === 'Hub Staff') &&
+            m.messenger && typeof m.messenger === 'string' && /^\d+$/.test(m.messenger)
+        );
+    }
+    
+    if (admins.length === 0) {
+        // Fallback defaults
+        admins = [
+            { nickname: 'Ian', messenger: '26521276764196410', role: 'Systems Manager' },
+            { nickname: 'Lawrence', messenger: '32834231939557699', role: 'Operations Manager' }
+        ];
+    }
+    
+    const results = [];
+    for (const adm of admins) {
+        try {
+            const res = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_CONFIG.ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    action: 'test_tags',
+                    recipientId: adm.messenger
+                })
+            });
+            const data = await res.json();
+            results.push({ admin: adm, success: res.ok, data });
+        } catch (e) {
+            results.push({ admin: adm, success: false, error: e.message });
+        }
+    }
+    
+    listEl.innerHTML = results.map(r => {
+        const adm = r.admin;
+        // Check if standard UPDATE succeeded (status 200)
+        const isUpdateActive = r.success && r.data?.results?.UPDATE?.status === 200;
+        const statusText = isUpdateActive ? 'ACTIVE (CONNECTED)' : 'EXPIRED (DISCONNECTED)';
+        const statusColor = isUpdateActive ? '#22c55e' : '#ef4444';
+        const statusBg = isUpdateActive ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+        const statusBorder = isUpdateActive ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)';
+        
+        return `
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h4 style="margin: 0; font-size: 0.9rem; color: white;">${adm.nickname || adm.name}</h4>
+                            <label style="display: inline-flex; align-items: center; cursor: pointer;" title="Toggle Messenger Alerts">
+                                <input type="checkbox" ${adm.messengerAlertsEnabled !== false ? 'checked' : ''} onchange="admin.toggleMessengerNotifications('${adm.messenger}', this.checked)" style="position: absolute; opacity: 0; width: 0; height: 0;">
+                                <span style="position: relative; display: inline-block; width: 28px; height: 16px; background-color: ${adm.messengerAlertsEnabled !== false ? '#22c55e' : '#475569'}; border-radius: 99px; transition: background-color 0.2s;">
+                                    <span style="position: absolute; display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: white; left: ${adm.messengerAlertsEnabled !== false ? '14px' : '2px'}; top: 2px; transition: left 0.2s;"></span>
+                                </span>
+                            </label>
+                        </div>
+                        <span style="font-size: 0.65rem; color: #64748b;">${adm.designation || adm.role || 'Admin'} • ID: ${adm.messenger}</span>
+                    </div>
+                    <span style="padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusBorder};">
+                        ${statusText}
+                    </span>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="admin.sendDiagnosticKeepAlive('${adm.messenger}')" style="flex: 1; background: #0ea5e9; border: none; color: white; padding: 8px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(14,165,233,0.3); transition: all 0.2s;">
+                        ⚡ Keep-Alive
+                    </button>
+                    <a href="https://m.me/61557321703652" target="_blank" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 8px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        💬 Open Chat
+                    </a>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Fill backup channels status dynamically
+    const firstSuccessfulResult = results.find(r => r.success && r.data);
+    const backupsListEl = document.getElementById('backups-status-list');
+    if (backupsListEl) {
+        if (firstSuccessfulResult && firstSuccessfulResult.data) {
+            const data = firstSuccessfulResult.data;
+            const tgActive = data.telegram_configured;
+            const dsActive = data.discord_configured;
+            
+            backupsListEl.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04);">
+                    <span style="font-size: 0.75rem; color: #cbd5e1; font-weight: 500;">Telegram Bot</span>
+                    <span style="padding: 2px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; background: ${tgActive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}; color: ${tgActive ? '#22c55e' : '#64748b'}; border: 1px solid ${tgActive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.1)'};">
+                        ${tgActive ? 'CONFIGURED' : 'NOT CONFIGURED'}
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04);">
+                    <span style="font-size: 0.75rem; color: #cbd5e1; font-weight: 500;">Discord Webhook</span>
+                    <span style="padding: 2px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; background: ${dsActive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}; color: ${dsActive ? '#22c55e' : '#64748b'}; border: 1px solid ${dsActive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.1)'};">
+                        ${dsActive ? 'CONFIGURED' : 'NOT CONFIGURED'}
+                    </span>
+                </div>
+            `;
+        } else {
+            backupsListEl.innerHTML = `
+                <div style="font-size: 0.7rem; color: #ef4444; padding: 4px 0;">Failed to check backup configuration status.</div>
+            `;
+        }
+    }
+};
+
+admin.toggleMessengerNotifications = function(messengerId, isEnabled) {
+    if (!Array.isArray(admin.teamMembersData)) return;
+    const member = admin.teamMembersData.find(m => m.messenger === messengerId);
+    if (member) {
+        member.messengerAlertsEnabled = isEnabled;
+        admin.saveTeamMembers();
+        console.log(`[Notification Center] Toggle Messenger for ${member.nickname || member.name}: ${isEnabled}`);
+        admin.checkNotificationDiagnostics();
+    }
+};
+
+admin.sendDiagnosticKeepAlive = async function(recipientId) {
+    try {
+        // Send a custom diagnostics message to the webhook
+        const res = await fetch(`${SUPABASE_CONFIG.URL}/functions/v1/messenger-webhook`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+            },
+            body: JSON.stringify({
+                recipientId: recipientId,
+                message: "🔔 IceQube Notification Bridge: Diagnostic ping sent successfully! Your 24-hour window is now active."
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ Diagnostics Ping sent! If you received the message on Messenger, your connection is active. If not, click 'Open Chat' to send a message and restore connection.");
+        } else {
+            const errDetail = data?.error?.message || JSON.stringify(data);
+            alert(`⚠️ Connection check failed: Standard window closed. Please click 'Open Chat' and send a message to IceQube to reactivate alerts.`);
+        }
+    } catch (e) {
+        alert(`❌ Error sending keep-alive: ${e.message}`);
+    }
+    // Refresh status
+    admin.checkNotificationDiagnostics();
+};
