@@ -78,6 +78,10 @@ var admin = {
                 cleanCloud = cloudData;
             }
             
+            if (cloudData && cloudData._cloudCreatedAt) {
+                localStorage.setItem(`${mapping.key}_cloud_time`, cloudData._cloudCreatedAt);
+            }
+            
             if (JSON.stringify(cleanCloud) !== JSON.stringify(localData)) {
                 console.log(`☁️ [Admin] State updated from Cloud: ${mapping.key}`);
                 localStorage.setItem(mapping.key, typeof cleanCloud === 'string' ? cleanCloud : JSON.stringify(cleanCloud));
@@ -537,6 +541,28 @@ var admin = {
                 } else if (event.type === 'PROFILE_UPDATED') {
                     console.log("👤 [Admin] Profile update detected via Sync:", event.payload.establishment);
                     this.fetchRealStats(); // Refresh everything to reflect new profile data
+                } else if (event.type === 'APP_STATE_UPDATED') {
+                    console.log(`🔄 [Admin] App State (${event.key}) updated via Local Sync`);
+                    const stateMappings = {
+                        'iceqube_team_members': { prop: 'teamMembersData', updateFn: 'renderTeamCards' },
+                        'iceqube_consumables': { prop: 'consumables', updateFn: 'updateConsumablesUI' },
+                        'iceqube_assets': { prop: 'assets', updateFn: 'updateAssetsUI' },
+                        'iceqube_utilities': { prop: 'utilities', updateFn: 'updateUtilitiesUI' },
+                        'iceqube_utility_status': { prop: 'utilityStatus', updateFn: 'updateUtilitiesUI' },
+                        'iceqube_utility_paid_dates': { prop: 'utilityPaidDates', updateFn: 'updateUtilitiesUI' },
+                        'iceqube_maintenance_logs': { prop: 'maintenanceLogs', updateFn: 'updateAssetsUI' },
+                        'iceqube_ice_machines': { prop: 'iceMachines', updateFn: 'updateIceMachinesUI' },
+                        'iceqube_rental': { prop: 'rental', updateFn: 'updateUtilitiesUI' },
+                        'iceqube_vacation_mode': { prop: 'vacationMode', updateFn: 'updateVacationUI' }
+                    };
+                    const mapping = stateMappings[event.key];
+                    if (mapping) {
+                        this[mapping.prop] = event.payload;
+                        localStorage.setItem(event.key, typeof event.payload === 'string' ? event.payload : JSON.stringify(event.payload));
+                        if (mapping.updateFn && typeof this[mapping.updateFn] === 'function') {
+                            this[mapping.updateFn]();
+                        }
+                    }
                 }
             });
 
@@ -1313,6 +1339,13 @@ var admin = {
         
         // Initial fetch
         this.fetchRealStats();
+
+        // Initial cloud states fetch to load Team & Payroll immediately
+        if (window.IceQubeSync && window.IceQubeSync.fetchCloudAppStates) {
+            window.IceQubeSync.fetchCloudAppStates().then(cloudStates => {
+                this.applyCloudStates(cloudStates);
+            }).catch(e => console.error("Initial cloud states fetch failed:", e));
+        }
         
         // Auto-refresh every 10 seconds
         this._syncIntervalId = setInterval(async () => {

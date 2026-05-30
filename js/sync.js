@@ -211,7 +211,7 @@ window.IceQubeSync = {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
                         'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
+                        'Prefer': 'return=representation'
                     },
                     body: JSON.stringify({
                         order_id: `CONFIG_${key.toUpperCase()}`,
@@ -222,6 +222,10 @@ window.IceQubeSync = {
                     })
                 });
                 if (response.ok) {
+                    const rows = await response.json();
+                    if (rows && rows.length > 0) {
+                        localStorage.setItem(`${key}_cloud_time`, rows[0].created_at);
+                    }
                     console.log(`✅ [Sync] App State (${key}) Synced to Cloud Successfully`);
                 } else {
                     console.error(`❌ [Sync] App State (${key}) Cloud Sync failed:`, response.status);
@@ -237,12 +241,44 @@ window.IceQubeSync = {
             return {};
         }
 
+        const configKeys = [
+            'CONFIG_CASHFLOW',
+            'CONFIG_CONSUMABLES',
+            'CONFIG_ASSETS',
+            'CONFIG_UTILITIES',
+            'CONFIG_UTILITY_STATUS',
+            'CONFIG_UTILITY_PAID_DATES',
+            'CONFIG_MAINTENANCE_LOGS',
+            'CONFIG_ICE_MACHINES',
+            'CONFIG_RENTAL',
+            'CONFIG_VACATION_MODE',
+            'CONFIG_PURGE',
+            'CONFIG_ICEQUBE_TEAM_MEMBERS'
+        ];
+
+        const localKeyMappings = {
+            'CONFIG_CASHFLOW': 'ice_cashflow',
+            'CONFIG_CONSUMABLES': 'iceqube_consumables',
+            'CONFIG_ASSETS': 'iceqube_assets',
+            'CONFIG_UTILITIES': 'iceqube_utilities',
+            'CONFIG_UTILITY_STATUS': 'iceqube_utility_status',
+            'CONFIG_UTILITY_PAID_DATES': 'iceqube_utility_paid_dates',
+            'CONFIG_MAINTENANCE_LOGS': 'iceqube_maintenance_logs',
+            'CONFIG_ICE_MACHINES': 'iceqube_ice_machines',
+            'CONFIG_RENTAL': 'iceqube_rental',
+            'CONFIG_VACATION_MODE': 'iceqube_vacation_mode',
+            'CONFIG_PURGE': 'ice_system_purged',
+            'CONFIG_ICEQUBE_TEAM_MEMBERS': 'iceqube_team_members'
+        };
+
         return new Promise(async (resolve) => {
-            const timeout = setTimeout(() => resolve({}), 5000);
+            const timeout = setTimeout(() => resolve({}), 6000);
             try {
-                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=like.CONFIG_*&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=50&select=order_id,items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                // Step 1: Query only metadata (order_id and created_at) to see the latest timestamps in the cloud.
+                // We pull the latest 150 metadata entries, which is tiny and fast.
+                const metadataUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=in.(${configKeys.join(',')})&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=150&select=order_id,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
                 
-                const response = await fetch(url, {
+                const metaResponse = await fetch(metadataUrl, {
                     method: 'GET',
                     cache: 'no-store',
                     headers: {
@@ -251,33 +287,97 @@ window.IceQubeSync = {
                     }
                 });
 
-                clearTimeout(timeout);
+                if (!metaResponse.ok) {
+                    clearTimeout(timeout);
+                    resolve({});
+                    return;
+                }
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.length > 0) {
-                        // Keep only the latest for each config key (data is ordered descending)
-                        const latestConfigs = {};
-                        data.forEach(record => {
-                            if (!latestConfigs[record.order_id] && record.items) {
-                                let parsedItems = record.items;
-                                while (typeof parsedItems === 'string') {
-                                    try { 
-                                        const nextParse = JSON.parse(parsedItems); 
-                                        if (typeof nextParse === 'string' && nextParse === parsedItems) break;
-                                        parsedItems = nextParse;
-                                    } catch(e) { break; }
-                                }
-                                if (typeof parsedItems === 'object' && parsedItems !== null) {
-                                    parsedItems._cloudCreatedAt = record.created_at;
-                                }
-                                latestConfigs[record.order_id] = parsedItems;
+                const metaData = await metaResponse.json();
+                if (!metaData || metaData.length === 0) {
+                    clearTimeout(timeout);
+                    resolve({});
+                    return;
+                }
+
+                // Find the latest cloud timestamp for each key
+                const latestCloudTimes = {};
+                metaData.forEach(row => {
+                    if (!latestCloudTimes[row.order_id]) {
+                        latestCloudTimes[row.order_id] = row.created_at;
+                    }
+                });
+
+                // Step 2: Compare each key's cloud timestamp with local storage's stored cloud time.
+                // If cloud time is newer, we need to fetch the full items payload for that key.
+                const keysToFetch = [];
+                for (const orderId of configKeys) {
+                    const cloudTime = latestCloudTimes[orderId];
+                    if (!cloudTime) continue; // No cloud record for this key
+
+                    const localKey = localKeyMappings[orderId];
+                    const localCloudTime = localStorage.getItem(`${localKey}_cloud_time`);
+
+                    if (!localCloudTime || new Date(cloudTime) > new Date(localCloudTime)) {
+                        keysToFetch.push(orderId);
+                    }
+                }
+
+                // If nothing is out of date, return empty object (meaning no updates needed)
+                if (keysToFetch.length === 0) {
+                    console.log("☁️ [Sync] All app states are up-to-date with cloud.");
+                    clearTimeout(timeout);
+                    resolve({});
+                    return;
+                }
+
+                console.log("☁️ [Sync] App states out of date. Fetching full payloads for:", keysToFetch);
+
+                // Step 3: Fetch the latest full record (with items payload) for each out-of-date key.
+                // We do these in parallel with limit=1 to ensure we get exactly the latest record for each key.
+                const fetchPromises = keysToFetch.map(async (orderId) => {
+                    try {
+                        const fetchUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${orderId}&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=order_id,items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                        const res = await fetch(fetchUrl, {
+                            method: 'GET',
+                            cache: 'no-store',
+                            headers: {
+                                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
                             }
                         });
-                        resolve(latestConfigs);
-                    } else {
-                        resolve({});
+                        if (res.ok) {
+                            const rows = await res.json();
+                            return rows && rows.length > 0 ? rows[0] : null;
+                        }
+                    } catch (e) {
+                        console.error(`Error fetching cloud payload for ${orderId}:`, e);
                     }
+                    return null;
+                });
+
+                const fetchedRecords = (await Promise.all(fetchPromises)).filter(Boolean);
+                clearTimeout(timeout);
+
+                if (fetchedRecords.length > 0) {
+                    const latestConfigs = {};
+                    fetchedRecords.forEach(record => {
+                        if (record.items) {
+                            let parsedItems = record.items;
+                            while (typeof parsedItems === 'string') {
+                                try { 
+                                    const nextParse = JSON.parse(parsedItems); 
+                                    if (typeof nextParse === 'string' && nextParse === parsedItems) break;
+                                    parsedItems = nextParse;
+                                } catch(e) { break; }
+                            }
+                            if (typeof parsedItems === 'object' && parsedItems !== null) {
+                                parsedItems._cloudCreatedAt = record.created_at;
+                            }
+                            latestConfigs[record.order_id] = parsedItems;
+                        }
+                    });
+                    resolve(latestConfigs);
                 } else {
                     resolve({});
                 }
