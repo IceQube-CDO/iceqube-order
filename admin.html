@@ -3906,15 +3906,9 @@
                 });
             });
 
-            // Listen for new service worker taking control, and reload to apply updates
-            const hadController = !!navigator.serviceWorker.controller;
-            let refreshing = false;
+            // Listen for new service worker taking control
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing && hadController) {
-                    refreshing = true;
-                    console.log("New Service Worker activated! Reloading page...");
-                    window.location.reload();
-                }
+                console.log("Service Worker controller changed.");
             });
         }
     </script>
