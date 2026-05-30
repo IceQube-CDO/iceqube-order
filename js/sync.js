@@ -275,25 +275,30 @@ window.IceQubeSync = {
             const timeout = setTimeout(() => resolve({}), 6000);
             try {
                 // Step 1: Query only metadata (order_id and created_at) to see the latest timestamps in the cloud.
-                // We pull the latest 150 metadata entries, which is tiny and fast.
-                const metadataUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=in.(${configKeys.join(',')})&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=150&select=order_id,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
-                
-                const metaResponse = await fetch(metadataUrl, {
-                    method: 'GET',
-                    cache: 'no-store',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                // We fetch the latest metadata row for each config key in parallel to ensure
+                // that highly frequent config updates do not push out other keys (e.g. CONFIG_ICEQUBE_TEAM_MEMBERS).
+                const metaPromises = configKeys.map(async (key) => {
+                    const metadataUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${key}&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=1&select=order_id,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                    try {
+                        const res = await fetch(metadataUrl, {
+                            method: 'GET',
+                            cache: 'no-store',
+                            headers: {
+                                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                            }
+                        });
+                        if (res.ok) {
+                            const rows = await res.json();
+                            return rows && rows.length > 0 ? rows[0] : null;
+                        }
+                    } catch (e) {
+                        console.error(`❌ [Sync] Metadata fetch failed for ${key}:`, e);
                     }
+                    return null;
                 });
 
-                if (!metaResponse.ok) {
-                    clearTimeout(timeout);
-                    resolve({});
-                    return;
-                }
-
-                const metaData = await metaResponse.json();
+                const metaData = (await Promise.all(metaPromises)).filter(Boolean);
                 if (!metaData || metaData.length === 0) {
                     clearTimeout(timeout);
                     resolve({});
