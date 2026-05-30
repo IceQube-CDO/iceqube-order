@@ -523,14 +523,14 @@ var admin = {
                     cloudBadge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
                     cloudDot.style.background = '#22c55e';
                     cloudDot.style.boxShadow = '0 0 8px #22c55e';
-                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> CLOUD LIVE';
+                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> <span class="hide-mobile">CLOUD LIVE</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>';
                 } else {
                     cloudBadge.style.background = 'rgba(245, 158, 11, 0.1)';
                     cloudBadge.style.color = '#f59e0b';
                     cloudBadge.style.borderColor = 'rgba(245, 158, 11, 0.2)';
                     cloudDot.style.background = '#f59e0b';
                     cloudDot.style.boxShadow = '0 0 8px #f59e0b';
-                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; box-shadow: 0 0 8px #f59e0b;"></span> MOCK MODE';
+                    cloudBadge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; box-shadow: 0 0 8px #f59e0b;"></span> <span class="hide-mobile">MOCK MODE</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>';
                 }
             }
 
@@ -1434,7 +1434,7 @@ var admin = {
                 badge.style.background = 'rgba(239, 68, 68, 0.1)';
                 badge.style.color = '#ef4444';
                 badge.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> CLOUD SYNC (OFF)';
+                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> <span class="hide-mobile">CLOUD SYNC (OFF)</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>';
             }
             this.renderMockStats();
             return;
@@ -1462,7 +1462,7 @@ var admin = {
                 badge.style.background = 'rgba(34, 197, 94, 0.1)';
                 badge.style.color = '#22c55e';
                 badge.style.borderColor = 'rgba(34, 197, 94, 0.2)';
-                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> CLOUD LIVE';
+                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> <span class="hide-mobile">CLOUD LIVE</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>';
             }
 
             // Merge cloud data with local data
@@ -1557,7 +1557,7 @@ var admin = {
                 badge.style.background = 'rgba(239, 68, 68, 0.1)';
                 badge.style.color = '#ef4444';
                 badge.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> OFFLINE';
+                badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span> <span class="hide-mobile">OFFLINE</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>';
             }
             this.renderMockStats();
         }
