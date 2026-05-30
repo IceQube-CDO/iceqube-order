@@ -242,31 +242,31 @@ window.IceQubeSync = {
         }
 
         const configKeys = [
-            'CONFIG_CASHFLOW',
-            'CONFIG_CONSUMABLES',
-            'CONFIG_ASSETS',
-            'CONFIG_UTILITIES',
-            'CONFIG_UTILITY_STATUS',
-            'CONFIG_UTILITY_PAID_DATES',
-            'CONFIG_MAINTENANCE_LOGS',
-            'CONFIG_ICE_MACHINES',
-            'CONFIG_RENTAL',
-            'CONFIG_VACATION_MODE',
+            'CONFIG_ICE_CASHFLOW',
+            'CONFIG_ICEQUBE_CONSUMABLES',
+            'CONFIG_ICEQUBE_ASSETS',
+            'CONFIG_ICEQUBE_UTILITIES',
+            'CONFIG_ICEQUBE_UTILITY_STATUS',
+            'CONFIG_ICEQUBE_UTILITY_PAID_DATES',
+            'CONFIG_ICEQUBE_MAINTENANCE_LOGS',
+            'CONFIG_ICEQUBE_ICE_MACHINES',
+            'CONFIG_ICEQUBE_RENTAL',
+            'CONFIG_ICEQUBE_VACATION_MODE',
             'CONFIG_PURGE',
             'CONFIG_ICEQUBE_TEAM_MEMBERS'
         ];
 
         const localKeyMappings = {
-            'CONFIG_CASHFLOW': 'ice_cashflow',
-            'CONFIG_CONSUMABLES': 'iceqube_consumables',
-            'CONFIG_ASSETS': 'iceqube_assets',
-            'CONFIG_UTILITIES': 'iceqube_utilities',
-            'CONFIG_UTILITY_STATUS': 'iceqube_utility_status',
-            'CONFIG_UTILITY_PAID_DATES': 'iceqube_utility_paid_dates',
-            'CONFIG_MAINTENANCE_LOGS': 'iceqube_maintenance_logs',
-            'CONFIG_ICE_MACHINES': 'iceqube_ice_machines',
-            'CONFIG_RENTAL': 'iceqube_rental',
-            'CONFIG_VACATION_MODE': 'iceqube_vacation_mode',
+            'CONFIG_ICE_CASHFLOW': 'ice_cashflow',
+            'CONFIG_ICEQUBE_CONSUMABLES': 'iceqube_consumables',
+            'CONFIG_ICEQUBE_ASSETS': 'iceqube_assets',
+            'CONFIG_ICEQUBE_UTILITIES': 'iceqube_utilities',
+            'CONFIG_ICEQUBE_UTILITY_STATUS': 'iceqube_utility_status',
+            'CONFIG_ICEQUBE_UTILITY_PAID_DATES': 'iceqube_utility_paid_dates',
+            'CONFIG_ICEQUBE_MAINTENANCE_LOGS': 'iceqube_maintenance_logs',
+            'CONFIG_ICEQUBE_ICE_MACHINES': 'iceqube_ice_machines',
+            'CONFIG_ICEQUBE_RENTAL': 'iceqube_rental',
+            'CONFIG_ICEQUBE_VACATION_MODE': 'iceqube_vacation_mode',
             'CONFIG_PURGE': 'ice_system_purged',
             'CONFIG_ICEQUBE_TEAM_MEMBERS': 'iceqube_team_members'
         };
@@ -337,7 +337,7 @@ window.IceQubeSync = {
                 // We do these in parallel with limit=1 to ensure we get exactly the latest record for each key.
                 const fetchPromises = keysToFetch.map(async (orderId) => {
                     try {
-                        const fetchUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${orderId}&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=order_id,items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                        const fetchUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${orderId}&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=1&select=order_id,items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
                         const res = await fetch(fetchUrl, {
                             method: 'GET',
                             cache: 'no-store',

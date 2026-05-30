@@ -40,16 +40,16 @@ var admin = {
     applyCloudStates: function(cloudStates) {
         let needsUpdate = false;
         const stateMappings = {
-            'CONFIG_CASHFLOW': { key: 'ice_cashflow', prop: 'manualEntries' },
-            'CONFIG_CONSUMABLES': { key: 'iceqube_consumables', prop: 'consumables', updateFn: 'updateConsumablesUI' },
-            'CONFIG_ASSETS': { key: 'iceqube_assets', prop: 'assets', updateFn: 'updateAssetsUI' },
-            'CONFIG_UTILITIES': { key: 'iceqube_utilities', prop: 'utilities', updateFn: 'updateUtilitiesUI' },
-            'CONFIG_UTILITY_STATUS': { key: 'iceqube_utility_status', prop: 'utilityStatus', updateFn: 'updateUtilitiesUI' },
-            'CONFIG_UTILITY_PAID_DATES': { key: 'iceqube_utility_paid_dates', prop: 'utilityPaidDates', updateFn: 'updateUtilitiesUI' },
-            'CONFIG_MAINTENANCE_LOGS': { key: 'iceqube_maintenance_logs', prop: 'maintenanceLogs', updateFn: 'updateAssetsUI' },
-            'CONFIG_ICE_MACHINES': { key: 'iceqube_ice_machines', prop: 'iceMachines', updateFn: 'updateIceMachinesUI' },
-            'CONFIG_RENTAL': { key: 'iceqube_rental', prop: 'rental', updateFn: 'updateUtilitiesUI' },
-            'CONFIG_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
+            'CONFIG_ICE_CASHFLOW': { key: 'ice_cashflow', prop: 'manualEntries' },
+            'CONFIG_ICEQUBE_CONSUMABLES': { key: 'iceqube_consumables', prop: 'consumables', updateFn: 'updateConsumablesUI' },
+            'CONFIG_ICEQUBE_ASSETS': { key: 'iceqube_assets', prop: 'assets', updateFn: 'updateAssetsUI' },
+            'CONFIG_ICEQUBE_UTILITIES': { key: 'iceqube_utilities', prop: 'utilities', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_ICEQUBE_UTILITY_STATUS': { key: 'iceqube_utility_status', prop: 'utilityStatus', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_ICEQUBE_UTILITY_PAID_DATES': { key: 'iceqube_utility_paid_dates', prop: 'utilityPaidDates', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_ICEQUBE_MAINTENANCE_LOGS': { key: 'iceqube_maintenance_logs', prop: 'maintenanceLogs', updateFn: 'updateAssetsUI' },
+            'CONFIG_ICEQUBE_ICE_MACHINES': { key: 'iceqube_ice_machines', prop: 'iceMachines', updateFn: 'updateIceMachinesUI' },
+            'CONFIG_ICEQUBE_RENTAL': { key: 'iceqube_rental', prop: 'rental', updateFn: 'updateUtilitiesUI' },
+            'CONFIG_ICEQUBE_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
             'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' },
             'CONFIG_ICEQUBE_TEAM_MEMBERS': { key: 'iceqube_team_members', prop: 'teamMembersData', updateFn: 'renderTeamCards' }
         };
