@@ -1348,28 +1348,32 @@ var admin = {
         }
         
         // Auto-refresh every 10 seconds
+        let syncIteration = 0;
         this._syncIntervalId = setInterval(async () => {
             this.fetchRealStats();
             
-            // Also poll for pricing updates in the background (SKIP if currently editing to avoid overwriting inputs)
-            if (window.IceQubeSync && !this.isEditingMatrix) {
-                const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
-                if (cloudMatrix && !cloudMatrix._error && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
-                    console.log("☁️ [Admin] Pricing updated from Cloud (V2 Background Sync)");
+            syncIteration++;
+            // Only poll for pricing and config updates every 30 seconds (every 3 iterations) to reduce parallel request queueing and rate limits
+            if (syncIteration % 3 === 0) {
+                if (window.IceQubeSync && !this.isEditingMatrix) {
+                    const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
+                    if (cloudMatrix && !cloudMatrix._error && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
+                        console.log("☁️ [Admin] Pricing updated from Cloud (V2 Background Sync)");
+                        
+                        if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
+                        if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
+                        
+                        localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
+                        this.updatePricingUI();
+                        const syncText = document.getElementById('cloud-sync-status-text');
+                        if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
+                    }
                     
-                    if (cloudMatrix.products) this.pricingMatrix.products = cloudMatrix.products;
-                    if (cloudMatrix.delivery) this.pricingMatrix.delivery = cloudMatrix.delivery;
-                    
-                    localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
-                    this.updatePricingUI();
-                    const syncText = document.getElementById('cloud-sync-status-text');
-                    if (syncText) syncText.innerText = `☁️ Updated: ${new Date().toLocaleTimeString()}`;
-                }
-                
-                // Poll for other App States (Consumables, Cashflow, Utilities, Assets, Purge, etc.)
-                if (window.IceQubeSync.fetchCloudAppStates) {
-                    const cloudStates = await window.IceQubeSync.fetchCloudAppStates();
-                    this.applyCloudStates(cloudStates);
+                    // Poll for other App States (Consumables, Cashflow, Utilities, Assets, Purge, etc.)
+                    if (window.IceQubeSync.fetchCloudAppStates) {
+                        const cloudStates = await window.IceQubeSync.fetchCloudAppStates();
+                        this.applyCloudStates(cloudStates);
+                    }
                 }
             }
         }, 10000);
@@ -2098,8 +2102,6 @@ var admin = {
     },
 
     renderMockStats() {
-        this.animateCards();
-        
         // Comprehensive Mock Data for Order Queue and Dashboard
         const mockOrders = [];
 
