@@ -5316,10 +5316,10 @@ var admin = {
             }
         });
 
-        this.calculateTotalUtilities();
+        this.calculateTotalUtilities(false);
     },
 
-    calculateTotalUtilities() {
+    calculateTotalUtilities(shouldSave = true) {
         const cepalco = parseFloat(document.getElementById('bill-cepalco')?.value) || 0;
         const cowd = parseFloat(document.getElementById('bill-cowd')?.value) || 0;
         const pldt = parseFloat(document.getElementById('bill-pldt')?.value) || 0;
@@ -5327,7 +5327,9 @@ var admin = {
         this.utilities.electricity = cepalco;
         this.utilities.water = cowd;
         this.utilities.internet = pldt;
-        admin.saveState('iceqube_utilities', this.utilities);
+        if (shouldSave) {
+            admin.saveState('iceqube_utilities', this.utilities);
+        }
 
         const total = cepalco + cowd + pldt;
         const el = document.getElementById('total-utilities');
