@@ -7808,50 +7808,66 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
         if (!window.IceQubeSync || !window.IceQubeSync.fetchCloudCustomerProfiles) return;
         
         const localProfileStr = localStorage.getItem('iceqube_user_profile');
-        if (!localProfileStr) return;
+        const messengerId = this.user.messengerId;
         
         try {
-            const localProfile = JSON.parse(localProfileStr);
-            if (!localProfile.establishment) return;
-            
             const cloudProfiles = await window.IceQubeSync.fetchCloudCustomerProfiles();
             if (cloudProfiles && typeof cloudProfiles === 'object') {
                 // Save the whole directory locally to keep the customer app's copy of directories up to date
                 localStorage.setItem('iceqube_customer_profiles', JSON.stringify(cloudProfiles));
                 
-                // Lookup using messengerId first, then name
-                const messengerId = localProfile.messengerId || this.user.messengerId;
-                const cloudProfile = window.IceQubeSync.findProfile(cloudProfiles, localProfile.establishment, messengerId);
-
-                if (cloudProfile) {
-                    let isCloudNewer = false;
-                    const localUpdatedAt = localProfile.updatedAt ? new Date(localProfile.updatedAt) : null;
-                    const cloudUpdatedAt = cloudProfile.updatedAt ? new Date(cloudProfile.updatedAt) : null;
-
-                    if (localUpdatedAt && cloudUpdatedAt) {
-                        isCloudNewer = cloudUpdatedAt > localUpdatedAt;
-                    } else if (cloudUpdatedAt && !localUpdatedAt) {
-                        isCloudNewer = true;
-                    } else {
-                        // Timestamps are not available/comparable. Compare details to see if they differ.
-                        const fieldsChanged = 
-                            (cloudProfile.address !== localProfile.address) ||
-                            (cloudProfile.contactPerson !== localProfile.contactPerson) ||
-                            (cloudProfile.contactNumber !== localProfile.contactNumber) ||
-                            (parseFloat(cloudProfile.lat) !== parseFloat(localProfile.lat)) ||
-                            (parseFloat(cloudProfile.lng) !== parseFloat(localProfile.lng));
-                        
-                        if (fieldsChanged) {
+                let localProfile = null;
+                if (localProfileStr) {
+                    try {
+                        localProfile = JSON.parse(localProfileStr);
+                    } catch (e) {}
+                }
+                
+                // Allow sync if we have a company name or a PSID
+                const searchName = localProfile ? localProfile.establishment : null;
+                const searchPsid = messengerId || (localProfile ? localProfile.messengerId : null);
+                
+                if (searchName || searchPsid) {
+                    const cloudProfile = window.IceQubeSync.findProfile(cloudProfiles, searchName, searchPsid);
+                    
+                    if (cloudProfile) {
+                        let isCloudNewer = false;
+                        if (localProfile) {
+                            const localUpdatedAt = localProfile.updatedAt ? new Date(localProfile.updatedAt) : null;
+                            const cloudUpdatedAt = cloudProfile.updatedAt ? new Date(cloudProfile.updatedAt) : null;
+                            
+                            if (localUpdatedAt && cloudUpdatedAt) {
+                                isCloudNewer = cloudUpdatedAt > localUpdatedAt;
+                            } else if (cloudUpdatedAt && !localUpdatedAt) {
+                                isCloudNewer = true;
+                            } else {
+                                // Compare details to see if they differ
+                                const fieldsChanged = 
+                                    (cloudProfile.establishment !== localProfile.establishment) ||
+                                    (cloudProfile.address !== localProfile.address) ||
+                                    (cloudProfile.contactPerson !== localProfile.contactPerson) ||
+                                    (cloudProfile.contactNumber !== localProfile.contactNumber) ||
+                                    (parseFloat(cloudProfile.lat) !== parseFloat(localProfile.lat)) ||
+                                    (parseFloat(cloudProfile.lng) !== parseFloat(localProfile.lng)) ||
+                                    (cloudProfile.instructions !== localProfile.instructions) ||
+                                    (cloudProfile.messengerId !== localProfile.messengerId);
+                                
+                                if (fieldsChanged) {
+                                    isCloudNewer = true;
+                                }
+                            }
+                        } else {
+                            // No local profile exists yet, use the cloud one!
                             isCloudNewer = true;
                         }
-                    }
-                    
-                    if (isCloudNewer) {
-                        console.log(`☁️ [Cloud Sync] Newer/different profile found in cloud for ${localProfile.establishment} (Cloud: ${cloudProfile.updatedAt || 'No Timestamp'}, Local: ${localProfile.updatedAt || 'No Timestamp'})`);
-                        // Apply the cloud profile
-                        localStorage.setItem('iceqube_user_profile', JSON.stringify(cloudProfile));
-                        this.loadUserProfile();
-                        this.showToast("🔄 Profile updated from Control Room", "info");
+                        
+                        if (isCloudNewer) {
+                            console.log(`☁️ [Cloud Sync] Newer/different profile found in cloud for ${cloudProfile.establishment || searchPsid} (Cloud: ${cloudProfile.updatedAt || 'No Timestamp'})`);
+                            // Apply the cloud profile
+                            localStorage.setItem('iceqube_user_profile', JSON.stringify(cloudProfile));
+                            this.loadUserProfile();
+                            this.showToast("🔄 Profile updated from Control Room", "info");
+                        }
                     }
                 }
             }
@@ -7862,6 +7878,36 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
 
     async restoreProfileFromCloud(psid) {
         if (!psid) return;
+
+        // 1. Try to fetch from the cloud customer profiles directory first
+        if (window.IceQubeSync && window.IceQubeSync.fetchCloudCustomerProfiles) {
+            try {
+                const cloudProfiles = await window.IceQubeSync.fetchCloudCustomerProfiles();
+                if (cloudProfiles && typeof cloudProfiles === 'object') {
+                    // Save the whole directory locally
+                    localStorage.setItem('iceqube_customer_profiles', JSON.stringify(cloudProfiles));
+                    
+                    const cloudProfile = window.IceQubeSync.findProfile(cloudProfiles, null, psid);
+                    if (cloudProfile) {
+                        console.log(`✅ [Cloud Sync] Profile successfully restored from Cloud Profiles Directory for PSID: ${psid}`);
+                        localStorage.setItem('iceqube_user_profile', JSON.stringify(cloudProfile));
+                        this.loadUserProfile();
+                        this.syncOrdersFromCloud();
+                        this.showToast(`✨ Profile sync complete: Welcome back ${cloudProfile.establishment}!`, 'success');
+                        
+                        // If they are currently on index 2 (Logistics), force-repopulate the inputs
+                        if (this.currentStep === 2) {
+                            this.showStep(2);
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('❌ [Cloud Sync] Failed to restore from cloud profiles directory:', e);
+            }
+        }
+
+        // 2. Fallback to querying the last order database record
         if (!SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             console.warn('Supabase not configured. Cloud profile restoration skipped.');
             return;
@@ -8029,6 +8075,22 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 if (pickEst) pickEst.value = this.user.companyName;
                 if (pickPer) pickPer.value = this.user.contactPerson;
                 if (pickNum) pickNum.value = this.user.contactNumber;
+
+                // Update UI text tags immediately
+                const nameElem = document.getElementById('user-full-name');
+                if (nameElem) {
+                    nameElem.innerText = this.user.companyName || 'Guest Customer';
+                    const pfp = document.getElementById('user-pfp');
+                    if (pfp) pfp.style.background = (this.user.companyName === 'Guest Customer') ? '#94a3b8' : '#4285F4';
+                }
+                const roleElem = document.getElementById('user-role');
+                if (roleElem) {
+                    let roleStr = 'Authorized Staff';
+                    if (this.user.role === 'Owner') roleStr = 'Business Owner';
+                    else if (this.user.role === 'Admin') roleStr = 'Manager/Admin';
+                    else if (this.user.role === 'Staff') roleStr = 'Authorized Staff';
+                    roleElem.innerText = roleStr;
+                }
 
                 this.updateMessengerStatusUI();
                 this.updateDiscountsUI();

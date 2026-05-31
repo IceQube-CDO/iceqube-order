@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-cache-v10.9.1';
+const CACHE_NAME = 'iceqube-cache-v10.9.2';
 const ASSETS = [
   './',
   './index.html',

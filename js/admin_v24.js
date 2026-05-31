@@ -1473,8 +1473,16 @@ var admin = {
             }
 
             // Merge cloud data with local data
-            const localOrders = JSON.parse(localStorage.getItem('ice_orders') || '[]').filter(o => o.order_id && !o.order_id.startsWith('CONFIG_'));
-            const cloudOrders = (orders || []).filter(o => o.order_id && !o.order_id.startsWith('CONFIG_'));
+            let localOrders = [];
+            try {
+                const parsedLocal = JSON.parse(localStorage.getItem('ice_orders') || '[]');
+                if (Array.isArray(parsedLocal)) {
+                    localOrders = parsedLocal.filter(o => o && o.order_id && !o.order_id.startsWith('CONFIG_'));
+                }
+            } catch (e) {
+                console.warn("Failed to parse local orders:", e);
+            }
+            const cloudOrders = (orders || []).filter(o => o && o.order_id && !o.order_id.startsWith('CONFIG_'));
             
             // --- SESSION-BASED CLOUD DETECTION ---
             cloudOrders.forEach(co => {
@@ -1482,7 +1490,7 @@ var admin = {
                 const alreadyAlarmed = this.alarmedOrders.has(orderId);
 
                 // Find if this order already exists in local storage to preserve its status
-                const existingLocal = localOrders.find(lo => lo.order_id === orderId);
+                const existingLocal = localOrders.find(lo => lo && lo.order_id === orderId);
                 if (existingLocal && existingLocal.supplies_deducted) {
                     co.supplies_deducted = true;
                 }
@@ -1543,13 +1551,16 @@ var admin = {
                 });
                 if (logsResponse.ok) {
                     const deliveryLogs = await logsResponse.json();
-                    deliveryLogs.forEach(log => {
-                        const targetOrder = merged.find(o => String(o.order_id).trim() === String(log.order_id).trim() || String(o.id).trim() === String(log.order_id).trim());
-                        if (targetOrder && !targetOrder.actual_delivered_at) {
-                            targetOrder.actual_delivered_at = log.delivered_at;
-                            targetOrder.geotag_url = log.pod_photo_url;
-                        }
-                    });
+                    if (Array.isArray(deliveryLogs)) {
+                        deliveryLogs.forEach(log => {
+                            if (!log) return;
+                            const targetOrder = merged.find(o => o && (String(o.order_id).trim() === String(log.order_id).trim() || String(o.id).trim() === String(log.order_id).trim()));
+                            if (targetOrder && !targetOrder.actual_delivered_at) {
+                                targetOrder.actual_delivered_at = log.delivered_at;
+                                targetOrder.geotag_url = log.pod_photo_url;
+                            }
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch delivery logs:", err);
