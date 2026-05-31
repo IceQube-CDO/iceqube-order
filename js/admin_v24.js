@@ -1449,7 +1449,7 @@ var admin = {
 
         console.log('Fetching from Supabase...');
         try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?customer_name=neq.SYSTEM_CONFIG&order=created_at.desc&limit=100`, {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=100`, {
                 cache: 'no-store',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,
@@ -1462,7 +1462,7 @@ var admin = {
             }
             let orders = await response.json();
             // Filter out system configuration records from real business stats
-            orders = (orders || []).filter(o => o.order_id && !o.order_id.startsWith('CONFIG_'));
+            orders = (orders || []).filter(o => o.customer_name !== 'SYSTEM_CONFIG' && o.order_id && !o.order_id.startsWith('CONFIG_'));
             console.log(`✅ Received ${orders.length} business orders from Supabase.`);
             
             if (badge) {
