@@ -1449,7 +1449,7 @@ var admin = {
 
         console.log('Fetching from Supabase...');
         try {
-            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?order=created_at.desc&limit=100`, {
+            const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders?is_real=eq.true&order=created_at.desc&limit=100`, {
                 cache: 'no-store',
                 headers: {
                     'apikey': SUPABASE_CONFIG.ANON_KEY,

@@ -16,6 +16,68 @@ const complaintsChannel = new BroadcastChannel(COMPLAINTS_CHANNEL_NAME);
 
 console.log("🌐 [IceQube Sync] Channels Initialized:", ORDERS_CHANNEL_NAME, DELIVERIES_CHANNEL_NAME, COMPLAINTS_CHANNEL_NAME);
 
+async function saveConfigToCloud(orderId, customerName, poNumber, items) {
+    if (typeof SUPABASE_CONFIG === 'undefined' || !SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+        return null;
+    }
+    try {
+        const patchUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${orderId}&customer_name=eq.${customerName}&po_number=eq.${poNumber}`;
+        const patchResponse = await fetch(patchUrl, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                items: items,
+                is_real: false // Configurations are not real orders
+            })
+        });
+
+        if (patchResponse.ok) {
+            const updatedRows = await patchResponse.json();
+            if (updatedRows && updatedRows.length > 0) {
+                console.log(`✅ [Sync] Config ${orderId} updated in cloud via PATCH`);
+                return updatedRows[0];
+            }
+        }
+
+        console.log(`[Sync] Config ${orderId} not found or PATCH returned no rows. Performing POST...`);
+        const postResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                customer_name: customerName,
+                po_number: poNumber,
+                is_real: false, // Configurations are not real orders
+                items: items
+            })
+        });
+
+        if (postResponse.ok) {
+            const createdRows = await postResponse.json();
+            if (createdRows && createdRows.length > 0) {
+                console.log(`✅ [Sync] Config ${orderId} created in cloud via POST`);
+                return createdRows[0];
+            }
+        } else {
+            const err = await postResponse.json().catch(() => ({}));
+            console.error(`❌ [Sync] POST fallback failed for ${orderId}:`, postResponse.status, err);
+        }
+    } catch (e) {
+        console.error(`❌ [Sync] saveConfigToCloud error for ${orderId}:`, e);
+    }
+    return null;
+}
+
 window.IceQubeSync = {
     // --- STATE & CALLBACKS ---
     _orderCallbacks: [],
@@ -197,32 +259,13 @@ publishProfileUpdate: async function(profile) {
                 
                 localStorage.setItem('iceqube_customer_profiles', JSON.stringify(localDirectory));
 
-                // Save back to the cloud
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify({
-                        order_id: 'CONFIG_ICEQUBE_CUSTOMER_PROFILES',
-                        customer_name: 'SYSTEM_CONFIG',
-                        po_number: 'GLOBAL_CONFIG_V2',
-                        is_real: true,
-                        items: localDirectory
-                    })
-                });
-
-                if (response.ok) {
-                    const rows = await response.json();
-                    if (rows && rows.length > 0) {
-                        localStorage.setItem('iceqube_customer_profiles_cloud_time', rows[0].created_at);
-                    }
+                // Save back to the cloud using PATCH with POST fallback
+                const row = await saveConfigToCloud('CONFIG_ICEQUBE_CUSTOMER_PROFILES', 'SYSTEM_CONFIG', 'GLOBAL_CONFIG_V2', localDirectory);
+                if (row) {
+                    localStorage.setItem('iceqube_customer_profiles_cloud_time', row.created_at);
                     console.log("✅ [Sync] Customer Profiles directory Synced to Cloud Successfully");
                 } else {
-                    console.error("❌ [Sync] Customer Profiles Cloud Sync failed:", response.status);
+                    console.error("❌ [Sync] Customer Profiles Cloud Sync failed");
                 }
             } catch (err) {
                 console.error("❌ [Sync] Customer Profiles Cloud Sync Network Error:", err);
@@ -289,34 +332,16 @@ publishProfileUpdate: async function(profile) {
         localStorage.setItem('iceqube_global_pricing', JSON.stringify(matrix));
         ordersChannel.postMessage({ type: 'PRICING_UPDATED', payload: matrix });
 
-        // 2. Cloud Sync (Append-only strategy for maximum reliability)
+        // 2. Cloud Sync using PATCH with POST fallback
         if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             console.log("☁️ [Sync] Syncing Pricing Matrix to Cloud...");
             try {
-                // We create a NEW record every time. This avoids permission issues with PATCH/UPSERT.
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({
-                        order_id: 'CONFIG_PRICING_MATRIX',
-                        customer_name: 'SYSTEM_CONFIG',
-                        po_number: 'GLOBAL_CONFIG_V2', // Protected from purge logic
-                        is_real: true, // Mark as real so it's not purged
-                        items: matrix
-                    })
-                });
-                
-                if (response.ok) {
+                const row = await saveConfigToCloud('CONFIG_PRICING_MATRIX', 'SYSTEM_CONFIG', 'GLOBAL_CONFIG_V2', matrix);
+                if (row) {
                     console.log("✅ [Sync] Pricing Matrix Synced to Cloud Successfully");
                 } else {
-                    const err = await response.json().catch(() => ({}));
-                    console.error("❌ [Sync] Cloud Sync failed with status:", response.status, err);
-                    alert("Cloud Sync Failed: " + (err.message || response.statusText || "Unknown error"));
+                    console.error("❌ [Sync] Cloud Sync failed");
+                    alert("Cloud Sync Failed");
                 }
             } catch (err) {
                 console.error("❌ [Sync] Cloud Sync Network Error:", err);
@@ -405,33 +430,15 @@ publishProfileUpdate: async function(profile) {
         // 1. Local Sync (Optional redundancy, usually caller sets localStorage first)
         ordersChannel.postMessage({ type: 'APP_STATE_UPDATED', key: key, payload: data });
 
-        // 2. Cloud Sync
+        // 2. Cloud Sync using PATCH with POST fallback
         if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
-                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_CONFIG.ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify({
-                        order_id: `CONFIG_${key.toUpperCase()}`,
-                        customer_name: 'SYSTEM_CONFIG',
-                        po_number: 'GLOBAL_CONFIG_V2', 
-                        is_real: true, 
-                        items: data
-                    })
-                });
-                if (response.ok) {
-                    const rows = await response.json();
-                    if (rows && rows.length > 0) {
-                        localStorage.setItem(`${key}_cloud_time`, rows[0].created_at);
-                    }
+                const row = await saveConfigToCloud(`CONFIG_${key.toUpperCase()}`, 'SYSTEM_CONFIG', 'GLOBAL_CONFIG_V2', data);
+                if (row) {
+                    localStorage.setItem(`${key}_cloud_time`, row.created_at);
                     console.log(`✅ [Sync] App State (${key}) Synced to Cloud Successfully`);
                 } else {
-                    console.error(`❌ [Sync] App State (${key}) Cloud Sync failed:`, response.status);
+                    console.error(`❌ [Sync] App State (${key}) Cloud Sync failed`);
                 }
             } catch (err) {
                 console.error(`❌ [Sync] App State (${key}) Cloud Sync Network Error:`, err);
