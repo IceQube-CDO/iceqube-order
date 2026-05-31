@@ -356,12 +356,16 @@ const app = {
                 console.log("🔄 [App] Detected cloud pricing change, updating UI...");
                 this.updateTotal();
             }
+
+            // Check for profile updates from the cloud
+            await this.syncProfileFromCloud();
         }, 60000);
         
         // --- Profile Management (Must run BEFORE UI rendering) ---
         try {
             this.loadUserProfile();
             this.syncOrdersFromCloud();
+            this.syncProfileFromCloud();
         } catch (e) {
             console.error("❌ Profile Load Failed:", e);
         }
@@ -7351,6 +7355,7 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     openAccount() {
         this.renderDashboard(this.user.role);
         this.togglePanel('account', true);
+        this.syncProfileFromCloud();
     },
 
     closeAccount() {
@@ -7797,6 +7802,40 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
     saveOrderWithStatus(status) {
         console.log(`Order saved with status: ${status}`);
         // In a real app, this would persist to a database (e.g., Supabase)
+    },
+
+    async syncProfileFromCloud() {
+        if (!window.IceQubeSync || !window.IceQubeSync.fetchCloudCustomerProfiles) return;
+        
+        const localProfileStr = localStorage.getItem('iceqube_user_profile');
+        if (!localProfileStr) return;
+        
+        try {
+            const localProfile = JSON.parse(localProfileStr);
+            if (!localProfile.establishment) return;
+            
+            const cloudProfiles = await window.IceQubeSync.fetchCloudCustomerProfiles();
+            if (cloudProfiles && typeof cloudProfiles === 'object') {
+                // Save the whole directory locally to keep the customer app's copy of directories up to date
+                localStorage.setItem('iceqube_customer_profiles', JSON.stringify(cloudProfiles));
+                
+                const cloudProfile = cloudProfiles[localProfile.establishment];
+                if (cloudProfile && cloudProfile.updatedAt) {
+                    const localUpdatedAt = localProfile.updatedAt ? new Date(localProfile.updatedAt) : new Date(0);
+                    const cloudUpdatedAt = new Date(cloudProfile.updatedAt);
+                    
+                    if (cloudUpdatedAt > localUpdatedAt) {
+                        console.log(`☁️ [Cloud Sync] Newer profile found in cloud for ${localProfile.establishment} (Cloud: ${cloudProfile.updatedAt}, Local: ${localProfile.updatedAt})`);
+                        // Apply the cloud profile
+                        localStorage.setItem('iceqube_user_profile', JSON.stringify(cloudProfile));
+                        this.loadUserProfile();
+                        this.showToast("🔄 Profile updated from Control Room", "info");
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("❌ Failed to sync profile from cloud:", e);
+        }
     },
 
     async restoreProfileFromCloud(psid) {

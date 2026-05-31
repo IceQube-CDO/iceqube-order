@@ -71,13 +71,152 @@ window.IceQubeSync = {
         deliveriesChannel.postMessage(event);
     },
 
-    publishProfileUpdate: function(profile) {
+    publishProfileUpdate: async function(profile) {
         console.log("📡 [Sync] Publishing Profile Update:", profile.establishment);
-        const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-        directory[profile.establishment] = profile;
-        localStorage.setItem('iceqube_customer_profiles', JSON.stringify(directory));
+        if (!profile.updatedAt) {
+            profile.updatedAt = new Date().toISOString();
+        }
+
+        // 1. Update local directory first for immediate local responsiveness
+        const localDirectory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+        const localExisting = localDirectory[profile.establishment];
+        if (!localExisting || !localExisting.updatedAt || new Date(profile.updatedAt) >= new Date(localExisting.updatedAt)) {
+            localDirectory[profile.establishment] = profile;
+            localStorage.setItem('iceqube_customer_profiles', JSON.stringify(localDirectory));
+        }
+
+        // Broadcast to other tabs in the same browser session
         ordersChannel.postMessage({ type: 'PROFILE_UPDATED', payload: profile });
+
+        // 2. Sync to cloud (Supabase)
+        if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                // Fetch the latest profile directory from the cloud
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CUSTOMER_PROFILES&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=1&select=items&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                const res = await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+
+                let cloudDirectory = {};
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        let parsedItems = data[0].items;
+                        while (typeof parsedItems === 'string') {
+                            try {
+                                parsedItems = JSON.parse(parsedItems);
+                            } catch(e) { break; }
+                        }
+                        if (parsedItems && typeof parsedItems === 'object') {
+                            cloudDirectory = parsedItems;
+                        }
+                    }
+                }
+
+                // Merge the new profile into the cloud directory
+                const existingInCloud = cloudDirectory[profile.establishment];
+                if (!existingInCloud || !existingInCloud.updatedAt || new Date(profile.updatedAt) >= new Date(existingInCloud.updatedAt)) {
+                    cloudDirectory[profile.establishment] = profile;
+                }
+
+                // Update local storage with the fully merged directory
+                for (const [est, cloudProf] of Object.entries(cloudDirectory)) {
+                    const localProf = localDirectory[est];
+                    if (!localProf || !localProf.updatedAt || (cloudProf.updatedAt && new Date(cloudProf.updatedAt) > new Date(localProf.updatedAt))) {
+                        localDirectory[est] = cloudProf;
+                    }
+                }
+                localStorage.setItem('iceqube_customer_profiles', JSON.stringify(localDirectory));
+
+                // Save back to the cloud
+                const response = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({
+                        order_id: 'CONFIG_ICEQUBE_CUSTOMER_PROFILES',
+                        customer_name: 'SYSTEM_CONFIG',
+                        po_number: 'GLOBAL_CONFIG_V2',
+                        is_real: true,
+                        items: localDirectory
+                    })
+                });
+
+                if (response.ok) {
+                    const rows = await response.json();
+                    if (rows && rows.length > 0) {
+                        localStorage.setItem('iceqube_customer_profiles_cloud_time', rows[0].created_at);
+                    }
+                    console.log("✅ [Sync] Customer Profiles directory Synced to Cloud Successfully");
+                } else {
+                    console.error("❌ [Sync] Customer Profiles Cloud Sync failed:", response.status);
+                }
+            } catch (err) {
+                console.error("❌ [Sync] Customer Profiles Cloud Sync Network Error:", err);
+            }
+        }
     },
+
+    fetchCloudCustomerProfiles: async function() {
+        if (typeof SUPABASE_CONFIG === 'undefined' || !SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            return null;
+        }
+
+        return new Promise(async (resolve) => {
+            const timeout = setTimeout(() => {
+                console.warn("⚠️ [Sync] Cloud Customer Profiles Fetch timed out after 5s");
+                resolve(null);
+            }, 5000);
+
+            try {
+                console.log("☁️ [Sync] Fetching latest Customer Profiles from Cloud...");
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CUSTOMER_PROFILES&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=1&select=items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`
+                    }
+                });
+
+                clearTimeout(timeout);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        let parsedItems = data[0].items;
+                        while (typeof parsedItems === 'string') {
+                            try {
+                                parsedItems = JSON.parse(parsedItems);
+                            } catch (e) {
+                                break;
+                            }
+                        }
+                        resolve(parsedItems);
+                    } else {
+                        resolve(null);
+                    }
+                } else {
+                    resolve(null);
+                }
+            } catch (err) {
+                clearTimeout(timeout);
+                resolve(null);
+            }
+        });
+    },
+
 
     publishPricingUpdate: async function(matrix) {
         console.log("📡 [Sync] Publishing Pricing Matrix Update");
@@ -253,7 +392,8 @@ window.IceQubeSync = {
             'CONFIG_ICEQUBE_RENTAL',
             'CONFIG_ICEQUBE_VACATION_MODE',
             'CONFIG_PURGE',
-            'CONFIG_ICEQUBE_TEAM_MEMBERS'
+            'CONFIG_ICEQUBE_TEAM_MEMBERS',
+            'CONFIG_ICEQUBE_CUSTOMER_PROFILES'
         ];
 
         const localKeyMappings = {
@@ -268,11 +408,13 @@ window.IceQubeSync = {
             'CONFIG_ICEQUBE_RENTAL': 'iceqube_rental',
             'CONFIG_ICEQUBE_VACATION_MODE': 'iceqube_vacation_mode',
             'CONFIG_PURGE': 'ice_system_purged',
-            'CONFIG_ICEQUBE_TEAM_MEMBERS': 'iceqube_team_members'
+            'CONFIG_ICEQUBE_TEAM_MEMBERS': 'iceqube_team_members',
+            'CONFIG_ICEQUBE_CUSTOMER_PROFILES': 'iceqube_customer_profiles'
         };
 
         return new Promise(async (resolve) => {
             const timeout = setTimeout(() => resolve({}), 6000);
+            try {
                 // Step 1: Query metadata (order_id and created_at) to see the latest timestamps in the cloud.
                 // We fetch the latest metadata rows in a single batch query for efficiency and to respect browser concurrent connection limits.
                 const metadataUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=in.(${configKeys.join(',')})&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.SYSTEM_CONFIG_CACHE_BUSTER_${Date.now()}&order=created_at.desc&limit=60&select=order_id,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;

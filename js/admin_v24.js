@@ -51,7 +51,8 @@ var admin = {
             'CONFIG_ICEQUBE_RENTAL': { key: 'iceqube_rental', prop: 'rental', updateFn: 'updateUtilitiesUI' },
             'CONFIG_ICEQUBE_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
             'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' },
-            'CONFIG_ICEQUBE_TEAM_MEMBERS': { key: 'iceqube_team_members', prop: 'teamMembersData', updateFn: 'renderTeamCards' }
+            'CONFIG_ICEQUBE_TEAM_MEMBERS': { key: 'iceqube_team_members', prop: 'teamMembersData', updateFn: 'renderTeamCards' },
+            'CONFIG_ICEQUBE_CUSTOMER_PROFILES': { key: 'iceqube_customer_profiles', prop: 'customerProfiles', updateFn: 'fetchRealStats' }
         };
 
         for (const [orderId, cloudData] of Object.entries(cloudStates)) {
@@ -204,6 +205,7 @@ var admin = {
     alarmedOrders: new Set(),
     isInitialLoadComplete: false,
     charts: {},
+    customerProfiles: JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}'),
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
@@ -6432,13 +6434,15 @@ async function renameCustomer(originalName, newName) {
         const oldProfile = profiles[originalName];
         profiles[newName] = {
             ...oldProfile,
-            establishment: newName
+            establishment: newName,
+            updatedAt: new Date().toISOString()
         };
         delete profiles[originalName];
     } else {
         profiles[newName] = {
             establishment: newName,
-            contactPerson: newName
+            contactPerson: newName,
+            updatedAt: new Date().toISOString()
         };
     }
     localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
@@ -6523,7 +6527,8 @@ async function mergeCustomerAccount() {
         contactPerson: targetProfile.contactPerson || sourceProfile.contactPerson || targetName,
         contactNumber: targetProfile.contactNumber || sourceProfile.contactNumber || '',
         address: targetProfile.address || sourceProfile.address || '',
-        messengerId: targetProfile.messengerId || sourceProfile.messengerId || ''
+        messengerId: targetProfile.messengerId || sourceProfile.messengerId || '',
+        updatedAt: new Date().toISOString()
     };
 
     profiles[targetName] = mergedProfile;
@@ -6641,7 +6646,8 @@ async function saveCustomerProfile() {
         address,
         messengerId,
         lat,
-        lng
+        lng,
+        updatedAt: new Date().toISOString()
     };
 
     profiles[activeName] = updatedProfile;
