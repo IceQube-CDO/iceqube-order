@@ -22,16 +22,16 @@ window.IceQubeSync = {
 
     findProfile: function(profiles, name, messengerId) {
         if (!profiles || typeof profiles !== 'object') return null;
-        if (messengerId && profiles[messengerId]) {
+        if (messengerId && profiles[messengerId] && typeof profiles[messengerId] === 'object') {
             return profiles[messengerId];
         }
         if (messengerId) {
-            const found = Object.values(profiles).find(p => p.messengerId === messengerId);
+            const found = Object.values(profiles).find(p => p && typeof p === 'object' && p.messengerId === messengerId);
             if (found) return found;
         }
         if (name) {
             const nameLower = name.trim().toLowerCase();
-            const found = Object.values(profiles).find(p => p.establishment && p.establishment.trim().toLowerCase() === nameLower);
+            const found = Object.values(profiles).find(p => p && typeof p === 'object' && p.establishment && p.establishment.trim().toLowerCase() === nameLower);
             if (found) return found;
         }
         return null;
@@ -171,6 +171,7 @@ publishProfileUpdate: async function(profile) {
 
                 // Update local storage with the fully merged directory
                 for (const [k, cloudProf] of Object.entries(cloudDirectory)) {
+                    if (!cloudProf || typeof cloudProf !== 'object') continue;
                     const localProf = findProfile ? findProfile(localDirectory, cloudProf.establishment, cloudProf.messengerId) : localDirectory[k];
                     const localProfKey = localProf ? Object.keys(localDirectory).find(key => localDirectory[key] === localProf) : null;
 
@@ -185,7 +186,7 @@ publishProfileUpdate: async function(profile) {
                 
                 // Clean up any remaining legacy keys locally
                 for (const [k, localProf] of Object.entries(localDirectory)) {
-                    if (localProf && localProf.messengerId && k !== localProf.messengerId) {
+                    if (localProf && typeof localProf === 'object' && localProf.messengerId && k !== localProf.messengerId) {
                         const targetProf = localDirectory[localProf.messengerId];
                         if (!targetProf || !targetProf.updatedAt || (localProf.updatedAt && new Date(localProf.updatedAt) > new Date(targetProf.updatedAt))) {
                             localDirectory[localProf.messengerId] = localProf;
