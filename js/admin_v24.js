@@ -3175,7 +3175,7 @@ var admin = {
             if (!customers[name]) {
                 const cleanName = name.trim();
                 const messengerId = order.messenger_id || order.messengerId || '';
-                const profile = (window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, messengerId) : {};
+                const profile = ((window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, messengerId) : {}) || {};
                 customers[name] = {
                     name: name,
                     address: profile.address || order.delivery_address || 'No Address Provided',
@@ -5949,7 +5949,7 @@ function openCustomerDrawer(customerId) {
 
         const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const cleanName = (customer.name || customerId || '').trim();
-        const profile = (window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, foundMessengerId) : {};
+        const profile = ((window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, foundMessengerId) : {}) || {};
 
         if (foundMessengerId && !profile.messengerId) {
             profile.messengerId = foundMessengerId;
@@ -6572,8 +6572,8 @@ async function mergeCustomerAccount() {
     // 2. Merge Profiles
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
     const findProfile = window.IceQubeSync && window.IceQubeSync.findProfile;
-    const sourceProfile = findProfile ? findProfile(profiles, sourceName) : (profiles[sourceName] || {});
-    const targetProfile = findProfile ? findProfile(profiles, targetName) : (profiles[targetName] || {});
+    const sourceProfile = (findProfile ? findProfile(profiles, sourceName) : (profiles[sourceName] || {})) || {};
+    const targetProfile = (findProfile ? findProfile(profiles, targetName) : (profiles[targetName] || {})) || {};
 
     const mergedProfile = {
         establishment: targetName,
@@ -6726,7 +6726,7 @@ async function saveCustomerProfile() {
     }
 
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    const currentProfile = (window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, activeName, messengerId) : (profiles[activeName] || {});
+    const currentProfile = ((window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, activeName, messengerId) : (profiles[activeName] || {})) || {};
     
     const updatedProfile = {
         ...currentProfile,
