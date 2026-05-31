@@ -1028,7 +1028,8 @@ var admin = {
         // Get customer profile to find their Messenger ID
         const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const cleanCustName = (order.customer_name || '').trim();
-        const profile = directory[cleanCustName] || directory[order.customer_name] || {};
+        const findProfile = window.IceQubeSync && window.IceQubeSync.findProfile;
+        const profile = findProfile ? findProfile(directory, cleanCustName, order.messenger_id || order.messengerId) : (directory[cleanCustName] || directory[order.customer_name] || {});
         
         const targetId = (profile && profile.messengerId) || (order.messenger_id || order.messengerId) || null;
         
@@ -3162,7 +3163,8 @@ var admin = {
             const name = order.customer_name.trim();
             if (!customers[name]) {
                 const cleanName = name.trim();
-                const profile = profiles[cleanName] || profiles[name] || {};
+                const messengerId = order.messenger_id || order.messengerId || '';
+                const profile = (window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, messengerId) : {};
                 customers[name] = {
                     name: name,
                     address: profile.address || order.delivery_address || 'No Address Provided',
@@ -4096,7 +4098,8 @@ var admin = {
                 if (fullOrder && fullOrder.customer_name) {
                     const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
                     const cleanCustName = (fullOrder.customer_name || '').trim();
-                    const profile = directory[cleanCustName] || directory[fullOrder.customer_name] || {};
+                    const findProfile = window.IceQubeSync && window.IceQubeSync.findProfile;
+                    const profile = findProfile ? findProfile(directory, cleanCustName, fullOrder.messenger_id || fullOrder.messengerId) : (directory[cleanCustName] || directory[fullOrder.customer_name] || {});
                     const targetId = (profile && profile.messengerId) || (fullOrder.messenger_id || fullOrder.messengerId) || null;
                     
                     if (targetId) {
@@ -4144,7 +4147,8 @@ var admin = {
                 if (fullOrder && fullOrder.customer_name) {
                     const directory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
                     const cleanCustName = (fullOrder.customer_name || '').trim();
-                    const profile = directory[cleanCustName] || directory[fullOrder.customer_name] || {};
+                    const findProfile = window.IceQubeSync && window.IceQubeSync.findProfile;
+                    const profile = findProfile ? findProfile(directory, cleanCustName, fullOrder.messenger_id || fullOrder.messengerId) : (directory[cleanCustName] || directory[fullOrder.customer_name] || {});
                     const targetId = (profile && profile.messengerId) || (fullOrder.messenger_id || fullOrder.messengerId) || null;
                     
                     if (targetId) {
@@ -5920,10 +5924,6 @@ function openCustomerDrawer(customerId) {
             };
         }
 
-        const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-        const cleanName = (customer.name || customerId || '').trim();
-        const profile = profiles[cleanName] || profiles[customer.name] || profiles[customerId] || {};
-
         // Find if any order has a messenger ID to auto-link
         let foundMessengerId = '';
         if (customer.orders && customer.orders.length > 0) {
@@ -5936,13 +5936,21 @@ function openCustomerDrawer(customerId) {
             }
         }
 
+        const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
+        const cleanName = (customer.name || customerId || '').trim();
+        const profile = (window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, foundMessengerId) : {};
+
         if (foundMessengerId && !profile.messengerId) {
             profile.messengerId = foundMessengerId;
-            profiles[cleanName] = {
+            const key = foundMessengerId;
+            profiles[key] = {
                 ...profile,
                 establishment: cleanName,
                 messengerId: foundMessengerId
             };
+            if (key !== cleanName) {
+                delete profiles[cleanName];
+            }
             localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
             console.log(`[SYSTEM] Auto-linked Messenger ID ${foundMessengerId} for customer ${cleanName} from order history.`);
         }
@@ -6430,31 +6438,64 @@ async function renameCustomer(originalName, newName) {
 
     // 3. Rename Profiles
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    if (profiles[originalName]) {
-        const oldProfile = profiles[originalName];
-        profiles[newName] = {
+    const findProfile = window.IceQubeSync && window.IceQubeSync.findProfile;
+    const oldProfile = findProfile ? findProfile(profiles, originalName) : profiles[originalName];
+    
+    let updatedProfile;
+    if (oldProfile) {
+        // Find the actual key under which oldProfile was stored to delete it
+        const oldKey = Object.keys(profiles).find(k => profiles[k] === oldProfile);
+        if (oldKey) {
+            delete profiles[oldKey];
+        }
+        
+        updatedProfile = {
             ...oldProfile,
             establishment: newName,
             updatedAt: new Date().toISOString()
         };
-        delete profiles[originalName];
     } else {
-        profiles[newName] = {
+        updatedProfile = {
             establishment: newName,
             contactPerson: newName,
             updatedAt: new Date().toISOString()
         };
     }
+    
+    // Also delete any other potential legacy keys for this customer
+    delete profiles[originalName];
+    const originalNameLower = originalName.toLowerCase();
+    for (const k of Object.keys(profiles)) {
+        if (k.toLowerCase() === originalNameLower) {
+            delete profiles[k];
+        }
+    }
+    
+    // Save under the primary key (messengerId or newName)
+    const newKey = updatedProfile.messengerId || newName;
+    profiles[newKey] = updatedProfile;
+    
+    // If the newKey is messengerId, also ensure no name-keyed profile remains for newName
+    if (newKey !== newName) {
+        delete profiles[newName];
+        const newNameLower = newName.toLowerCase();
+        for (const k of Object.keys(profiles)) {
+            if (k.toLowerCase() === newNameLower) {
+                delete profiles[k];
+            }
+        }
+    }
+    
     localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
 
     // Broadcast profile update
     if (window.IceQubeSync && typeof window.IceQubeSync.publishProfileUpdate === 'function') {
-        window.IceQubeSync.publishProfileUpdate(profiles[newName]);
+        window.IceQubeSync.publishProfileUpdate(profiles[newKey]);
     } else {
         const channel = new BroadcastChannel('iceqube_sync_channel');
         channel.postMessage({
             type: 'PROFILE_UPDATED',
-            payload: profiles[newName]
+            payload: profiles[newKey]
         });
         channel.close();
     }
@@ -6519,8 +6560,9 @@ async function mergeCustomerAccount() {
 
     // 2. Merge Profiles
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    const sourceProfile = profiles[sourceName] || {};
-    const targetProfile = profiles[targetName] || {};
+    const findProfile = window.IceQubeSync && window.IceQubeSync.findProfile;
+    const sourceProfile = findProfile ? findProfile(profiles, sourceName) : (profiles[sourceName] || {});
+    const targetProfile = findProfile ? findProfile(profiles, targetName) : (profiles[targetName] || {});
 
     const mergedProfile = {
         establishment: targetName,
@@ -6528,11 +6570,48 @@ async function mergeCustomerAccount() {
         contactNumber: targetProfile.contactNumber || sourceProfile.contactNumber || '',
         address: targetProfile.address || sourceProfile.address || '',
         messengerId: targetProfile.messengerId || sourceProfile.messengerId || '',
+        lat: targetProfile.lat || sourceProfile.lat || '',
+        lng: targetProfile.lng || sourceProfile.lng || '',
         updatedAt: new Date().toISOString()
     };
 
-    profiles[targetName] = mergedProfile;
-    delete profiles[sourceName];
+    // Find keys to delete to avoid duplicates
+    const keysToDelete = new Set();
+    if (sourceProfile) {
+        const sourceKey = Object.keys(profiles).find(k => profiles[k] === sourceProfile);
+        if (sourceKey) keysToDelete.add(sourceKey);
+    }
+    if (targetProfile) {
+        const targetKey = Object.keys(profiles).find(k => profiles[k] === targetProfile);
+        if (targetKey) keysToDelete.add(targetKey);
+    }
+
+    keysToDelete.add(sourceName);
+    const sourceNameLower = sourceName.toLowerCase();
+    for (const k of Object.keys(profiles)) {
+        if (k.toLowerCase() === sourceNameLower) {
+            keysToDelete.add(k);
+        }
+    }
+
+    for (const key of keysToDelete) {
+        delete profiles[key];
+    }
+
+    const newKey = mergedProfile.messengerId || targetName;
+    profiles[newKey] = mergedProfile;
+
+    // If newKey is messengerId, also ensure targetName key is cleared so no duplicates exist
+    if (newKey !== targetName) {
+        delete profiles[targetName];
+        const targetNameLower = targetName.toLowerCase();
+        for (const k of Object.keys(profiles)) {
+            if (k.toLowerCase() === targetNameLower) {
+                delete profiles[k];
+            }
+        }
+    }
+
     localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
 
     // Broadcast profile update
@@ -6636,7 +6715,7 @@ async function saveCustomerProfile() {
     }
 
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    const currentProfile = profiles[activeName] || {};
+    const currentProfile = (window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, activeName, messengerId) : (profiles[activeName] || {});
     
     const updatedProfile = {
         ...currentProfile,
@@ -6650,7 +6729,16 @@ async function saveCustomerProfile() {
         updatedAt: new Date().toISOString()
     };
 
-    profiles[activeName] = updatedProfile;
+    const key = updatedProfile.messengerId || activeName;
+    profiles[key] = updatedProfile;
+    
+    if (key !== activeName) {
+        delete profiles[activeName];
+    }
+    if (originalName && originalName !== key && originalName !== activeName) {
+        delete profiles[originalName];
+    }
+    
     localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
     
     // Broadcast updating profile to other tabs

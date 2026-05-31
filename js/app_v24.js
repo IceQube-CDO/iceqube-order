@@ -7819,13 +7819,35 @@ ${isCritical ? 'ACTION REQUIRED: Immediate replacement & factory audit initiated
                 // Save the whole directory locally to keep the customer app's copy of directories up to date
                 localStorage.setItem('iceqube_customer_profiles', JSON.stringify(cloudProfiles));
                 
-                const cloudProfile = cloudProfiles[localProfile.establishment];
-                if (cloudProfile && cloudProfile.updatedAt) {
-                    const localUpdatedAt = localProfile.updatedAt ? new Date(localProfile.updatedAt) : new Date(0);
-                    const cloudUpdatedAt = new Date(cloudProfile.updatedAt);
+                // Lookup using messengerId first, then name
+                const messengerId = localProfile.messengerId || this.user.messengerId;
+                const cloudProfile = window.IceQubeSync.findProfile(cloudProfiles, localProfile.establishment, messengerId);
+
+                if (cloudProfile) {
+                    let isCloudNewer = false;
+                    const localUpdatedAt = localProfile.updatedAt ? new Date(localProfile.updatedAt) : null;
+                    const cloudUpdatedAt = cloudProfile.updatedAt ? new Date(cloudProfile.updatedAt) : null;
+
+                    if (localUpdatedAt && cloudUpdatedAt) {
+                        isCloudNewer = cloudUpdatedAt > localUpdatedAt;
+                    } else if (cloudUpdatedAt && !localUpdatedAt) {
+                        isCloudNewer = true;
+                    } else {
+                        // Timestamps are not available/comparable. Compare details to see if they differ.
+                        const fieldsChanged = 
+                            (cloudProfile.address !== localProfile.address) ||
+                            (cloudProfile.contactPerson !== localProfile.contactPerson) ||
+                            (cloudProfile.contactNumber !== localProfile.contactNumber) ||
+                            (parseFloat(cloudProfile.lat) !== parseFloat(localProfile.lat)) ||
+                            (parseFloat(cloudProfile.lng) !== parseFloat(localProfile.lng));
+                        
+                        if (fieldsChanged) {
+                            isCloudNewer = true;
+                        }
+                    }
                     
-                    if (cloudUpdatedAt > localUpdatedAt) {
-                        console.log(`☁️ [Cloud Sync] Newer profile found in cloud for ${localProfile.establishment} (Cloud: ${cloudProfile.updatedAt}, Local: ${localProfile.updatedAt})`);
+                    if (isCloudNewer) {
+                        console.log(`☁️ [Cloud Sync] Newer/different profile found in cloud for ${localProfile.establishment} (Cloud: ${cloudProfile.updatedAt || 'No Timestamp'}, Local: ${localProfile.updatedAt || 'No Timestamp'})`);
                         // Apply the cloud profile
                         localStorage.setItem('iceqube_user_profile', JSON.stringify(cloudProfile));
                         this.loadUserProfile();

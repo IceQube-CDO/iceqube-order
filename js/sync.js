@@ -20,6 +20,23 @@ window.IceQubeSync = {
     // --- STATE & CALLBACKS ---
     _orderCallbacks: [],
 
+    findProfile: function(profiles, name, messengerId) {
+        if (!profiles || typeof profiles !== 'object') return null;
+        if (messengerId && profiles[messengerId]) {
+            return profiles[messengerId];
+        }
+        if (messengerId) {
+            const found = Object.values(profiles).find(p => p.messengerId === messengerId);
+            if (found) return found;
+        }
+        if (name) {
+            const nameLower = name.trim().toLowerCase();
+            const found = Object.values(profiles).find(p => p.establishment && p.establishment.trim().toLowerCase() === nameLower);
+            if (found) return found;
+        }
+        return null;
+    },
+
     // --- PUBLISHERS ---
     
     publishNewOrder: function(orderData) {
@@ -71,17 +88,32 @@ window.IceQubeSync = {
         deliveriesChannel.postMessage(event);
     },
 
-    publishProfileUpdate: async function(profile) {
+publishProfileUpdate: async function(profile) {
         console.log("📡 [Sync] Publishing Profile Update:", profile.establishment);
         if (!profile.updatedAt) {
             profile.updatedAt = new Date().toISOString();
         }
 
+        const key = profile.messengerId || profile.establishment;
+        if (!key) return;
+
+        const findProfile = window.IceQubeSync ? window.IceQubeSync.findProfile : this.findProfile;
+
         // 1. Update local directory first for immediate local responsiveness
         const localDirectory = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-        const localExisting = localDirectory[profile.establishment];
+        const localExisting = findProfile ? findProfile(localDirectory, profile.establishment, profile.messengerId) : localDirectory[key];
+        const existingKey = localExisting ? Object.keys(localDirectory).find(k => localDirectory[k] === localExisting) : null;
+
         if (!localExisting || !localExisting.updatedAt || new Date(profile.updatedAt) >= new Date(localExisting.updatedAt)) {
-            localDirectory[profile.establishment] = profile;
+            // Delete old key if different from the new key
+            if (existingKey && existingKey !== key) {
+                delete localDirectory[existingKey];
+            }
+            // Clean up legacy keys if messengerId is newly added
+            if (profile.messengerId && localDirectory[profile.establishment] && profile.establishment !== key) {
+                delete localDirectory[profile.establishment];
+            }
+            localDirectory[key] = profile;
             localStorage.setItem('iceqube_customer_profiles', JSON.stringify(localDirectory));
         }
 
@@ -118,19 +150,50 @@ window.IceQubeSync = {
                     }
                 }
 
+                // If cloudDirectory is empty, fall back to using the local directory as the base
+                if (Object.keys(cloudDirectory).length === 0) {
+                    cloudDirectory = { ...localDirectory };
+                }
+
                 // Merge the new profile into the cloud directory
-                const existingInCloud = cloudDirectory[profile.establishment];
+                const existingInCloud = findProfile ? findProfile(cloudDirectory, profile.establishment, profile.messengerId) : cloudDirectory[key];
+                const cloudExistingKey = existingInCloud ? Object.keys(cloudDirectory).find(k => cloudDirectory[k] === existingInCloud) : null;
+
                 if (!existingInCloud || !existingInCloud.updatedAt || new Date(profile.updatedAt) >= new Date(existingInCloud.updatedAt)) {
-                    cloudDirectory[profile.establishment] = profile;
+                    if (cloudExistingKey && cloudExistingKey !== key) {
+                        delete cloudDirectory[cloudExistingKey];
+                    }
+                    if (profile.messengerId && cloudDirectory[profile.establishment] && profile.establishment !== key) {
+                        delete cloudDirectory[profile.establishment];
+                    }
+                    cloudDirectory[key] = profile;
                 }
 
                 // Update local storage with the fully merged directory
-                for (const [est, cloudProf] of Object.entries(cloudDirectory)) {
-                    const localProf = localDirectory[est];
+                for (const [k, cloudProf] of Object.entries(cloudDirectory)) {
+                    const localProf = findProfile ? findProfile(localDirectory, cloudProf.establishment, cloudProf.messengerId) : localDirectory[k];
+                    const localProfKey = localProf ? Object.keys(localDirectory).find(key => localDirectory[key] === localProf) : null;
+
                     if (!localProf || !localProf.updatedAt || (cloudProf.updatedAt && new Date(cloudProf.updatedAt) > new Date(localProf.updatedAt))) {
-                        localDirectory[est] = cloudProf;
+                        // Delete the old local location if it's different from the cloud key
+                        if (localProfKey && localProfKey !== k) {
+                            delete localDirectory[localProfKey];
+                        }
+                        localDirectory[k] = cloudProf;
                     }
                 }
+                
+                // Clean up any remaining legacy keys locally
+                for (const [k, localProf] of Object.entries(localDirectory)) {
+                    if (localProf && localProf.messengerId && k !== localProf.messengerId) {
+                        const targetProf = localDirectory[localProf.messengerId];
+                        if (!targetProf || !targetProf.updatedAt || (localProf.updatedAt && new Date(localProf.updatedAt) > new Date(targetProf.updatedAt))) {
+                            localDirectory[localProf.messengerId] = localProf;
+                        }
+                        delete localDirectory[k];
+                    }
+                }
+                
                 localStorage.setItem('iceqube_customer_profiles', JSON.stringify(localDirectory));
 
                 // Save back to the cloud
