@@ -3507,6 +3507,61 @@ var admin = {
         
         if (!pendingBody || !ledgerBody) return;
 
+        const getDeliveryFeeBreakdown = (o) => {
+            const delivery = parseFloat(o.delivery_fee) || 0;
+            const priority = parseFloat(o.priority_fee) || 0;
+            const totalDelivery = delivery + priority;
+            
+            if (totalDelivery === 0) {
+                return `<div style="font-family: 'Inter', sans-serif;">₱0</div>`;
+            }
+
+            const parsedItems = this.parseItems(o.items);
+            const matrix = parsedItems._matrix || this.pricingMatrix;
+            const deliveryConfig = matrix.delivery || {};
+            const peakHoursFee = parseFloat(deliveryConfig.peakHoursFee) || 0;
+            const lateNightFee = parseFloat(deliveryConfig.lateNightFee) || 0;
+            
+            const getOrderEffectiveHour = (order) => {
+                try {
+                    if (order.delivery_schedule && order.delivery_schedule !== 'Immediate') {
+                        const parts = order.delivery_schedule.split(' ');
+                        const timePart = parts[parts.length - 1];
+                        if (timePart && timePart.includes(':')) {
+                            return parseInt(timePart.split(':')[0]);
+                        }
+                    }
+                    if (order.created_at) {
+                        return new Date(order.created_at).getHours();
+                    }
+                } catch (e) {
+                    console.error("Error parsing effective hour:", e);
+                }
+                return new Date().getHours();
+            };
+            
+            const effHour = getOrderEffectiveHour(o);
+            let peakSurcharge = 0;
+            const isPeak = (effHour >= 12 && effHour <= 14) || (effHour >= 17 && effHour <= 19);
+            if (isPeak) {
+                peakSurcharge = peakHoursFee;
+            } else if (effHour >= 21) {
+                peakSurcharge = lateNightFee;
+            }
+            
+            const distPremium = Math.max(0, delivery - peakSurcharge);
+            const weightSurcharge = priority;
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-weight: 700; color: #f1f5f9;">₱${totalDelivery.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}</span>
+                    <span style="font-size: 0.65rem; color: #64748b; font-weight: 500; white-space: nowrap;">
+                        ₱${distPremium} Dist + ₱${peakSurcharge} Peak + ₱${weightSurcharge} Weight
+                    </span>
+                </div>
+            `;
+        };
+
         // PRESERVE EXPANDED STATE (MOBILE)
         const expandedOrderIds = new Set(
             Array.from(document.querySelectorAll('#orders-view .expanded'))
@@ -3696,7 +3751,7 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
-                    <td style="font-family: 'Inter', sans-serif;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif;">${getDeliveryFeeBreakdown(o)}</td>
                     <td>
                         <div style="display: flex; gap: 6px; align-items: center;">
                             <select class="status-select" onchange="admin.assignRider('${o.id || o.order_id}', this.value)" style="flex: 1; min-width: 80px;">
@@ -3848,7 +3903,7 @@ var admin = {
                     <td style="font-size: 0.75rem; color: #cbd5e1;">${itemsStr}</td>
                     <td style="font-size: 0.75rem; font-weight: 700; color: #f1f5f9;">${o.payment_method || 'Cash'}</td>
                     <td style="font-family: 'Inter', sans-serif; font-weight: 700;">₱${(Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0) - (parseFloat(o.priority_fee) || 0))).toLocaleString()}</td>
-                    <td style="font-family: 'Inter', sans-serif; color: #94a3b8;">₱${(parseFloat(o.delivery_fee) || 0).toLocaleString()}</td>
+                    <td style="font-family: 'Inter', sans-serif; color: #94a3b8;">${getDeliveryFeeBreakdown(o)}</td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div class="rider-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">${(o.rider || 'U')[0]}</div>
