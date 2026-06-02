@@ -32,7 +32,8 @@ async function saveConfigToCloud(orderId, customerName, poNumber, items) {
             },
             body: JSON.stringify({
                 items: items,
-                is_real: false // Configurations are not real orders
+                is_real: false, // Configurations are not real orders
+                created_at: new Date().toISOString()
             })
         });
 
