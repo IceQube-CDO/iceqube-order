@@ -5868,8 +5868,19 @@ const app = {
         if (this.orderData.paymentReceipt && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
                 console.log('⬆️ Uploading payment receipt to Supabase...');
-                const file = this.orderData.paymentReceipt;
-                const fileExt = file.name.split('.').pop();
+                let fileToUpload = this.orderData.paymentReceipt;
+                
+                // If we have a compressed version, upload that instead to save bandwidth
+                if (this.orderData.payment_screenshot_base64) {
+                    try {
+                        console.log('📦 Using compressed receipt image...');
+                        fileToUpload = this.dataURLtoBlob(this.orderData.payment_screenshot_base64);
+                    } catch (compressErr) {
+                        console.warn('Failed to convert compressed receipt to Blob, falling back to raw file:', compressErr);
+                    }
+                }
+                
+                const fileExt = this.orderData.paymentReceipt.name ? this.orderData.paymentReceipt.name.split('.').pop() : 'jpg';
                 const fileName = `receipt_${orderId.replace('#', '')}_${Date.now()}.${fileExt}`;
                 
                 const uploadRes = await fetch(`${SUPABASE_CONFIG.URL}/storage/v1/object/payment_receipts/${fileName}`, {
@@ -5877,9 +5888,9 @@ const app = {
                     headers: {
                         'apikey': SUPABASE_CONFIG.ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                        'Content-Type': file.type || 'image/jpeg'
+                        'Content-Type': fileToUpload.type || 'image/jpeg'
                     },
-                    body: file
+                    body: fileToUpload
                 });
 
                 if (uploadRes.ok) {
