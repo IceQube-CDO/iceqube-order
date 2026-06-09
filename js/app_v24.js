@@ -4112,7 +4112,21 @@ const app = {
     },
 
     selectSchedule(type, element) {
+        let total3kg = (parseFloat(this.orderData.qty.fullDice['bag3kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag3kg']) || 0);
+        let total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
+        let isLargeOrder = total3kg > 15 || total1kg > 40;
+
         if (type === 'Deliver Now') {
+            if (isLargeOrder) {
+                const timeMsg = 'Orders exceeding 15 bags of 3kg or 40 bags of 1kg must be scheduled at least 1 day in advance.';
+                if (typeof this.showToast === 'function') {
+                    this.showToast(timeMsg, 'error');
+                } else {
+                    alert(timeMsg);
+                }
+                return;
+            }
+
             const now = new Date();
             const hour = now.getHours();
             const min = now.getMinutes();
@@ -4193,7 +4207,11 @@ const app = {
                 isRestHour = hour < 8 || hour >= 22;
             }
             
-            if (isRestHour) {
+            let total3kg = (parseFloat(this.orderData.qty.fullDice['bag3kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag3kg']) || 0);
+            let total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
+            let isLargeOrder = total3kg > 15 || total1kg > 40;
+
+            if (isRestHour || isLargeOrder) {
                 deliverNowCard.style.opacity = '0.5';
                 deliverNowCard.style.cursor = 'not-allowed';
             } else {
@@ -4351,9 +4369,16 @@ const app = {
             const maxDate = new Date(today);
             maxDate.setDate(today.getDate() + 14);
 
+            let total3kg = (parseFloat(this.orderData.qty.fullDice['bag3kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag3kg']) || 0);
+            let total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
+            let isLargeOrder = total3kg > 15 || total1kg > 40;
+
             if (selectedDate > maxDate) {
                 isValidDate = false;
                 msg = "Online booking is limited to 14 days in advance.";
+            } else if (isLargeOrder && selectedDate.getTime() === today.getTime()) {
+                isValidDate = false;
+                msg = "Orders exceeding 15 bags of 3kg or 40 bags of 1kg must be scheduled at least 1 day in advance.";
             }
         }
 
