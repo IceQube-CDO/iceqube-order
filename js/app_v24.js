@@ -4493,7 +4493,7 @@ const app = {
                 }
                 
                 let surcharge = 0;
-                const isPeakHour = (effectiveHour >= 12 && effectiveHour <= 14) || (effectiveHour >= 17 && effectiveHour <= 19);
+                const isPeakHour = (effectiveHour >= 11 && effectiveHour <= 12) || (effectiveHour >= 17 && effectiveHour <= 18);
                 if (isPeakHour) {
                     surcharge += peakHoursFee;
                 }
@@ -4523,7 +4523,7 @@ const app = {
                     if (timeSurcharge > 0) {
                         fee += timeSurcharge;
                         let effectiveHour = this.orderData.schedule && this.orderData.schedule.time ? parseInt(this.orderData.schedule.time.split(':')[0]) : new Date().getHours();
-                        const isPeakHour = (effectiveHour >= 12 && effectiveHour <= 14) || (effectiveHour >= 17 && effectiveHour <= 19);
+                        const isPeakHour = (effectiveHour >= 11 && effectiveHour <= 12) || (effectiveHour >= 17 && effectiveHour <= 18);
                         if (isPeakHour) {
                             zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
                         } else if (effectiveHour >= 21) {
