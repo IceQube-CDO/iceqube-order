@@ -5613,6 +5613,10 @@ var admin = {
         const delKmLong = document.getElementById('m-del-km-long');
         const delLate = document.getElementById('m-del-late');
         const delPeak = document.getElementById('m-del-peak');
+        const peakLunchStart = document.getElementById('m-del-peak-lunch-start');
+        const peakLunchEnd = document.getElementById('m-del-peak-lunch-end');
+        const peakEveStart = document.getElementById('m-del-peak-eve-start');
+        const peakEveEnd = document.getElementById('m-del-peak-eve-end');
         const delFree = document.getElementById('m-del-free');
         const delHeavyT1Weight = document.getElementById('m-del-heavy-t1-weight');
         const delHeavyT1Fee = document.getElementById('m-del-heavy-t1-fee');
@@ -5624,6 +5628,10 @@ var admin = {
         if (delKmLong) delKmLong.value = this.pricingMatrix.delivery.perKmLong !== undefined ? this.pricingMatrix.delivery.perKmLong : 20;
         if (delLate) delLate.value = this.pricingMatrix.delivery.lateNightFee !== undefined ? this.pricingMatrix.delivery.lateNightFee : 0;
         if (delPeak) delPeak.value = this.pricingMatrix.delivery.peakHoursFee !== undefined ? this.pricingMatrix.delivery.peakHoursFee : 0;
+        if (peakLunchStart) peakLunchStart.value = this.pricingMatrix.delivery.peakLunchStart !== undefined ? this.pricingMatrix.delivery.peakLunchStart : 11;
+        if (peakLunchEnd) peakLunchEnd.value = this.pricingMatrix.delivery.peakLunchEnd !== undefined ? this.pricingMatrix.delivery.peakLunchEnd : 12;
+        if (peakEveStart) peakEveStart.value = this.pricingMatrix.delivery.peakEveningStart !== undefined ? this.pricingMatrix.delivery.peakEveningStart : 17;
+        if (peakEveEnd) peakEveEnd.value = this.pricingMatrix.delivery.peakEveningEnd !== undefined ? this.pricingMatrix.delivery.peakEveningEnd : 18;
         if (delFree) delFree.value = this.pricingMatrix.delivery.freeThreshold !== undefined ? this.pricingMatrix.delivery.freeThreshold : 0;
         if (delHeavyT1Weight) delHeavyT1Weight.value = this.pricingMatrix.delivery.heavyLoadT1Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Weight : 19;
         if (delHeavyT1Fee) delHeavyT1Fee.value = this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10;
@@ -5684,6 +5692,10 @@ var admin = {
                 perKmLong: parseFloat(document.getElementById('m-del-km-long')?.value) || 20,
                 lateNightFee: parseFloat(document.getElementById('m-del-late')?.value) || 0,
                 peakHoursFee: parseFloat(document.getElementById('m-del-peak')?.value) || 0,
+                peakLunchStart: parseInt(document.getElementById('m-del-peak-lunch-start')?.value) !== undefined && !isNaN(parseInt(document.getElementById('m-del-peak-lunch-start')?.value)) ? parseInt(document.getElementById('m-del-peak-lunch-start')?.value) : 11,
+                peakLunchEnd: parseInt(document.getElementById('m-del-peak-lunch-end')?.value) !== undefined && !isNaN(parseInt(document.getElementById('m-del-peak-lunch-end')?.value)) ? parseInt(document.getElementById('m-del-peak-lunch-end')?.value) : 12,
+                peakEveningStart: parseInt(document.getElementById('m-del-peak-eve-start')?.value) !== undefined && !isNaN(parseInt(document.getElementById('m-del-peak-eve-start')?.value)) ? parseInt(document.getElementById('m-del-peak-eve-start')?.value) : 17,
+                peakEveningEnd: parseInt(document.getElementById('m-del-peak-eve-end')?.value) !== undefined && !isNaN(parseInt(document.getElementById('m-del-peak-eve-end')?.value)) ? parseInt(document.getElementById('m-del-peak-eve-end')?.value) : 18,
                 freeThreshold: parseFloat(document.getElementById('m-del-free')?.value) || 0,
                 heavyLoadT1Weight: delHeavyT1WeightEl ? parseFloat(delHeavyT1WeightEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Weight : 19),
                 heavyLoadT1Fee: delHeavyT1FeeEl ? parseFloat(delHeavyT1FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10),

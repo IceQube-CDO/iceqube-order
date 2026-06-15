@@ -4493,7 +4493,11 @@ const app = {
                 }
                 
                 let surcharge = 0;
-                const isPeakHour = (effectiveHour >= 11 && effectiveHour <= 12) || (effectiveHour >= 17 && effectiveHour <= 18);
+                const peakLunchStart = delivery.peakLunchStart !== undefined ? parseInt(delivery.peakLunchStart) : 11;
+                const peakLunchEnd = delivery.peakLunchEnd !== undefined ? parseInt(delivery.peakLunchEnd) : 12;
+                const peakEveStart = delivery.peakEveningStart !== undefined ? parseInt(delivery.peakEveningStart) : 17;
+                const peakEveEnd = delivery.peakEveningEnd !== undefined ? parseInt(delivery.peakEveningEnd) : 18;
+                const isPeakHour = (effectiveHour >= peakLunchStart && effectiveHour <= peakLunchEnd) || (effectiveHour >= peakEveStart && effectiveHour <= peakEveEnd);
                 if (isPeakHour) {
                     surcharge += peakHoursFee;
                 }
@@ -4523,7 +4527,11 @@ const app = {
                     if (timeSurcharge > 0) {
                         fee += timeSurcharge;
                         let effectiveHour = this.orderData.schedule && this.orderData.schedule.time ? parseInt(this.orderData.schedule.time.split(':')[0]) : new Date().getHours();
-                        const isPeakHour = (effectiveHour >= 11 && effectiveHour <= 12) || (effectiveHour >= 17 && effectiveHour <= 18);
+                        const peakLunchStart = delivery.peakLunchStart !== undefined ? parseInt(delivery.peakLunchStart) : 11;
+                        const peakLunchEnd = delivery.peakLunchEnd !== undefined ? parseInt(delivery.peakLunchEnd) : 12;
+                        const peakEveStart = delivery.peakEveningStart !== undefined ? parseInt(delivery.peakEveningStart) : 17;
+                        const peakEveEnd = delivery.peakEveningEnd !== undefined ? parseInt(delivery.peakEveningEnd) : 18;
+                        const isPeakHour = (effectiveHour >= peakLunchStart && effectiveHour <= peakLunchEnd) || (effectiveHour >= peakEveStart && effectiveHour <= peakEveEnd);
                         if (isPeakHour) {
                             zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
                         } else if (effectiveHour >= 21) {
