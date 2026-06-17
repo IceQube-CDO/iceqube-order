@@ -231,6 +231,13 @@ publishProfileUpdate: async function(profile) {
                     }
                     cloudDirectory[key] = profile;
                 }
+                
+                // Deduplicate any remaining profiles in cloudDirectory with the same establishment name
+                for (const k of Object.keys(cloudDirectory)) {
+                    if (k !== key && cloudDirectory[k] && cloudDirectory[k].establishment && cloudDirectory[k].establishment.trim().toLowerCase() === profile.establishment.trim().toLowerCase()) {
+                        delete cloudDirectory[k];
+                    }
+                }
 
                 // Update local storage with the fully merged directory
                 for (const [k, cloudProf] of Object.entries(cloudDirectory)) {

@@ -6816,6 +6816,16 @@ async function saveCustomerProfile() {
     if (originalName && originalName !== key && originalName !== activeName) {
         delete profiles[originalName];
     }
+    if (currentProfile && currentProfile.messengerId && currentProfile.messengerId !== key) {
+        delete profiles[currentProfile.messengerId];
+    }
+    
+    // Deduplicate any remaining profiles with the same establishment name
+    for (const k of Object.keys(profiles)) {
+        if (k !== key && profiles[k] && profiles[k].establishment && profiles[k].establishment.trim().toLowerCase() === activeName.trim().toLowerCase()) {
+            delete profiles[k];
+        }
+    }
     
     localStorage.setItem('iceqube_customer_profiles', JSON.stringify(profiles));
     
