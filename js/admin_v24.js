@@ -6014,11 +6014,15 @@ function openCustomerDrawer(customerId) {
             }
         }
 
+        if (foundMessengerId === 'GUEST_WEB') {
+            foundMessengerId = '';
+        }
+
         const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
         const cleanName = (customer.name || customerId || '').trim();
         const profile = ((window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, cleanName, foundMessengerId) : {}) || {};
 
-        if (foundMessengerId && !profile.messengerId) {
+        if (foundMessengerId && !profile.messengerId && foundMessengerId !== 'GUEST_WEB') {
             profile.messengerId = foundMessengerId;
             const key = foundMessengerId;
             profiles[key] = {
