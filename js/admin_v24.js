@@ -6793,7 +6793,12 @@ async function saveCustomerProfile() {
     }
 
     const profiles = JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}');
-    const currentProfile = ((window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, activeName, messengerId) : (profiles[activeName] || {})) || {};
+    
+    const oldMessengerDisplay = document.getElementById('drawer-messenger-display');
+    let oldMessengerId = oldMessengerDisplay ? oldMessengerDisplay.innerText.trim() : '';
+    if (oldMessengerId === 'Not Linked') oldMessengerId = '';
+
+    const currentProfile = ((window.IceQubeSync && window.IceQubeSync.findProfile) ? window.IceQubeSync.findProfile(profiles, activeName, oldMessengerId || messengerId) : (profiles[activeName] || {})) || {};
     
     const updatedProfile = {
         ...currentProfile,
@@ -6818,6 +6823,9 @@ async function saveCustomerProfile() {
     }
     if (currentProfile && currentProfile.messengerId && currentProfile.messengerId !== key) {
         delete profiles[currentProfile.messengerId];
+    }
+    if (oldMessengerId && oldMessengerId !== key) {
+        delete profiles[oldMessengerId];
     }
     
     // Deduplicate any remaining profiles with the same establishment name
