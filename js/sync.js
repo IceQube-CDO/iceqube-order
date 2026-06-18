@@ -151,7 +151,7 @@ window.IceQubeSync = {
         deliveriesChannel.postMessage(event);
     },
 
-publishProfileUpdate: async function(profile) {
+publishProfileUpdate: async function(profile, oldMessengerId) {
         console.log("📡 [Sync] Publishing Profile Update:", profile.establishment);
         if (!profile.updatedAt) {
             profile.updatedAt = new Date().toISOString();
@@ -230,6 +230,10 @@ publishProfileUpdate: async function(profile) {
                         delete cloudDirectory[profile.establishment];
                     }
                     cloudDirectory[key] = profile;
+                }
+                
+                if (oldMessengerId && oldMessengerId !== key) {
+                    delete cloudDirectory[oldMessengerId];
                 }
                 
                 // Deduplicate any remaining profiles in cloudDirectory with the same establishment name

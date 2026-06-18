@@ -6839,7 +6839,7 @@ async function saveCustomerProfile() {
     
     // Broadcast updating profile to other tabs
     if (window.IceQubeSync && typeof window.IceQubeSync.publishProfileUpdate === 'function') {
-        window.IceQubeSync.publishProfileUpdate(updatedProfile);
+        window.IceQubeSync.publishProfileUpdate(updatedProfile, oldMessengerId);
     } else {
         const channel = new BroadcastChannel('iceqube_sync_channel');
         channel.postMessage({
