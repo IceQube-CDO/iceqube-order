@@ -157,6 +157,10 @@ publishProfileUpdate: async function(profile, oldMessengerId) {
             profile.updatedAt = new Date().toISOString();
         }
 
+        if (profile.messengerId === 'GUEST_WEB') {
+            profile.messengerId = '';
+        }
+
         const key = profile.messengerId || profile.establishment;
         if (!key) return;
 

@@ -219,7 +219,7 @@ const app = {
         
         for (const key of possibleKeys) {
             const val = urlParams.get(key) || hashParams.get(key);
-            if (val && !val.includes('{{') && !val.includes('}}')) {
+            if (val && !val.includes('{{') && !val.includes('}}') && val !== 'GUEST_WEB') {
                 psid = val;
                 break;
             }
@@ -287,7 +287,11 @@ const app = {
             if (msgIdInput) msgIdInput.value = psid;
         } else {
             // Fallback 1: Last known technical PSID
-            const storedPsid = localStorage.getItem('ice_messenger_psid');
+            let storedPsid = localStorage.getItem('ice_messenger_psid');
+            if (storedPsid === 'GUEST_WEB') {
+                storedPsid = null;
+                localStorage.removeItem('ice_messenger_psid');
+            }
             // Fallback 2: Stored in user profile
             const profileStr = localStorage.getItem('iceqube_user_profile');
             let profileId = null;
@@ -295,6 +299,11 @@ const app = {
                 try {
                     const p = JSON.parse(profileStr);
                     profileId = p.messengerId;
+                    if (profileId === 'GUEST_WEB') {
+                        profileId = null;
+                        p.messengerId = '';
+                        localStorage.setItem('iceqube_user_profile', JSON.stringify(p));
+                    }
                 } catch(e) {}
             }
 
