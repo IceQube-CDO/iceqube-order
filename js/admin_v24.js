@@ -3547,9 +3547,14 @@ var admin = {
                 return new Date().getHours();
             };
             
+            const peakLunchStart = deliveryConfig.peakLunchStart !== undefined ? parseInt(deliveryConfig.peakLunchStart) : 11;
+            const peakLunchEnd = deliveryConfig.peakLunchEnd !== undefined ? parseInt(deliveryConfig.peakLunchEnd) : 12;
+            const peakEveStart = deliveryConfig.peakEveningStart !== undefined ? parseInt(deliveryConfig.peakEveningStart) : 17;
+            const peakEveEnd = deliveryConfig.peakEveningEnd !== undefined ? parseInt(deliveryConfig.peakEveningEnd) : 18;
+            
             const effHour = getOrderEffectiveHour(o);
             let peakSurcharge = 0;
-            const isPeak = (effHour >= 12 && effHour <= 14) || (effHour >= 17 && effHour <= 19);
+            const isPeak = (effHour >= peakLunchStart && effHour < peakLunchEnd) || (effHour >= peakEveStart && effHour < peakEveEnd);
             if (isPeak) {
                 peakSurcharge = peakHoursFee;
             } else if (effHour >= 21) {
