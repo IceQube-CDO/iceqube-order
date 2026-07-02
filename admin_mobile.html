@@ -4720,5 +4720,77 @@
     </div>
     
     <div id="hidden-bridge" style="display:none;"></div>
+
+    <script>
+        // Web Push Notification Setup
+        async function subscribeToPushNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                console.warn('Push notifications are not supported by the browser.');
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.warn('Push notification permission denied.');
+                    return;
+                }
+
+                const registration = await navigator.serviceWorker.ready;
+                const vapidPublicKey = 'BP1EzcLJvnJ9DOabaKNg85oNzIjQX1dj85Ht4JNSwCLxJ24MQBN0AXAwt2NqfYSzcrOWR9khMk8jlIKksuImydU';
+                
+                // Convert VAPID key for use
+                const urlB64ToUint8Array = (base64String) => {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding)
+                        .replace(/\-/g, '+')
+                        .replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
+                    }
+                    return outputArray;
+                };
+
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlB64ToUint8Array(vapidPublicKey)
+                });
+
+                console.log('Push subscription successful:', subscription);
+                const subJson = subscription.toJSON();
+
+                // Save to Supabase
+                if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+                    // Using upsert (ON CONFLICT DO UPDATE) is better handled by Prefer: resolution=merge-duplicates
+                    const postResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/admin_push_subscriptions`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify({
+                            endpoint: subJson.endpoint,
+                            keys_p256dh: subJson.keys.p256dh,
+                            keys_auth: subJson.keys.auth
+                        })
+                    });
+                    
+                    if (postResponse.ok) {
+                        console.log('Push subscription saved to Supabase');
+                    } else {
+                        console.error('Failed to save push subscription:', await postResponse.text());
+                    }
+                }
+            } catch (err) {
+                console.error('Error subscribing to push notifications:', err);
+            }
+        }
+
+        window.subscribeToPushNotifications = subscribeToPushNotifications;
+    </script>
 </body>
 </html>

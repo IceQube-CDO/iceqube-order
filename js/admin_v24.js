@@ -1335,6 +1335,11 @@ var admin = {
                 dropdown.style.display = 'none';
             }
         });
+
+        // Request push notification subscription
+        if (typeof window.subscribeToPushNotifications === 'function') {
+            window.subscribeToPushNotifications();
+        }
     },
 
     startDataSync() {

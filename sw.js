@@ -67,3 +67,49 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+// Push Notification Event Listener
+self.addEventListener('push', event => {
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      const title = data.title || 'IceQube CDO';
+      const options = {
+        body: data.body || 'You have a new notification.',
+        icon: './assets/logo-192.png',
+        badge: './assets/logo-192.png',
+        data: {
+          url: data.url || '/admin_mobile.html'
+        },
+        vibrate: [200, 100, 200, 100, 200, 100, 200],
+        requireInteraction: true // keeps the notification until user dismisses it
+      };
+
+      event.waitUntil(self.registration.showNotification(title, options));
+    } catch (e) {
+      console.error('Error parsing push data:', e);
+    }
+  }
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  const urlToOpen = event.notification.data.url || '/admin_mobile.html';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // Check if there is already a window/tab open with the target URL
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If not, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
