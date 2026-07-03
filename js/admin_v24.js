@@ -2880,6 +2880,8 @@ var admin = {
         // 1. Process Automatic Entries from Orders (Revenue)
         const autoEntries = syncedOrders.filter(o => o.is_real !== false).map(o => {
             let amount = parseFloat(o.total_price) || 0;
+            let deliveryFee = parseFloat(o.delivery_fee) || 0;
+            amount = Math.max(0, amount - deliveryFee);
             return {
                 timestamp: o.created_at,
                 category: 'Sales',
@@ -3270,6 +3272,8 @@ var admin = {
         // 1. Process Automatic Entries from Orders
         const autoEntries = orders.map(o => {
             let amount = parseFloat(o.total_price) || 0;
+            let deliveryFee = parseFloat(o.delivery_fee) || 0;
+            amount = Math.max(0, amount - deliveryFee);
             return {
                 timestamp: o.created_at,
                 category: 'Sales',

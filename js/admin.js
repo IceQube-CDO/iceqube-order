@@ -1747,10 +1747,13 @@ var admin = {
         // 1. Process Automatic Entries from Orders (Revenue)
         const autoEntries = syncedOrders.filter(o => o.is_real !== false).map(o => {
             let amount = parseFloat(o.total_price) || 0;
+            let deliveryFee = parseFloat(o.delivery_fee) || 0;
             // COD Adjustment: Business only receives (Item Total - Priority Fee) 
             // because Delivery + Priority goes directly to the rider.
             if (o.payment_method === 'Cash on Delivery') {
-                amount = Math.max(0, amount - (parseFloat(o.priority_fee) || 0));
+                amount = Math.max(0, amount - deliveryFee - (parseFloat(o.priority_fee) || 0));
+            } else {
+                amount = Math.max(0, amount - deliveryFee);
             }
             return {
                 timestamp: o.created_at,
@@ -2084,10 +2087,13 @@ var admin = {
         // 1. Process Automatic Entries from Orders
         const autoEntries = orders.map(o => {
             let amount = parseFloat(o.total_price) || 0;
+            let deliveryFee = parseFloat(o.delivery_fee) || 0;
             // COD Adjustment: Business only receives (Item Total - Priority Fee) 
             // because Delivery + Priority goes directly to the rider.
             if (o.payment_method === 'Cash on Delivery') {
-                amount = Math.max(0, amount - (parseFloat(o.priority_fee) || 0));
+                amount = Math.max(0, amount - deliveryFee - (parseFloat(o.priority_fee) || 0));
+            } else {
+                amount = Math.max(0, amount - deliveryFee);
             }
             return {
                 timestamp: o.created_at,
