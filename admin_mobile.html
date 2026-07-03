@@ -1825,26 +1825,7 @@
                 flex: none !important;
                 max-width: 140px;
             }
-            #buzzer-test-btn, 
-            #purge-test-data-btn {
-                display: none !important;
-            }
-            #buzzer-badge,
-            #cloud-sync-badge {
-                padding: 4px 6px !important;
-                border-radius: 8px !important;
-                font-size: 10px !important;
-                gap: 4px !important;
-            }
-            #buzzer-badge .hide-mobile,
-            #cloud-sync-badge .hide-mobile {
-                display: none !important;
-            }
-            #buzzer-badge .show-mobile,
-            #cloud-sync-badge .show-mobile {
-                display: inline-block !important;
-                margin-left: 2px !important;
-            }
+
             #vacation-btn,
             #diagnostics-btn,
             #notif-bell,
@@ -2657,52 +2638,7 @@
             </div>
 
                 <!-- RIGHT: BADGES -->
-                <div style="display: flex; gap: 12px; align-items: center; justify-content: flex-end; flex: 1; flex-shrink: 0; flex-wrap: wrap;">
-
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                    <button id="enable-push-btn" onclick="if(window.subscribeToPushNotifications) window.subscribeToPushNotifications();" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 10px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(14, 165, 233, 0.2); cursor: pointer; transition: all 0.3s ease; position: relative;" title="Enable Alerts">
-                        <span style="position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: #0ea5e9; border-radius: 50%; box-shadow: 0 0 8px #0ea5e9;"></span>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                    </button>
-                </div>
-
-
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                    <div id="buzzer-badge" onclick="admin.toggleBuzzerMute()" style="cursor: pointer; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(34, 197, 94, 0.2); transition: all 0.3s ease;">
-                        <span id="buzzer-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span>
-                        BUZZER (ON)
-                    </div>
-                    <button id="buzzer-test-btn" 
-                            onclick="admin.testBuzzer()"
-                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #94a3b8; font-size: 8px; font-weight: 800; padding: 2px 6px; cursor: pointer !important; text-transform: uppercase; white-space: nowrap; transition: all 0.2s ease;">Test Alarm</button>
-                </div>
-
-                <audio id="buzzer-audio-element" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-
-
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                    <div id="cloud-sync-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                        <span id="cloud-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px #ef4444;"></span>
-                        <span class="hide-mobile">CLOUD SYNC (OFF)</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>
-                    </div>
-                    <button id="purge-test-data-btn" 
-                            onclick="admin.purgeTestData()"
-                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #f87171; font-size: 8px; font-weight: 800; padding: 2px 6px; cursor: pointer !important; text-transform: uppercase; white-space: nowrap; transition: all 0.2s ease;">Purge Test Data</button>
-                </div>
-
-
-
-                <button id="vacation-btn" class="vacation-btn" onclick="admin.toggleVacationMode()" style="padding: 10px; border-radius: 12px; display: flex; align-items: center; justify-content: center;" title="Toggle Vacation Mode">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 12a10.06 10.06 0 0 0-20 0Z"></path>
-                        <path d="M12 12v8a2 2 0 0 0 4 0"></path>
-                        <path d="M12 2v1"></path>
-                    </svg>
-                </button>
-                
-                <button id="refresh-btn" onclick="admin.forceReloadApp()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                </button>
+                <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex: 1; flex-shrink: 0;">
                 
                 <div class="notif-wrapper">
                     <button id="notif-bell" onclick="admin.toggleNotifs(event)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
@@ -2719,16 +2655,78 @@
                     </div>
                 </div>
 
-                <button id="btn-header-install" onclick="triggerPWAInstall()" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; color: #0ea5e9; padding: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.2s ease;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                </button>
+                <div class="settings-wrapper" style="position: relative;">
+                    <button id="settings-btn" onclick="const sd = document.getElementById('settings-dropdown'); sd.style.display = sd.style.display === 'flex' ? 'none' : 'flex'; event.stopPropagation();" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="Settings & Controls">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                    </button>
+                    
+                    <!-- Settings Dropdown -->
+                    <div id="settings-dropdown" style="position: absolute; top: calc(100% + 15px); right: 0; width: 230px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: none; flex-direction: column; z-index: 2000; overflow: hidden; animation: fadeInScale 0.2s ease-out; padding: 16px; gap: 14px;">
+                        
+                        <!-- System Configs -->
+                        <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: -6px;">System Controls</div>
 
-                <button id="diagnostics-btn" onclick="admin.toggleDiagnostics(true)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="Notification Diagnostics">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                </button>
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Push Alerts</div>
+                            <button id="enable-push-btn" onclick="if(window.subscribeToPushNotifications) window.subscribeToPushNotifications();" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(14, 165, 233, 0.2); cursor: pointer;">
+                                ENABLE
+                            </button>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Buzzer</div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <div id="buzzer-badge" onclick="admin.toggleBuzzerMute()" style="cursor: pointer; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(34, 197, 94, 0.2);">
+                                    BUZZER (ON)
+                                </div>
+                                <button id="buzzer-test-btn" onclick="admin.testBuzzer()" style="background: none; border: none; color: #94a3b8; font-size: 9px; cursor: pointer; text-decoration: underline;">Test</button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Cloud Sync</div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <div id="cloud-sync-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(239, 68, 68, 0.2);">
+                                    SYNC (OFF)
+                                </div>
+                                <button id="purge-test-data-btn" onclick="admin.purgeTestData()" style="background: none; border: none; color: #ef4444; font-size: 9px; cursor: pointer; text-decoration: underline;">Purge Test</button>
+                            </div>
+                        </div>
+
+                        <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 2px 0;"></div>
+
+                        <!-- Actions -->
+                        <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: -6px;">Actions</div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Vacation Mode</div>
+                            <button id="vacation-btn" class="vacation-btn" onclick="admin.toggleVacationMode()" style="background: rgba(255,255,255,0.05); color: #94a3b8; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                TOGGLE
+                            </button>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Reload App</div>
+                            <button id="refresh-btn" onclick="admin.forceReloadApp()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 6px 10px; font-size: 10px; font-weight: 800; cursor: pointer;">
+                                RELOAD
+                            </button>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Diagnostics</div>
+                            <button id="diagnostics-btn" onclick="admin.toggleDiagnostics(true)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 6px 10px; font-size: 10px; font-weight: 800; cursor: pointer;">
+                                OPEN
+                            </button>
+                        </div>
+                        
+                        <button id="btn-header-install" onclick="triggerPWAInstall()" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; color: #0ea5e9; padding: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; width: 100%; margin-top: 4px;">
+                            Install App
+                        </button>
+                    </div>
+                </div>
             </div>
+            
+            <audio id="buzzer-audio-element" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
         </header>
 
         <div id="alert-center" style="display: none;"></div>

@@ -1334,6 +1334,12 @@ var admin = {
             if (dropdown && bell && !bell.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.style.display = 'none';
             }
+
+            const settingsDropdown = document.getElementById('settings-dropdown');
+            const settingsBtn = document.getElementById('settings-btn');
+            if (settingsDropdown && settingsBtn && !settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+                settingsDropdown.style.display = 'none';
+            }
         });
 
         // Request push notification subscription
