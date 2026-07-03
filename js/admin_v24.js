@@ -1615,8 +1615,8 @@ var admin = {
         const dispatched = realOrders.filter(o => o.delivery_status === 'Dispatched').length;
         const delivered = realOrders.filter(o => o.delivery_status === 'Delivered' || o.delivery_status === 'Picked Up').length;
         
-        let revenue = todaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
-        let yesterdayRevenue = yesterdaysOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        let revenue = todaysOrders.reduce((sum, o) => sum + Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0)), 0);
+        let yesterdayRevenue = yesterdaysOrders.reduce((sum, o) => sum + Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0)), 0);
 
         if (this.manualEntries) {
             this.manualEntries.forEach(entry => {
@@ -1830,7 +1830,7 @@ var admin = {
         });
 
         // Compute Yearly Revenue
-        const yearlyRevenue = yearOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        const yearlyRevenue = yearOrders.reduce((sum, o) => sum + Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0)), 0);
         const formattedYearly = `₱${yearlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         
         const yearlyEls = document.querySelectorAll('#rev-monitor-yearly, #rev-monitor-yearly-mobile');
@@ -1849,7 +1849,7 @@ var admin = {
             const d = new Date(dateVal);
             return d >= currentMonday;
         });
-        const currentWeekRevenue = currentOrders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+        const currentWeekRevenue = currentOrders.reduce((sum, o) => sum + Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0)), 0);
         let daysElapsedThisWeek = new Date().getDay() || 7; 
         const weeklyAvg = currentWeekRevenue / daysElapsedThisWeek;
         const formattedWeekly = `₱${weeklyAvg.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
@@ -1870,7 +1870,7 @@ var admin = {
             const month = d.getMonth();
             const day = d.getDay();
             const dateString = d.toDateString();
-            const price = parseFloat(o.total_price) || 0;
+            const price = Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0));
 
             monthlyData[month] += price;
             dayOfWeekTotals[day] += price;
@@ -2013,7 +2013,7 @@ var admin = {
             const dateVal = o.created_at || o.timestamp;
             if (dateVal) {
                 const y = new Date(dateVal).getFullYear();
-                const price = parseFloat(o.total_price) || 0;
+                const price = Math.max(0, (parseFloat(o.total_price) || 0) - (parseFloat(o.delivery_fee) || 0));
                 yearlyTotalsMap.set(y, (yearlyTotalsMap.get(y) || 0) + price);
             }
         });
