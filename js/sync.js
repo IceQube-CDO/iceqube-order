@@ -480,7 +480,8 @@ publishProfileUpdate: async function(profile, oldMessengerId) {
             'CONFIG_ICEQUBE_VACATION_MODE',
             'CONFIG_PURGE',
             'CONFIG_ICEQUBE_TEAM_MEMBERS',
-            'CONFIG_ICEQUBE_CUSTOMER_PROFILES'
+            'CONFIG_ICEQUBE_CUSTOMER_PROFILES',
+            'CONFIG_ICEQUBE_SYSTEM_SETTINGS'
         ];
 
         const localKeyMappings = {
@@ -496,7 +497,8 @@ publishProfileUpdate: async function(profile, oldMessengerId) {
             'CONFIG_ICEQUBE_VACATION_MODE': 'iceqube_vacation_mode',
             'CONFIG_PURGE': 'ice_system_purged',
             'CONFIG_ICEQUBE_TEAM_MEMBERS': 'iceqube_team_members',
-            'CONFIG_ICEQUBE_CUSTOMER_PROFILES': 'iceqube_customer_profiles'
+            'CONFIG_ICEQUBE_CUSTOMER_PROFILES': 'iceqube_customer_profiles',
+            'CONFIG_ICEQUBE_SYSTEM_SETTINGS': 'iceqube_system_settings'
         };
 
         return new Promise(async (resolve) => {

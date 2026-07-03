@@ -52,7 +52,8 @@ var admin = {
             'CONFIG_ICEQUBE_VACATION_MODE': { key: 'iceqube_vacation_mode', prop: 'vacationMode' },
             'CONFIG_PURGE': { key: 'ice_system_purged', prop: 'isPurged', special: 'purge' },
             'CONFIG_ICEQUBE_TEAM_MEMBERS': { key: 'iceqube_team_members', prop: 'teamMembersData', updateFn: 'renderTeamCards' },
-            'CONFIG_ICEQUBE_CUSTOMER_PROFILES': { key: 'iceqube_customer_profiles', prop: 'customerProfiles', updateFn: 'fetchRealStats' }
+            'CONFIG_ICEQUBE_CUSTOMER_PROFILES': { key: 'iceqube_customer_profiles', prop: 'customerProfiles', updateFn: 'fetchRealStats' },
+            'CONFIG_ICEQUBE_SYSTEM_SETTINGS': { key: 'iceqube_system_settings', prop: 'systemSettings' }
         };
 
         for (const [orderId, cloudData] of Object.entries(cloudStates)) {
@@ -7501,9 +7502,18 @@ admin.checkNotificationDiagnostics = async function() {
             const tgActive = data.telegram_configured;
             const dsActive = data.discord_configured;
             
+            const isTgPaused = admin.systemSettings && admin.systemSettings.telegramPaused;
             backupsListEl.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04);">
-                    <span style="font-size: 0.75rem; color: #cbd5e1; font-weight: 500;">Telegram Bot</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.75rem; color: #cbd5e1; font-weight: 500;">Telegram Bot</span>
+                        <label style="display: inline-flex; align-items: center; cursor: pointer;" title="Toggle Telegram Alerts">
+                            <input type="checkbox" ${!isTgPaused ? 'checked' : ''} onchange="admin.toggleTelegramPause(!this.checked)" style="position: absolute; opacity: 0; width: 0; height: 0;">
+                            <span style="position: relative; display: inline-block; width: 28px; height: 16px; background-color: ${!isTgPaused ? '#22c55e' : '#475569'}; border-radius: 99px; transition: background-color 0.2s;">
+                                <span style="position: absolute; display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: white; left: ${!isTgPaused ? '14px' : '2px'}; top: 2px; transition: left 0.2s;"></span>
+                            </span>
+                        </label>
+                    </div>
                     <span style="padding: 2px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; background: ${tgActive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}; color: ${tgActive ? '#22c55e' : '#64748b'}; border: 1px solid ${tgActive ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.1)'};">
                         ${tgActive ? 'CONFIGURED' : 'NOT CONFIGURED'}
                     </span>
@@ -7532,6 +7542,14 @@ admin.toggleMessengerNotifications = function(messengerId, isEnabled) {
         console.log(`[Notification Center] Toggle Messenger for ${member.nickname || member.name}: ${isEnabled}`);
         admin.checkNotificationDiagnostics();
     }
+};
+
+admin.toggleTelegramPause = function(isPaused) {
+    admin.systemSettings = admin.systemSettings || {};
+    admin.systemSettings.telegramPaused = isPaused;
+    admin.saveState('iceqube_system_settings', admin.systemSettings);
+    console.log(`[Notification Center] Telegram Pause: ${isPaused}`);
+    admin.checkNotificationDiagnostics();
 };
 
 admin.sendDiagnosticKeepAlive = async function(recipientId) {

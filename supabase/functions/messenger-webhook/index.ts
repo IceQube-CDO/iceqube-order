@@ -79,10 +79,35 @@ async function sendDiscordMessage(text: string) {
 }
 
 async function broadcastToBackups(text: string) {
-  await Promise.allSettled([
-    sendTelegramMessage(text),
-    sendDiscordMessage(text)
-  ]);
+  let isTelegramPaused = false;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  if (supabaseUrl && supabaseAnonKey) {
+     try {
+       const res = await fetch(`${supabaseUrl}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_SYSTEM_SETTINGS&select=items`, {
+         headers: { 'apikey': supabaseAnonKey, 'Authorization': `Bearer ${supabaseAnonKey}` }
+       });
+       if (res.ok) {
+         const data = await res.json();
+         if (data && data[0] && data[0].items) {
+           let sysSettings = data[0].items;
+           if (typeof sysSettings === 'string') {
+             try { sysSettings = JSON.parse(sysSettings); } catch(e){}
+           }
+           if (sysSettings && sysSettings.telegramPaused) isTelegramPaused = true;
+         }
+       }
+     } catch(e) {
+         console.warn("[Backup Check] Failed to fetch settings", e);
+     }
+  }
+
+  const promises = [];
+  if (!isTelegramPaused) {
+    promises.push(sendTelegramMessage(text));
+  }
+  promises.push(sendDiscordMessage(text));
+  await Promise.allSettled(promises);
 }
 
 async function sendFBMessage(recipientId: string, text: string) {
