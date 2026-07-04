@@ -2668,7 +2668,7 @@
 
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Push Alerts</div>
-                            <button id="enable-push-btn" onclick="if(window.subscribeToPushNotifications) window.subscribeToPushNotifications();" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(14, 165, 233, 0.2); cursor: pointer;">
+                            <button id="enable-push-btn" onclick="if(window.togglePushNotifications) window.togglePushNotifications();" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(14, 165, 233, 0.2); cursor: pointer; min-width: 65px;">
                                 ENABLE
                             </button>
                         </div>
@@ -4729,20 +4729,61 @@
 
     <script>
         // Web Push Notification Setup
-        async function subscribeToPushNotifications() {
+        async function updatePushBtnUI(isSubscribed) {
+            const btn = document.getElementById('enable-push-btn');
+            if (!btn) return;
+            if (isSubscribed) {
+                btn.textContent = 'DISABLE';
+                btn.style.background = 'rgba(239, 68, 68, 0.1)';
+                btn.style.color = '#ef4444';
+                btn.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+            } else {
+                btn.textContent = 'ENABLE';
+                btn.style.background = 'rgba(14, 165, 233, 0.1)';
+                btn.style.color = '#0ea5e9';
+                btn.style.borderColor = 'rgba(14, 165, 233, 0.2)';
+            }
+        }
+
+        async function checkPushSubscriptionStatus() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+                updatePushBtnUI(!!subscription);
+            } catch (err) {
+                console.error('Error checking push status:', err);
+            }
+        }
+
+        async function togglePushNotifications() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                 console.warn('Push notifications are not supported by the browser.');
                 return;
             }
 
             try {
+                const registration = await navigator.serviceWorker.ready;
+                const existingSubscription = await registration.pushManager.getSubscription();
+                
+                if (existingSubscription) {
+                    // Unsubscribe
+                    await existingSubscription.unsubscribe();
+                    console.log('Unsubscribed from push notifications.');
+                    
+                    // Note: Supabase deletion can be added here if desired,
+                    // but unsubscribing locally is enough to stop alerts.
+                    
+                    updatePushBtnUI(false);
+                    return;
+                }
+
                 const permission = await Notification.requestPermission();
                 if (permission !== 'granted') {
                     console.warn('Push notification permission denied.');
                     return;
                 }
 
-                const registration = await navigator.serviceWorker.ready;
                 const vapidPublicKey = 'BP1EzcLJvnJ9DOabaKNg85oNzIjQX1dj85Ht4JNSwCLxJ24MQBN0AXAwt2NqfYSzcrOWR9khMk8jlIKksuImydU';
                 
                 // Convert VAPID key for use
@@ -4769,7 +4810,6 @@
 
                 // Save to Supabase
                 if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
-                    // Using upsert (ON CONFLICT DO UPDATE) is better handled by Prefer: resolution=merge-duplicates
                     const postResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/admin_push_subscriptions`, {
                         method: 'POST',
                         headers: {
@@ -4791,12 +4831,19 @@
                         console.error('Failed to save push subscription:', await postResponse.text());
                     }
                 }
+                
+                updatePushBtnUI(true);
             } catch (err) {
-                console.error('Error subscribing to push notifications:', err);
+                console.error('Error toggling push notifications:', err);
             }
         }
 
-        window.subscribeToPushNotifications = subscribeToPushNotifications;
+        window.togglePushNotifications = togglePushNotifications;
+        window.addEventListener('load', () => {
+            if (window.checkPushSubscriptionStatus) {
+                window.checkPushSubscriptionStatus();
+            }
+        });
     </script>
 </body>
 </html>

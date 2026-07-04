@@ -1179,6 +1179,7 @@ var admin = {
             this.stopBuzzer();
             return;
         }
+        
         this.buzzerMuted = !this.buzzerMuted;
         localStorage.setItem('iceqube_buzzer_muted', this.buzzerMuted);
         console.log(`🔔 Buzzer Mute: ${this.buzzerMuted}`);
