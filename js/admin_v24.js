@@ -1175,14 +1175,24 @@ var admin = {
             this.audioCtx.resume();
         }
 
-        if (this.buzzerActive) {
-            this.stopBuzzer();
-            return;
+        const toggle = document.getElementById('buzzer-toggle');
+        if (toggle) {
+            this.buzzerMuted = !toggle.checked;
+        } else {
+            if (this.buzzerActive) {
+                this.stopBuzzer();
+                return;
+            }
+            this.buzzerMuted = !this.buzzerMuted;
         }
         
-        this.buzzerMuted = !this.buzzerMuted;
         localStorage.setItem('iceqube_buzzer_muted', this.buzzerMuted);
         console.log(`🔔 Buzzer Mute: ${this.buzzerMuted}`);
+
+        if (this.buzzerActive && this.buzzerMuted) {
+            this.stopBuzzer();
+        }
+
         this.updateBuzzerUI();
     },
 
@@ -1204,6 +1214,16 @@ var admin = {
     },
 
     updateBuzzerUI() {
+        const toggle = document.getElementById('buzzer-toggle');
+        const stopBtn = document.getElementById('buzzer-stop-btn');
+        
+        if (toggle) {
+            toggle.checked = !this.buzzerMuted;
+        }
+        if (stopBtn) {
+            stopBtn.style.display = this.buzzerActive ? 'inline-block' : 'none';
+        }
+
         const badge = document.getElementById('buzzer-badge');
         const dot = document.getElementById('buzzer-dot');
         if (!badge || !dot) return;
@@ -1227,12 +1247,14 @@ var admin = {
         } else {
             badge.className = '';
             if (this.buzzerMuted) {
-                badge.style.background = 'rgba(255, 255, 255, 0.05)';
-                badge.style.color = '#94a3b8';
-                badge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                dot.style.background = '#64748b';
-                dot.style.boxShadow = 'none';
-                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #64748b; border-radius: 50%;"></span> <span class="hide-mobile">BUZZER (MUTED)</span><span class="show-mobile" style="display:none; font-size:14px;">🔇</span>`;
+                badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                if (dot) {
+                    dot.style.background = '#ef4444';
+                    dot.style.boxShadow = 'none';
+                }
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%;"></span> <span class="hide-mobile">BUZZER (OFF)</span><span class="show-mobile" style="display:none; font-size:14px;">🔇</span>`;
             } else if (isAudioBlocked) {
                 badge.style.background = 'rgba(234, 179, 8, 0.1)';
                 badge.style.color = '#eab308';

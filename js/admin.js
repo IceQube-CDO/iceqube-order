@@ -830,12 +830,14 @@ var admin = {
         } else {
             badge.className = '';
             if (this.buzzerMuted) {
-                badge.style.background = 'rgba(255, 255, 255, 0.05)';
-                badge.style.color = '#94a3b8';
-                badge.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                dot.style.background = '#64748b';
-                dot.style.boxShadow = 'none';
-                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #64748b; border-radius: 50%;"></span> BUZZER (MUTED)`;
+                badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                badge.style.color = '#ef4444';
+                badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                if (dot) {
+                    dot.style.background = '#ef4444';
+                    dot.style.boxShadow = 'none';
+                }
+                badge.innerHTML = `<span id="buzzer-dot" style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%;"></span> BUZZER (OFF)`;
             } else if (isAudioBlocked) {
                 badge.style.background = 'rgba(234, 179, 8, 0.1)';
                 badge.style.color = '#eab308';
