@@ -712,6 +712,12 @@ var admin = {
     },
 
     toggleVacationMode() {
+        const toggle = document.getElementById('vacation-toggle');
+        if (toggle) {
+            // Revert visually immediately so it doesn't stay flipped if user cancels
+            toggle.checked = this.vacationMode;
+        }
+
         const action = this.vacationMode ? "DISABLE" : "ENABLE";
         const msg = `Are you sure you want to ${action} Vacation Mode? When enabled, all incoming orders are automatically accepted/dispatched.`;
         
@@ -737,6 +743,11 @@ var admin = {
     },
 
     updateVacationUI() {
+        const toggle = document.getElementById('vacation-toggle');
+        if (toggle) {
+            toggle.checked = this.vacationMode;
+        }
+
         const btn = document.getElementById('vacation-btn');
         if (!btn) return;
 

@@ -2705,9 +2705,10 @@
                         
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Vacation Mode</div>
-                            <button id="vacation-btn" class="vacation-btn" onclick="admin.toggleVacationMode()" style="background: rgba(255,255,255,0.05); color: #94a3b8; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
-                                TOGGLE
-                            </button>
+                            <label class="switch" style="margin: 0; margin-right: 5px;">
+                                <input type="checkbox" id="vacation-toggle" onchange="admin.toggleVacationMode()">
+                                <span class="slider round"></span>
+                            </label>
                         </div>
                         
                         <div style="display: flex; align-items: center; justify-content: space-between;">
