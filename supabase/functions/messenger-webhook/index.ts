@@ -383,6 +383,22 @@ serve(async (req) => {
         // Broadcast to backup channels (Telegram / Discord) in parallel
         await broadcastToBackups(adminMsg).catch(err => console.error("Backup broadcast failed:", err));
         
+        // Trigger web push notifications
+        try {
+          if (supabaseUrl && supabaseAnonKey) {
+            fetch(`${supabaseUrl}/functions/v1/send-admin-push`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`
+              },
+              body: JSON.stringify({ record })
+            }).catch(e => console.error("Failed to trigger send-admin-push fetch:", e));
+          }
+        } catch (e) {
+          console.error("Failed to trigger send-admin-push:", e);
+        }
+
         return new Response(JSON.stringify({ success: true, results }), {
           headers: { "Content-Type": "application/json", 'Access-Control-Allow-Origin': '*' },
           status: 200,
