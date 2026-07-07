@@ -4812,8 +4812,7 @@
                         headers: {
                             'apikey': SUPABASE_CONFIG.ANON_KEY,
                             'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'resolution=merge-duplicates'
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             endpoint: subJson.endpoint,
@@ -4822,10 +4821,11 @@
                         })
                     });
                     
-                    if (postResponse.ok) {
-                        console.log('Push subscription saved to Supabase');
+                    if (postResponse.ok || postResponse.status === 409) {
+                        console.log('Push subscription saved to Supabase (or already exists)');
                     } else {
                         console.error('Failed to save push subscription:', await postResponse.text());
+                        alert('Failed to save push subscription to database. Check console.');
                     }
                 }
                 

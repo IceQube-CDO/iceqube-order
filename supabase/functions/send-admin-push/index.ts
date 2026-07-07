@@ -48,6 +48,7 @@ serve(async (req) => {
     })
 
     // Broadcast push
+    const results: any[] = []
     const sendPromises = subscriptions.map((sub: any) => {
       const pushSubscription = {
         endpoint: sub.endpoint,
@@ -57,8 +58,12 @@ serve(async (req) => {
         }
       }
       return webpush.sendNotification(pushSubscription, notificationPayload)
+        .then(() => {
+          results.push({ endpoint: sub.endpoint, status: 'success' })
+        })
         .catch(async (err: any) => {
           console.error('Error sending push to endpoint', sub.endpoint, err)
+          results.push({ endpoint: sub.endpoint, status: 'error', error: err.message || err.toString(), code: err.statusCode })
           // Remove dead subscriptions
           if (err.statusCode === 410 || err.statusCode === 404) {
             await supabaseClient.from('admin_push_subscriptions').delete().eq('id', sub.id)
@@ -68,7 +73,7 @@ serve(async (req) => {
 
     await Promise.all(sendPromises)
 
-    return new Response(JSON.stringify({ success: true, notified: subscriptions.length }), {
+    return new Response(JSON.stringify({ success: true, notified: subscriptions.length, results }), {
       headers: { "Content-Type": "application/json" },
     })
   } catch (error: any) {
