@@ -386,7 +386,7 @@ serve(async (req) => {
         // Trigger web push notifications
         try {
           if (supabaseUrl && supabaseAnonKey) {
-            fetch(`${supabaseUrl}/functions/v1/send-admin-push`, {
+            await fetch(`${supabaseUrl}/functions/v1/send-admin-push`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
