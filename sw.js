@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-cache-v10.9.7';
+const CACHE_NAME = 'iceqube-cache-v10.9.8';
 const ASSETS = [
   './',
   './index.html',
@@ -70,10 +70,6 @@ self.addEventListener('fetch', event => {
 
 // Push Notification Event Listener
 self.addEventListener('push', event => {
-  if (navigator.setAppBadge) {
-    navigator.setAppBadge(1).catch(e => console.error("Badge error:", e));
-  }
-
   if (event.data) {
     try {
       const data = event.data.json();
@@ -86,10 +82,16 @@ self.addEventListener('push', event => {
           url: data.url || '/admin_mobile.html'
         },
         vibrate: [200, 100, 200, 100, 200, 100, 200],
-        requireInteraction: true // keeps the notification until user dismisses it
+        requireInteraction: true
       };
 
-      event.waitUntil(self.registration.showNotification(title, options));
+      const promises = [self.registration.showNotification(title, options)];
+      
+      if (navigator.setAppBadge) {
+        promises.push(navigator.setAppBadge(1).catch(e => console.error('Badge error:', e)));
+      }
+
+      event.waitUntil(Promise.all(promises));
     } catch (e) {
       console.error('Error parsing push data:', e);
     }
