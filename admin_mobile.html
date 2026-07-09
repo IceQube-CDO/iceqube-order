@@ -4793,7 +4793,25 @@
                 }
                 
                 if (existingSubscription && isTurningOn) {
-                    // Already subscribed correctly
+                    // Already subscribed locally, but Supabase might have lost it.
+                    // Let's re-send it to Supabase just in case!
+                    const subJson = existingSubscription.toJSON();
+                    if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL) {
+                        fetch(`${SUPABASE_CONFIG.URL}/rest/v1/admin_push_subscriptions`, {
+                            method: 'POST',
+                            headers: {
+                                'apikey': SUPABASE_CONFIG.ANON_KEY,
+                                'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                endpoint: subJson.endpoint,
+                                keys_p256dh: subJson.keys.p256dh,
+                                keys_auth: subJson.keys.auth
+                            })
+                        }).catch(e => console.error(e));
+                    }
+                    updatePushBtnUI(true);
                     return;
                 }
 
