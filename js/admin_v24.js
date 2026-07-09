@@ -662,8 +662,40 @@ var admin = {
         }
     },
 
-    deductPackagingSupplies(order) {
+    async fetchLatestConsumables() {
+        if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+            try {
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CONSUMABLES&po_number=eq.GLOBAL_CONFIG_V2&select=items&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                const res = await fetch(url, { 
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: { 'apikey': SUPABASE_CONFIG.ANON_KEY, 'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}` } 
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        let parsedItems = data[0].items;
+                        if (typeof parsedItems === 'string') {
+                            try { parsedItems = JSON.parse(parsedItems); } catch(e) {}
+                        }
+                        if (parsedItems && typeof parsedItems === 'object') {
+                            this.consumables = parsedItems;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("⚠️ Failed to fetch fresh consumables:", e);
+            }
+        }
+    },
+
+    async deductPackagingSupplies(order) {
         if (!order || !order.items) return;
+
+        // --- Prevent Race Conditions ---
+        // Fetch latest state directly from cloud before mutating to avoid clobbering new filters
+        await this.fetchLatestConsumables();
+        // --------------------------------
 
         const items = this.parseItems(order.items);
         const fd = items.fullDice || {};
@@ -4595,7 +4627,8 @@ var admin = {
         document.getElementById('restock-modal').style.display = 'none';
     },
 
-    submitRestock() {
+    async submitRestock() {
+        await this.fetchLatestConsumables();
         const itemVal = document.getElementById('restock-item').value;
         const qty = parseFloat(document.getElementById('restock-qty').value);
         const cost = parseFloat(document.getElementById('restock-cost').value);
@@ -4686,7 +4719,8 @@ var admin = {
         alert(isAdjustment ? 'Inventory adjusted successfully!' : 'Restock logged successfully!');
     },
 
-    deleteConsumable() {
+    async deleteConsumable() {
+        await this.fetchLatestConsumables();
         const itemVal = document.getElementById('restock-item').value;
         if (itemVal === 'CUSTOM') return;
 
@@ -4868,7 +4902,8 @@ var admin = {
         document.getElementById('modal-add-filter').classList.remove('active');
     },
 
-    saveFilter() {
+    async saveFilter() {
+        await this.fetchLatestConsumables();
         const id = document.getElementById('filter-edit-id').value;
         const name = document.getElementById('filter-name').value;
         const date = document.getElementById('filter-date').value;
@@ -4906,7 +4941,8 @@ var admin = {
         this.closeFilterModal();
     },
 
-    resetFilterLife(id) {
+    async resetFilterLife(id) {
+        await this.fetchLatestConsumables();
         const idx = this.consumables.filtration.findIndex(f => f.id === id);
         if (idx > -1) {
             const item = this.consumables.filtration[idx];
@@ -5067,6 +5103,11 @@ var admin = {
             optionsHtml += '</optgroup>';
             optionsHtml += '<option value="CUSTOM">--- Add New Custom Item ---</option>';
             dropdown.innerHTML = optionsHtml;
+        }
+        
+        // Also update filtration UI whenever consumables are updated (e.g. from cloud sync)
+        if (typeof this.updateFiltrationUI === 'function') {
+            this.updateFiltrationUI();
         }
     },
 
@@ -6947,6 +6988,33 @@ admin.saveTeamMembers = function() {
     admin.saveState('iceqube_team_members', admin.teamMembersData);
 };
 
+admin.fetchLatestTeamMembers = async function() {
+    if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
+        try {
+            const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_TEAM_MEMBERS&po_number=eq.GLOBAL_CONFIG_V2&select=items&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const res = await fetch(url, { 
+                method: 'GET',
+                cache: 'no-store',
+                headers: { 'apikey': SUPABASE_CONFIG.ANON_KEY, 'Authorization': `Bearer ${SUPABASE_CONFIG.ANON_KEY}` } 
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    let parsedItems = data[0].items;
+                    if (typeof parsedItems === 'string') {
+                        try { parsedItems = JSON.parse(parsedItems); } catch(e) {}
+                    }
+                    if (Array.isArray(parsedItems)) {
+                        admin.teamMembersData = parsedItems;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("⚠️ Failed to fetch fresh team members:", e);
+        }
+    }
+};
+
 admin.renderTeamCards = function() {
     const adminList = document.getElementById('admin-officers-list');
     const hubList = document.getElementById('hub-staff-list');
@@ -7059,7 +7127,8 @@ admin.showAddTeamMemberOverlay = function(roleCategory) {
     }
 };
 
-admin.toggleMemberStatus = function(index, checkboxEl) {
+admin.toggleMemberStatus = async function(index, checkboxEl) {
+    await admin.fetchLatestTeamMembers();
     const member = admin.teamMembersData[index];
     if (member) {
         const action = member.status === 'Active' ? 'deactivate' : 'activate';
@@ -7078,9 +7147,10 @@ admin.toggleMemberStatus = function(index, checkboxEl) {
     }
 };
 
-admin.archiveTeamMember = function() {
+admin.archiveTeamMember = async function() {
     const name = document.getElementById('drawer-team-name').innerText;
     if (confirm(`Are you sure you want to archive ${name}?`)) {
+        await admin.fetchLatestTeamMembers();
         const member = admin.teamMembersData.find(m => m.name === name);
         if (member) {
             member.status = 'Archived';
@@ -7212,7 +7282,7 @@ if (originalSwitchView) {
 admin.isEditingTeamMember = false;
 admin.currentDrawerMemberIndex = -1;
 
-admin.toggleEditTeamMember = function() {
+admin.toggleEditTeamMember = async function() {
     admin.isEditingTeamMember = !admin.isEditingTeamMember;
     const editableFields = ['drawer-team-nickname', 'drawer-team-designation', 'drawer-team-phone', 'drawer-team-messenger', 'drawer-team-address', 'drawer-team-tin', 'drawer-team-sss', 'drawer-team-philhealth', 'drawer-team-pagibig', 'drawer-team-rate'];
     
@@ -7259,6 +7329,7 @@ admin.toggleEditTeamMember = function() {
         });
         
         // Save changes
+        await admin.fetchLatestTeamMembers();
         const currentName = nameEl.innerText.trim();
         const member = admin.teamMembersData[admin.currentDrawerMemberIndex];
         if (member) {
@@ -7564,7 +7635,8 @@ admin.checkNotificationDiagnostics = async function() {
     }
 };
 
-admin.toggleMessengerNotifications = function(messengerId, isEnabled) {
+admin.toggleMessengerNotifications = async function(messengerId, isEnabled) {
+    await admin.fetchLatestTeamMembers();
     if (!Array.isArray(admin.teamMembersData)) return;
     const member = admin.teamMembersData.find(m => m.messenger === messengerId);
     if (member) {
