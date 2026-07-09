@@ -70,6 +70,10 @@ self.addEventListener('fetch', event => {
 
 // Push Notification Event Listener
 self.addEventListener('push', event => {
+  if (navigator.setAppBadge) {
+    navigator.setAppBadge(1).catch(e => console.error("Badge error:", e));
+  }
+
   if (event.data) {
     try {
       const data = event.data.json();
