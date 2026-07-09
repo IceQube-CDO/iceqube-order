@@ -758,12 +758,24 @@ var admin = {
         }
     },
 
-    showNotification(title, sub) {
+    async showNotification(title, sub) {
         const bell = document.getElementById('notif-dot');
         if (bell) bell.style.display = 'block';
         
         // Browser notification if permitted
         if (Notification.permission === "granted") {
+            // Prevent duplicate native notifications for New Orders if Web Push is active
+            if (title.toUpperCase().includes("NEW ORDER")) {
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const reg = await navigator.serviceWorker.ready;
+                        const subscription = await reg.pushManager.getSubscription();
+                        if (subscription) {
+                            return; // Let the cloud Web Push handle it!
+                        }
+                    }
+                } catch(e) {}
+            }
             new Notification(title, { body: sub, icon: './assets/logo.png' });
         }
     },

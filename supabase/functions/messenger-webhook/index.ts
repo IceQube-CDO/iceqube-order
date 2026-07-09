@@ -1,6 +1,21 @@
 // Supabase Edge Function: messenger-webhook v2.0.0 (2026-05-21)
 // v2: Added /send dedicated path to bypass Facebook platform webhook handler
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import webpush from "npm:web-push@3.6.7"
+
+const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? 'BP1EzcLJvnJ9DOabaKNg85oNzIjQX1dj85Ht4JNSwCLxJ24MQBN0AXAwt2NqfYSzcrOWR9khMk8jlIKksuImydU';
+const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') ?? 'c4mQrtTznT6i_Uy9cHfxHE5dOe7JZuzk6L3i9Cw_7W4';
+
+try {
+  webpush.setVapidDetails(
+    'mailto:admin@iceqube.com',
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+} catch (e) {
+  console.warn("Failed to set VAPID details:", e);
+}
 
 const FB_PAGE_ACCESS_TOKEN = Deno.env.get("FB_PAGE_ACCESS_TOKEN")
 const FB_API_URL = "https://graph.facebook.com/v21.0/me/messages"
@@ -383,20 +398,41 @@ serve(async (req) => {
         // Broadcast to backup channels (Telegram / Discord) in parallel
         await broadcastToBackups(adminMsg).catch(err => console.error("Backup broadcast failed:", err));
         
-        // Trigger web push notifications
+        // Trigger web push notifications directly
         try {
-          if (supabaseUrl && supabaseAnonKey) {
-            await fetch(`${supabaseUrl}/functions/v1/send-admin-push`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabaseAnonKey}`
-              },
-              body: JSON.stringify({ record })
-            }).catch(e => console.error("Failed to trigger send-admin-push fetch:", e));
+          const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+          if (supabaseUrl && supabaseServiceKey) {
+            const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+            const { data: subscriptions } = await supabaseClient.from('admin_push_subscriptions').select('*');
+            
+            if (subscriptions && subscriptions.length > 0) {
+              const notificationPayload = JSON.stringify({
+                title: 'New Order! 🛍️',
+                body: `Order from ${record.customer_name || 'Customer'}. Tap to view.`,
+                url: '/admin_mobile.html'
+              });
+              
+              const sendPromises = subscriptions.map((sub: any) => {
+                const pushSubscription = {
+                  endpoint: sub.endpoint,
+                  keys: {
+                    p256dh: sub.keys_p256dh,
+                    auth: sub.keys_auth
+                  }
+                };
+                return webpush.sendNotification(pushSubscription, notificationPayload)
+                  .catch(async (err: any) => {
+                    console.error('Error sending push to endpoint', sub.endpoint, err);
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                      await supabaseClient.from('admin_push_subscriptions').delete().eq('id', sub.id);
+                    }
+                  });
+              });
+              await Promise.all(sendPromises);
+            }
           }
         } catch (e) {
-          console.error("Failed to trigger send-admin-push:", e);
+          console.error("Failed to trigger web push:", e);
         }
 
         return new Response(JSON.stringify({ success: true, results }), {
