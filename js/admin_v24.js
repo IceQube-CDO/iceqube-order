@@ -1445,8 +1445,9 @@ var admin = {
             this.fetchRealStats();
             
             syncIteration++;
-            // Only poll for pricing and config updates every 30 seconds (every 3 iterations) to reduce parallel request queueing and rate limits
-            if (syncIteration % 3 === 0) {
+            // Only poll for pricing and config updates every 24 hours (8640 iterations of 10s) to reduce database load.
+            // Note: Initial load and forced mutations will still immediately fetch from cloud.
+            if (syncIteration % 8640 === 0) {
                 if (window.IceQubeSync && !this.isEditingMatrix) {
                     const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
                     if (cloudMatrix && !cloudMatrix._error && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
