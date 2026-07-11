@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iceqube-cache-v10.9.15';
+const CACHE_NAME = 'iceqube-cache-v10.9.16';
 const ASSETS = [
   './',
   './index.html',
@@ -85,13 +85,30 @@ self.addEventListener('push', event => {
         requireInteraction: true
       };
 
-      const promises = [self.registration.showNotification(title, options)];
-      
-      if (navigator.setAppBadge) {
-        promises.push(navigator.setAppBadge(1).catch(e => console.error('Badge error:', e)));
-      }
+      event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+          let isFocused = false;
+          for (let i = 0; i < windowClients.length; i++) {
+            if (windowClients[i].focused) {
+              isFocused = true;
+              break;
+            }
+          }
+          
+          // If the user is actively looking at the app, don't show an OS-level banner
+          if (isFocused) {
+            return Promise.resolve();
+          }
 
-      event.waitUntil(Promise.all(promises));
+          const promises = [self.registration.showNotification(title, options)];
+          
+          if (navigator.setAppBadge) {
+            promises.push(navigator.setAppBadge(1).catch(e => console.error('Badge error:', e)));
+          }
+
+          return Promise.all(promises);
+        })
+      );
     } catch (e) {
       console.error('Error parsing push data:', e);
     }

@@ -804,8 +804,9 @@ var admin = {
         const bell = document.getElementById('notif-dot');
         if (bell) bell.style.display = 'block';
         
-        // Browser notification if permitted (ONLY for New Orders, per user request)
-        if (Notification.permission === "granted" && title.toUpperCase().includes("NEW ORDER")) {
+        // Browser native banner should ONLY show if the app is in the background!
+        // If they are actively using the app, the in-app buzzer and UI update is enough.
+        if (document.visibilityState !== 'visible' && Notification.permission === "granted" && title.toUpperCase().includes("NEW ORDER")) {
             // Prevent duplicate native notifications for New Orders if Web Push is active
             try {
                 if ('serviceWorker' in navigator) {
