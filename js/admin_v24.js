@@ -4651,6 +4651,10 @@ var admin = {
     },
 
     async submitRestock() {
+        const btn = document.querySelector('button[onclick="admin.submitRestock()"]');
+        const originalText = btn ? btn.innerText : 'Save Restock';
+        if (btn) { btn.innerText = 'Saving to Cloud...'; btn.disabled = true; btn.style.opacity = '0.7'; }
+
         await this.fetchLatestConsumables();
         const itemVal = document.getElementById('restock-item').value;
         const qty = parseFloat(document.getElementById('restock-qty').value);
@@ -4739,13 +4743,21 @@ var admin = {
         document.getElementById('restock-adjustment').checked = false;
         this.handleAdjustmentToggle();
         
+        if (btn) { btn.innerText = originalText; btn.disabled = false; btn.style.opacity = '1'; }
         alert(isAdjustment ? 'Inventory adjusted successfully!' : 'Restock logged successfully!');
     },
 
     async deleteConsumable() {
+        const btn = document.getElementById('delete-consumable-btn');
+        const originalText = btn ? btn.innerText : 'Remove Item from Inventory';
+        if (btn) { btn.innerText = 'Removing...'; btn.disabled = true; btn.style.opacity = '0.7'; }
+
         await this.fetchLatestConsumables();
         const itemVal = document.getElementById('restock-item').value;
-        if (itemVal === 'CUSTOM') return;
+        if (itemVal === 'CUSTOM') {
+            if (btn) { btn.innerText = originalText; btn.disabled = false; btn.style.opacity = '1'; }
+            return;
+        }
 
         if (!confirm('Are you sure you want to permanently remove this item from inventory?')) return;
 
@@ -4760,6 +4772,7 @@ var admin = {
         admin.saveState('iceqube_consumables', this.consumables);
         this.updateConsumablesUI();
         this.closeRestockModal();
+        if (btn) { btn.innerText = originalText; btn.disabled = false; btn.style.opacity = '1'; }
         alert('Item removed successfully.');
     },
 
@@ -4926,6 +4939,11 @@ var admin = {
     },
 
     async saveFilter() {
+        const modal = document.getElementById('modal-add-filter');
+        const btn = modal ? modal.querySelector('button[onclick="admin.saveFilter()"]') : null;
+        const originalText = btn ? btn.innerText : 'Save Filter Profile';
+        if (btn) { btn.innerText = 'Saving to Cloud...'; btn.disabled = true; btn.style.opacity = '0.7'; }
+
         await this.fetchLatestConsumables();
         const id = document.getElementById('filter-edit-id').value;
         const name = document.getElementById('filter-name').value;
@@ -4937,6 +4955,7 @@ var admin = {
         const link = document.getElementById('filter-link').value;
 
         if (!name || !date || !lifespan) {
+            if (btn) { btn.innerText = originalText; btn.disabled = false; btn.style.opacity = '1'; }
             alert('Please fill in Name, Date, and Lifespan.');
             return;
         }
@@ -4962,9 +4981,14 @@ var admin = {
         admin.saveState('iceqube_consumables', this.consumables);
         this.updateFiltrationUI();
         this.closeFilterModal();
+        if (btn) { btn.innerText = originalText; btn.disabled = false; btn.style.opacity = '1'; }
     },
 
     async resetFilterLife(id) {
+        const btn = document.querySelector(`button[onclick="admin.resetFilterLife('${id}')"]`);
+        const originalText = btn ? btn.innerText : 'RESET';
+        if (btn) { btn.innerText = '...'; btn.disabled = true; }
+
         await this.fetchLatestConsumables();
         const idx = this.consumables.filtration.findIndex(f => f.id === id);
         if (idx > -1) {
@@ -4975,6 +4999,7 @@ var admin = {
                 this.updateFiltrationUI();
             }
         }
+        if (btn) { btn.innerText = originalText; btn.disabled = false; }
     },
 
     updateConsumablesUI() {
@@ -5132,6 +5157,7 @@ var admin = {
         if (typeof this.updateFiltrationUI === 'function') {
             this.updateFiltrationUI();
         }
+        if (btn) { btn.innerText = originalText; btn.disabled = false; }
     },
 
     handleRestockItemChange() {
