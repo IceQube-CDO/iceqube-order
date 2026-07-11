@@ -1445,9 +1445,8 @@ var admin = {
             this.fetchRealStats();
             
             syncIteration++;
-            // Only poll for pricing and config updates every 24 hours (8640 iterations of 10s) to reduce database load.
-            // Note: Initial load and forced mutations will still immediately fetch from cloud.
-            if (syncIteration % 8640 === 0) {
+            // Poll for pricing and config updates every 30 seconds (every 3 iterations) to ensure mobile and web are synced perfectly in real-time
+            if (syncIteration % 3 === 0) {
                 if (window.IceQubeSync && !this.isEditingMatrix) {
                     const cloudMatrix = await window.IceQubeSync.fetchCloudPricing();
                     if (cloudMatrix && !cloudMatrix._error && JSON.stringify(cloudMatrix) !== JSON.stringify(this.pricingMatrix)) {
@@ -1470,6 +1469,22 @@ var admin = {
                 }
             }
         }, 10000);
+        
+        // PWA optimization: Force an immediate sync when the app is brought back from the background
+        if (!this._visibilityListenerAdded) {
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    console.log("📱 [Admin] App returned to foreground. Forcing instant cloud sync...");
+                    this.fetchRealStats();
+                    if (window.IceQubeSync && window.IceQubeSync.fetchCloudAppStates) {
+                        window.IceQubeSync.fetchCloudAppStates().then(cloudStates => {
+                            this.applyCloudStates(cloudStates);
+                        });
+                    }
+                }
+            });
+            this._visibilityListenerAdded = true;
+        }
         
         // --- SCHEDULED DELIVERY REMINDER CHECK (every 5 minutes) ---
         // Calls the edge function to check for deliveries coming up in ~1 hour
