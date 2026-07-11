@@ -464,7 +464,7 @@ publishProfileUpdate: async function(profile, oldMessengerId) {
         }
     },
 
-    fetchCloudAppStates: async function() {
+    fetchCloudAppStates: async function(forceSync = false) {
         if (typeof SUPABASE_CONFIG === 'undefined' || !SUPABASE_CONFIG.URL || SUPABASE_CONFIG.URL.includes('your-project-id')) {
             return {};
         }
@@ -554,7 +554,7 @@ publishProfileUpdate: async function(profile, oldMessengerId) {
                     const localKey = localKeyMappings[orderId];
                     const localCloudTime = localStorage.getItem(`${localKey}_cloud_time`);
 
-                    if (!localCloudTime || new Date(cloudTime) > new Date(localCloudTime)) {
+                    if (forceSync || !localCloudTime || new Date(cloudTime) > new Date(localCloudTime)) {
                         keysToFetch.push(orderId);
                     }
                 }

@@ -1439,9 +1439,9 @@ var admin = {
         // Initial fetch
         this.fetchRealStats();
 
-        // Initial cloud states fetch to load Team & Payroll immediately
+        // Initial cloud states fetch to load Team & Payroll immediately (FORCED to bypass local storage)
         if (window.IceQubeSync && window.IceQubeSync.fetchCloudAppStates) {
-            window.IceQubeSync.fetchCloudAppStates().then(cloudStates => {
+            window.IceQubeSync.fetchCloudAppStates(true).then(cloudStates => {
                 this.applyCloudStates(cloudStates);
             }).catch(e => console.error("Initial cloud states fetch failed:", e));
         }
@@ -1484,7 +1484,7 @@ var admin = {
                     console.log("📱 [Admin] App returned to foreground. Forcing instant cloud sync...");
                     this.fetchRealStats();
                     if (window.IceQubeSync && window.IceQubeSync.fetchCloudAppStates) {
-                        window.IceQubeSync.fetchCloudAppStates().then(cloudStates => {
+                        window.IceQubeSync.fetchCloudAppStates(true).then(cloudStates => {
                             this.applyCloudStates(cloudStates);
                         });
                     }
@@ -1584,28 +1584,12 @@ var admin = {
                 badge.innerHTML = '<span id="cloud-dot" style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span> <span class="hide-mobile">CLOUD LIVE</span><span class="show-mobile" style="display:none; font-size:14px;">☁️</span>';
             }
 
-            // Merge cloud data with local data
-            let localOrders = [];
-            try {
-                const parsedLocal = JSON.parse(localStorage.getItem('ice_orders') || '[]');
-                if (Array.isArray(parsedLocal)) {
-                    localOrders = parsedLocal.filter(o => o && o.order_id && !o.order_id.startsWith('CONFIG_'));
-                }
-            } catch (e) {
-                console.warn("Failed to parse local orders:", e);
-            }
             const cloudOrders = (orders || []).filter(o => o && o.order_id && !o.order_id.startsWith('CONFIG_'));
             
             // --- SESSION-BASED CLOUD DETECTION ---
             cloudOrders.forEach(co => {
                 const orderId = co.order_id;
                 const alreadyAlarmed = this.alarmedOrders.has(orderId);
-
-                // Find if this order already exists in local storage to preserve its status
-                const existingLocal = localOrders.find(lo => lo && lo.order_id === orderId);
-                if (existingLocal && existingLocal.supplies_deducted) {
-                    co.supplies_deducted = true;
-                }
 
                 if (!alreadyAlarmed) {
                     this.alarmedOrders.add(orderId);
@@ -1614,38 +1598,20 @@ var admin = {
                     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
                     const isVeryRecent = orderDate > thirtyMinutesAgo;
 
-                    // 1. Client-side notification (DB webhook trigger not reliably firing)
-                    if (isVeryRecent) {
-                        console.log("🔔 [Messenger] Detected very recent order, triggering bridge:", orderId);
-                        // Disabled: DB webhook handles this now to prevent duplicate notifications.
-                        // this.sendMessengerNotification(co);
-                    }
-
-                    // 2. Automated Inventory Deduction (Silent if initial load)
                     if (this.isInitialLoadComplete) {
-                        console.log("🚀 [Buzzer] Alarm Triggered for New Order:", orderId);
                         this.startBuzzer();
                         this.showNotification(`⚠️ NEW ORDER: ${co.customer_name}`, orderId);
-                        this.handleIncomingOrder(co, true, false); // silent = false
+                        this.handleIncomingOrder(co, true, false);
                     } else if (!co.supplies_deducted) {
-                        // If it's the initial load, we process it SILENTLY to ensure inventory is accurate
-                        console.log("📋 [Sync] Processing historical cloud order for inventory:", orderId);
-                        this.handleIncomingOrder(co, true, true); // silent = true
+                        this.handleIncomingOrder(co, true, true);
                     }
                 }
             });
 
-            // Mark initial load as done after the first successful cloud fetch
             this.isInitialLoadComplete = true;
 
-            // Merge logic: Prioritize Cloud data but keep local flags (like supplies_deducted)
+            // Strict cloud mode requested.
             let merged = [...cloudOrders];
-            localOrders.forEach(lo => {
-                const cloudVer = cloudOrders.find(co => co.order_id === lo.order_id);
-                if (!cloudVer && (lo.is_real || lo.total_price > 0 || lo.items)) {
-                    merged.push(lo);
-                }
-            });
             
             // Sort by newest first
             merged.sort((a, b) => {
