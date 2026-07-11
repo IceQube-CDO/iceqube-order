@@ -5123,7 +5123,6 @@ var admin = {
         if (typeof this.updateFiltrationUI === 'function') {
             this.updateFiltrationUI();
         }
-        if (btn) { btn.innerText = originalText; btn.disabled = false; }
     },
 
     handleRestockItemChange() {
