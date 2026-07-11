@@ -188,7 +188,8 @@ serve(async (req) => {
     let recipientId, message, messagingType, tag;
     let parsedBody: any = null;
     const contentType = req.headers.get("content-type") || "";
-    const pathname = new URL(req.url).pathname;
+    const url = new URL(req.url);
+    const pathname = url.pathname;
 
     // ── FACEBOOK PLATFORM INCOMING EVENTS (from Messenger users) ──
     // When a customer messages the IceQube page, Facebook POSTs here.
