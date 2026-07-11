@@ -207,6 +207,9 @@ var admin = {
     isInitialLoadComplete: false,
     charts: {},
     customerProfiles: JSON.parse(localStorage.getItem('iceqube_customer_profiles') || '{}'),
+    teamMembersData: JSON.parse(localStorage.getItem('iceqube_team_members') || '[]'),
+    systemSettings: JSON.parse(localStorage.getItem('iceqube_system_settings') || '{}'),
+    isPurged: localStorage.getItem('ice_system_purged') === 'true',
 
     purgeTestData() {
         console.log('[SYSTEM] Purge Test Data triggered');
