@@ -21,6 +21,7 @@ async function saveConfigToCloud(orderId, customerName, poNumber, items) {
         return null;
     }
     try {
+        // Step 1: Try PATCH to update existing row(s)
         const patchUrl = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.${orderId}&customer_name=eq.${customerName}&po_number=eq.${poNumber}`;
         const patchResponse = await fetch(patchUrl, {
             method: 'PATCH',
@@ -32,7 +33,7 @@ async function saveConfigToCloud(orderId, customerName, poNumber, items) {
             },
             body: JSON.stringify({
                 items: items,
-                is_real: false, // Configurations are not real orders
+                is_real: false,
                 created_at: new Date().toISOString()
             })
         });
@@ -40,12 +41,13 @@ async function saveConfigToCloud(orderId, customerName, poNumber, items) {
         if (patchResponse.ok) {
             const updatedRows = await patchResponse.json();
             if (updatedRows && updatedRows.length > 0) {
-                console.log(`✅ [Sync] Config ${orderId} updated in cloud via PATCH`);
+                console.log(`✅ [Sync] Config ${orderId} updated in cloud via PATCH (${updatedRows.length} row(s))`);
                 return updatedRows[0];
             }
         }
 
-        console.log(`[Sync] Config ${orderId} not found or PATCH returned no rows. Performing POST...`);
+        // Step 2: No existing row found — INSERT a new one (only if PATCH returned 0 rows)
+        console.log(`[Sync] Config ${orderId} not found. Performing INSERT...`);
         const postResponse = await fetch(`${SUPABASE_CONFIG.URL}/rest/v1/orders`, {
             method: 'POST',
             headers: {
@@ -58,7 +60,7 @@ async function saveConfigToCloud(orderId, customerName, poNumber, items) {
                 order_id: orderId,
                 customer_name: customerName,
                 po_number: poNumber,
-                is_real: false, // Configurations are not real orders
+                is_real: false,
                 items: items
             })
         });

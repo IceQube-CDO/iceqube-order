@@ -665,7 +665,9 @@ var admin = {
     async fetchLatestConsumables() {
         if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
             try {
-                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CONSUMABLES&po_number=eq.GLOBAL_CONFIG_V2&select=items&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                // CRITICAL: order=created_at.desc&limit=1 ensures we always get the LATEST row,
+                // not an old duplicate from a previous POST fallback.
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CONSUMABLES&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
                 const res = await fetch(url, { 
                     method: 'GET',
                     cache: 'no-store',
@@ -675,11 +677,16 @@ var admin = {
                     const data = await res.json();
                     if (data && data.length > 0) {
                         let parsedItems = data[0].items;
-                        if (typeof parsedItems === 'string') {
-                            try { parsedItems = JSON.parse(parsedItems); } catch(e) {}
+                        while (typeof parsedItems === 'string') {
+                            try { parsedItems = JSON.parse(parsedItems); } catch(e) { break; }
                         }
                         if (parsedItems && typeof parsedItems === 'object') {
                             this.consumables = parsedItems;
+                            // Keep localStorage and cloud_time in sync so applyCloudStates doesn't re-fetch stale data
+                            localStorage.setItem('iceqube_consumables', JSON.stringify(parsedItems));
+                            if (data[0].created_at) {
+                                localStorage.setItem('iceqube_consumables_cloud_time', data[0].created_at);
+                            }
                         }
                     }
                 }
