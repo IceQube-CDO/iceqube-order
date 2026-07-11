@@ -670,7 +670,7 @@ var admin = {
             try {
                 // CRITICAL: order=created_at.desc&limit=1 ensures we always get the LATEST row,
                 // not an old duplicate from a previous POST fallback.
-                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CONSUMABLES&po_number=eq.GLOBAL_CONFIG_V2&order=created_at.desc&limit=1&select=items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+                const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_CONSUMABLES&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.CB_${Date.now()}&order=created_at.desc&limit=1&select=items,created_at&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
                 const res = await fetch(url, { 
                     method: 'GET',
                     cache: 'no-store',
@@ -7009,7 +7009,7 @@ admin.saveTeamMembers = function() {
 admin.fetchLatestTeamMembers = async function() {
     if (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.URL && !SUPABASE_CONFIG.URL.includes('your-project-id')) {
         try {
-            const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_TEAM_MEMBERS&po_number=eq.GLOBAL_CONFIG_V2&select=items&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
+            const url = `${SUPABASE_CONFIG.URL}/rest/v1/orders?order_id=eq.CONFIG_ICEQUBE_TEAM_MEMBERS&po_number=eq.GLOBAL_CONFIG_V2&customer_name=neq.CB_${Date.now()}&order=created_at.desc&limit=1&select=items&apikey=${SUPABASE_CONFIG.ANON_KEY}`;
             const res = await fetch(url, { 
                 method: 'GET',
                 cache: 'no-store',
