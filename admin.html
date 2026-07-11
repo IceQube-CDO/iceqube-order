@@ -3924,7 +3924,8 @@
 
             // Listen for new service worker taking control
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-                console.log("Service Worker controller changed.");
+                console.log("Service Worker controller changed. Reloading app to apply updates...");
+                window.location.reload(true);
             });
         }
     </script>
