@@ -34,7 +34,9 @@ const app = {
             heavyLoadT1Weight: 19,
             heavyLoadT1Fee: 10,
             heavyLoadT2Weight: 31,
-            heavyLoadT2Fee: 15
+            heavyLoadT2Fee: 15,
+            maxOrderBags: 100,
+            maxDailyBags: 500
         }
     },
 
@@ -64,7 +66,9 @@ const app = {
                             heavyLoadT1Weight: matrix.delivery?.heavyLoadT1Weight !== undefined ? matrix.delivery.heavyLoadT1Weight : 19,
                             heavyLoadT1Fee: matrix.delivery?.heavyLoadT1Fee !== undefined ? matrix.delivery.heavyLoadT1Fee : 10,
                             heavyLoadT2Weight: matrix.delivery?.heavyLoadT2Weight !== undefined ? matrix.delivery.heavyLoadT2Weight : 31,
-                            heavyLoadT2Fee: matrix.delivery?.heavyLoadT2Fee !== undefined ? matrix.delivery.heavyLoadT2Fee : 15
+                            heavyLoadT2Fee: matrix.delivery?.heavyLoadT2Fee !== undefined ? matrix.delivery.heavyLoadT2Fee : 15,
+                            maxOrderBags: matrix.delivery?.maxOrderBags !== undefined ? matrix.delivery.maxOrderBags : 100,
+                            maxDailyBags: matrix.delivery?.maxDailyBags !== undefined ? matrix.delivery.maxDailyBags : 500
                         }
                     };
                 }
@@ -143,13 +147,19 @@ const app = {
             this.updateTotal();
         }
 
-        // Final Safety: Ensure heavy load fields exist on loaded delivery matrix
-        if (this.pricingMatrix.delivery && this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
-            console.log("🔄 [Migration] Migrating heavy load settings into delivery config.");
-            this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
-            this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
-            this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
-            this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
+        // Final Safety: Ensure heavy load and limit fields exist on loaded delivery matrix
+        if (this.pricingMatrix.delivery && (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined || this.pricingMatrix.delivery.maxOrderBags === undefined)) {
+            console.log("🔄 [Migration] Migrating heavy load & capacity settings into delivery config.");
+            if (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
+                this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
+                this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
+                this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
+                this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
+            }
+            if (this.pricingMatrix.delivery.maxOrderBags === undefined) {
+                this.pricingMatrix.delivery.maxOrderBags = 100;
+                this.pricingMatrix.delivery.maxDailyBags = 500;
+            }
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
             this.updateTotal();
         }
@@ -3907,6 +3917,30 @@ const app = {
                 t2Container.style.display = 'none';
             }
         }
+
+        const maxOrderContainer = document.getElementById('about-delivery-max-order-container');
+        const maxOrderEl = document.getElementById('about-delivery-max-order');
+        if (maxOrderContainer && maxOrderEl) {
+            const maxOrder = parseFloat(delivery.maxOrderBags) || 0;
+            if (maxOrder > 0) {
+                maxOrderEl.textContent = maxOrder;
+                maxOrderContainer.style.display = 'flex';
+            } else {
+                maxOrderContainer.style.display = 'none';
+            }
+        }
+
+        const maxDailyContainer = document.getElementById('about-delivery-max-daily-container');
+        const maxDailyEl = document.getElementById('about-delivery-max-daily');
+        if (maxDailyContainer && maxDailyEl) {
+            const maxDaily = parseFloat(delivery.maxDailyBags) || 0;
+            if (maxDaily > 0) {
+                maxDailyEl.textContent = maxDaily;
+                maxDailyContainer.style.display = 'flex';
+            } else {
+                maxDailyContainer.style.display = 'none';
+            }
+        }
     },
 
     updateAboutIcePricingUI() {
@@ -4120,12 +4154,115 @@ const app = {
         this.nextStep();
     },
 
+    getCurrentOrderTotalBags() {
+        let count = 0;
+        if (this.orderData && this.orderData.qty) {
+            Object.values(this.orderData.qty.fullDice || {}).forEach(v => count += (parseFloat(v) || 0));
+            Object.values(this.orderData.qty.halfDice || {}).forEach(v => count += (parseFloat(v) || 0));
+        }
+        return count;
+    },
+
+    getTodayDeliveryTotalBags() {
+        let totalToday = 0;
+        try {
+            const orders = JSON.parse(localStorage.getItem('iceqube_orders') || '[]');
+            const todayStr = new Date().toISOString().split('T')[0];
+            orders.forEach(order => {
+                if (order.logistics === 'Doorstep Delivery' && order.status !== 'cancelled' && order.status !== 'rejected') {
+                    let isToday = false;
+                    if (order.schedule?.delivery_type === 'immediate') {
+                        const createdDate = (order.createdAt || '').split('T')[0] || (order.id || '').split('-')[0] || '';
+                        if (createdDate === todayStr || (order.timestamp && new Date(order.timestamp).toISOString().split('T')[0] === todayStr)) {
+                            isToday = true;
+                        }
+                    } else if (order.schedule?.date === todayStr) {
+                        isToday = true;
+                    } else if (!order.schedule && order.timestamp && new Date(order.timestamp).toISOString().split('T')[0] === todayStr) {
+                        isToday = true;
+                    }
+                    if (isToday) {
+                        let orderBags = 0;
+                        if (order.items && Array.isArray(order.items)) {
+                            order.items.forEach(i => orderBags += (parseFloat(i.qty) || 0));
+                        } else if (order.qty) {
+                            Object.values(order.qty.fullDice || {}).forEach(v => orderBags += (parseFloat(v) || 0));
+                            Object.values(order.qty.halfDice || {}).forEach(v => orderBags += (parseFloat(v) || 0));
+                        }
+                        totalToday += orderBags;
+                    }
+                }
+            });
+        } catch (e) {
+            console.warn('Error counting today delivery bags:', e);
+        }
+        return totalToday;
+    },
+
+    checkDeliveryLimits(forDateStr) {
+        if (this.orderData.logistics !== 'Doorstep Delivery') return { exceeded: false };
+        const deliveryConfig = this.pricingMatrix?.delivery || {};
+        const maxOrder = parseFloat(deliveryConfig.maxOrderBags) || 100;
+        const maxDaily = parseFloat(deliveryConfig.maxDailyBags) || 500;
+        const currentBags = this.getCurrentOrderTotalBags();
+
+        if (maxOrder > 0 && currentBags > maxOrder) {
+            return {
+                exceeded: true,
+                type: 'order_limit',
+                msg: `Order size (${currentBags} bags) exceeds the delivery limit per order (${maxOrder} bags). Please reduce quantity or choose Self-Pickup.`
+            };
+        }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isToday = !forDateStr || forDateStr === todayStr || forDateStr === 'now';
+        if (isToday && maxDaily > 0) {
+            const todayBags = this.getTodayDeliveryTotalBags();
+            if ((todayBags + currentBags) > maxDaily) {
+                return {
+                    exceeded: true,
+                    type: 'daily_limit',
+                    msg: `Our maximum daily delivery limit (${maxDaily} bags) has been reached for today. We suggest a next day booking!`
+                };
+            }
+        }
+        return { exceeded: false };
+    },
+
     selectSchedule(type, element) {
         let total3kg = (parseFloat(this.orderData.qty.fullDice['bag3kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag3kg']) || 0);
         let total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
         let isLargeOrder = total3kg >= 15 || total1kg >= 40;
 
         if (type === 'Deliver Now') {
+            const limitCheck = this.checkDeliveryLimits('now');
+            if (limitCheck.exceeded) {
+                if (typeof this.showToast === 'function') {
+                    this.showToast(limitCheck.msg, 'error');
+                } else {
+                    alert(limitCheck.msg);
+                }
+                if (limitCheck.type === 'daily_limit') {
+                    const scheduleCard = document.getElementById('card-schedule-date');
+                    if (scheduleCard) {
+                        setTimeout(() => {
+                            this.selectSchedule('Schedule Later', scheduleCard);
+                            const dateInput = document.getElementById('schedule-date');
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            const tomStr = tomorrow.toISOString().split('T')[0];
+                            if (dateInput) {
+                                dateInput.value = tomStr;
+                                this.validateSchedule();
+                                if (typeof this.showToast === 'function') {
+                                    this.showToast("📅 Automatically suggesting a next day booking for you!", "info");
+                                }
+                            }
+                        }, 400);
+                    }
+                }
+                return;
+            }
             if (isLargeOrder) {
                 const timeMsg = 'Orders of 15 or more bags of 3kg, or 40 or more bags of 1kg must be scheduled at least 1 day in advance.';
                 if (typeof this.showToast === 'function') {
@@ -4219,13 +4356,18 @@ const app = {
             let total3kg = (parseFloat(this.orderData.qty.fullDice['bag3kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag3kg']) || 0);
             let total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
             let isLargeOrder = total3kg >= 15 || total1kg >= 40;
+            const limitCheck = this.checkDeliveryLimits('now');
 
-            if (isRestHour || isLargeOrder) {
+            if (isRestHour || isLargeOrder || limitCheck.exceeded) {
                 deliverNowCard.style.opacity = '0.5';
                 deliverNowCard.style.cursor = 'not-allowed';
+                if (limitCheck.exceeded && limitCheck.type === 'daily_limit' && !isRestHour && !isLargeOrder) {
+                    deliverNowCard.title = "Daily delivery capacity reached for today. Suggesting next day booking.";
+                }
             } else {
                 deliverNowCard.style.opacity = '1';
                 deliverNowCard.style.cursor = 'pointer';
+                deliverNowCard.title = "";
             }
         }
         
@@ -4383,12 +4525,16 @@ const app = {
             let total1kg = (parseFloat(this.orderData.qty.fullDice['bag1kg']) || 0) + (parseFloat(this.orderData.qty.halfDice['bag1kg']) || 0);
             let isLargeOrder = total3kg >= 15 || total1kg >= 40;
 
+            const limitCheck = this.checkDeliveryLimits(date);
             if (selectedDate > maxDate) {
                 isValidDate = false;
                 msg = "Online booking is limited to 14 days in advance.";
             } else if (isLargeOrder && selectedDate.getTime() === today.getTime()) {
                 isValidDate = false;
                 msg = "Orders of 15 or more bags of 3kg, or 40 or more bags of 1kg must be scheduled at least 1 day in advance.";
+            } else if (limitCheck.exceeded) {
+                isValidDate = false;
+                msg = limitCheck.msg;
             }
         }
 
@@ -4418,6 +4564,14 @@ const app = {
         element.classList.add('selected');
 
         if (method === 'Doorstep Delivery') {
+            const limitCheck = this.checkDeliveryLimits('now');
+            if (limitCheck.exceeded && limitCheck.type === 'order_limit') {
+                if (typeof this.showToast === 'function') {
+                    this.showToast(limitCheck.msg, 'error');
+                } else {
+                    alert(limitCheck.msg);
+                }
+            }
             this.showLogisticsSubView('delivery');
         } else {
             this.showLogisticsSubView('pickup');

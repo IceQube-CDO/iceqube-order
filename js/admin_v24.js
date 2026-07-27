@@ -193,7 +193,9 @@ var admin = {
             heavyLoadT1Weight: 19,
             heavyLoadT1Fee: 10,
             heavyLoadT2Weight: 31,
-            heavyLoadT2Fee: 15
+            heavyLoadT2Fee: 15,
+            maxOrderBags: 100,
+            maxDailyBags: 500
         }
     })),
     cashflowFilter: 'daily', 
@@ -463,18 +465,26 @@ var admin = {
                     heavyLoadT1Weight: 19,
                     heavyLoadT1Fee: 10,
                     heavyLoadT2Weight: 31,
-                    heavyLoadT2Fee: 15
+                    heavyLoadT2Fee: 15,
+                    maxOrderBags: 100,
+                    maxDailyBags: 500
                 }
             };
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
         }
 
-        // Final Safety: Ensure heavy load fields exist on loaded delivery matrix
-        if (this.pricingMatrix && this.pricingMatrix.delivery && this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
-            this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
-            this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
-            this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
-            this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
+        // Final Safety: Ensure heavy load and limit fields exist on loaded delivery matrix
+        if (this.pricingMatrix && this.pricingMatrix.delivery && (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined || this.pricingMatrix.delivery.maxOrderBags === undefined)) {
+            if (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
+                this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
+                this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
+                this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
+                this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
+            }
+            if (this.pricingMatrix.delivery.maxOrderBags === undefined) {
+                this.pricingMatrix.delivery.maxOrderBags = 100;
+                this.pricingMatrix.delivery.maxDailyBags = 500;
+            }
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
         }
 
@@ -5754,6 +5764,8 @@ var admin = {
         const delHeavyT1Fee = document.getElementById('m-del-heavy-t1-fee');
         const delHeavyT2Weight = document.getElementById('m-del-heavy-t2-weight');
         const delHeavyT2Fee = document.getElementById('m-del-heavy-t2-fee');
+        const delMaxOrder = document.getElementById('m-del-max-order');
+        const delMaxDaily = document.getElementById('m-del-max-daily');
         
         if (delBase) delBase.value = this.pricingMatrix.delivery.baseFare !== undefined ? this.pricingMatrix.delivery.baseFare : 30;
         if (delKmShort) delKmShort.value = this.pricingMatrix.delivery.perKmShort !== undefined ? this.pricingMatrix.delivery.perKmShort : (this.pricingMatrix.delivery.perKmRate !== undefined ? this.pricingMatrix.delivery.perKmRate : 15);
@@ -5769,6 +5781,8 @@ var admin = {
         if (delHeavyT1Fee) delHeavyT1Fee.value = this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10;
         if (delHeavyT2Weight) delHeavyT2Weight.value = this.pricingMatrix.delivery.heavyLoadT2Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Weight : 31;
         if (delHeavyT2Fee) delHeavyT2Fee.value = this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15;
+        if (delMaxOrder) delMaxOrder.value = this.pricingMatrix.delivery.maxOrderBags !== undefined ? this.pricingMatrix.delivery.maxOrderBags : 100;
+        if (delMaxDaily) delMaxDaily.value = this.pricingMatrix.delivery.maxDailyBags !== undefined ? this.pricingMatrix.delivery.maxDailyBags : 500;
     },
 
     toggleMatrixLock(cardId, btn) {
@@ -5815,6 +5829,8 @@ var admin = {
         const delHeavyT1FeeEl = document.getElementById('m-del-heavy-t1-fee');
         const delHeavyT2WeightEl = document.getElementById('m-del-heavy-t2-weight');
         const delHeavyT2FeeEl = document.getElementById('m-del-heavy-t2-fee');
+        const delMaxOrderEl = document.getElementById('m-del-max-order');
+        const delMaxDailyEl = document.getElementById('m-del-max-daily');
 
         const newMatrix = {
             products: products,
@@ -5832,7 +5848,9 @@ var admin = {
                 heavyLoadT1Weight: delHeavyT1WeightEl ? parseFloat(delHeavyT1WeightEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Weight : 19),
                 heavyLoadT1Fee: delHeavyT1FeeEl ? parseFloat(delHeavyT1FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10),
                 heavyLoadT2Weight: delHeavyT2WeightEl ? parseFloat(delHeavyT2WeightEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Weight : 31),
-                heavyLoadT2Fee: delHeavyT2FeeEl ? parseFloat(delHeavyT2FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15)
+                heavyLoadT2Fee: delHeavyT2FeeEl ? parseFloat(delHeavyT2FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15),
+                maxOrderBags: delMaxOrderEl ? parseFloat(delMaxOrderEl.value) : (this.pricingMatrix.delivery.maxOrderBags !== undefined ? this.pricingMatrix.delivery.maxOrderBags : 100),
+                maxDailyBags: delMaxDailyEl ? parseFloat(delMaxDailyEl.value) : (this.pricingMatrix.delivery.maxDailyBags !== undefined ? this.pricingMatrix.delivery.maxDailyBags : 500)
             }
         };
 
