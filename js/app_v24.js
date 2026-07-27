@@ -35,8 +35,8 @@ const app = {
             heavyLoadT1Fee: 10,
             heavyLoadT2Weight: 31,
             heavyLoadT2Fee: 15,
-            maxOrderBags: 100,
-            maxDailyBags: 500
+            maxOrderKg: 300,
+            maxDailyKg: 1500
         }
     },
 
@@ -67,8 +67,8 @@ const app = {
                             heavyLoadT1Fee: matrix.delivery?.heavyLoadT1Fee !== undefined ? matrix.delivery.heavyLoadT1Fee : 10,
                             heavyLoadT2Weight: matrix.delivery?.heavyLoadT2Weight !== undefined ? matrix.delivery.heavyLoadT2Weight : 31,
                             heavyLoadT2Fee: matrix.delivery?.heavyLoadT2Fee !== undefined ? matrix.delivery.heavyLoadT2Fee : 15,
-                            maxOrderBags: matrix.delivery?.maxOrderBags !== undefined ? matrix.delivery.maxOrderBags : 100,
-                            maxDailyBags: matrix.delivery?.maxDailyBags !== undefined ? matrix.delivery.maxDailyBags : 500
+                            maxOrderKg: matrix.delivery?.maxOrderKg !== undefined ? matrix.delivery.maxOrderKg : (matrix.delivery?.maxOrderBags !== undefined ? (matrix.delivery.maxOrderBags === 100 ? 300 : matrix.delivery.maxOrderBags * 3) : 300),
+                            maxDailyKg: matrix.delivery?.maxDailyKg !== undefined ? matrix.delivery.maxDailyKg : (matrix.delivery?.maxDailyBags !== undefined ? (matrix.delivery.maxDailyBags === 500 ? 1500 : matrix.delivery.maxDailyBags * 3) : 1500)
                         }
                     };
                 }
@@ -148,7 +148,7 @@ const app = {
         }
 
         // Final Safety: Ensure heavy load and limit fields exist on loaded delivery matrix
-        if (this.pricingMatrix.delivery && (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined || this.pricingMatrix.delivery.maxOrderBags === undefined)) {
+        if (this.pricingMatrix.delivery && (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined || this.pricingMatrix.delivery.maxOrderKg === undefined)) {
             console.log("🔄 [Migration] Migrating heavy load & capacity settings into delivery config.");
             if (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
                 this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
@@ -156,9 +156,11 @@ const app = {
                 this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
                 this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
             }
-            if (this.pricingMatrix.delivery.maxOrderBags === undefined) {
-                this.pricingMatrix.delivery.maxOrderBags = 100;
-                this.pricingMatrix.delivery.maxDailyBags = 500;
+            if (this.pricingMatrix.delivery.maxOrderKg === undefined) {
+                this.pricingMatrix.delivery.maxOrderKg = this.pricingMatrix.delivery.maxOrderBags !== undefined ? (this.pricingMatrix.delivery.maxOrderBags === 100 ? 300 : this.pricingMatrix.delivery.maxOrderBags * 3) : 300;
+                this.pricingMatrix.delivery.maxDailyKg = this.pricingMatrix.delivery.maxDailyBags !== undefined ? (this.pricingMatrix.delivery.maxDailyBags === 500 ? 1500 : this.pricingMatrix.delivery.maxDailyBags * 3) : 1500;
+                delete this.pricingMatrix.delivery.maxOrderBags;
+                delete this.pricingMatrix.delivery.maxDailyBags;
             }
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
             this.updateTotal();
@@ -3921,7 +3923,7 @@ const app = {
         const maxOrderContainer = document.getElementById('about-delivery-max-order-container');
         const maxOrderEl = document.getElementById('about-delivery-max-order');
         if (maxOrderContainer && maxOrderEl) {
-            const maxOrder = parseFloat(delivery.maxOrderBags) || 0;
+            const maxOrder = parseFloat(delivery.maxOrderKg) || 0;
             if (maxOrder > 0) {
                 maxOrderEl.textContent = maxOrder;
                 maxOrderContainer.style.display = 'flex';
@@ -3933,7 +3935,7 @@ const app = {
         const maxDailyContainer = document.getElementById('about-delivery-max-daily-container');
         const maxDailyEl = document.getElementById('about-delivery-max-daily');
         if (maxDailyContainer && maxDailyEl) {
-            const maxDaily = parseFloat(delivery.maxDailyBags) || 0;
+            const maxDaily = parseFloat(delivery.maxDailyKg) || 0;
             if (maxDaily > 0) {
                 maxDailyEl.textContent = maxDaily;
                 maxDailyContainer.style.display = 'flex';
@@ -3990,6 +3992,13 @@ const app = {
         let bulkNotices = [];
         let anyBulk = false;
 
+        // Check if customer account category allows bulk rate (default: Retail)
+        const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+        const company = (this.user && this.user.companyName ? this.user.companyName : '').trim().toUpperCase();
+        const dKey = Object.keys(discounts).find(k => k.trim().toUpperCase() === company);
+        const d = dKey ? discounts[dKey] : null;
+        const allowBulk = d && d.category === 'Wholesale';
+
         this.pricingMatrix.products.forEach(p => {
             const qtyFull = parseFloat(this.orderData.qty.fullDice[p.id]) || 0;
             const qtyHalf = parseFloat(this.orderData.qty.halfDice[p.id]) || 0;
@@ -4006,12 +4015,12 @@ const app = {
             if (!this.orderData.bonusStates) this.orderData.bonusStates = {};
             this.orderData.bonusStates[p.id] = false;
 
-            if (qTotal >= threshold) {
+            if (allowBulk && qTotal >= threshold) {
                 pTotal = qTotal * bulk;
                 isBulk = true;
                 anyBulk = true;
                 bulkNotices.push(`${p.name.split(' ')[0]} (₱${bulk})`);
-            } else if (qTotal === threshold - 1 && threshold > 1) {
+            } else if (allowBulk && qTotal === threshold - 1 && threshold > 1) {
                 pTotal = threshold * bulk;
                 this.orderData.bonusStates[p.id] = true;
             }
@@ -4036,7 +4045,12 @@ const app = {
         const halfBox = document.getElementById('halfDice-promo-box');
 
         if (fullPromo && halfPromo) {
-            if (anyBulk) {
+            if (!allowBulk) {
+                fullPromo.innerText = "Retail Account: Standard pricing applied";
+                halfPromo.innerText = "Retail Account: Standard pricing applied";
+                if (fullBox) { fullBox.classList.add('promo-info'); fullBox.classList.remove('promo-reached'); }
+                if (halfBox) { halfBox.classList.add('promo-info'); halfBox.classList.remove('promo-reached'); }
+            } else if (anyBulk) {
                 const notice = `🔥 Bulk Applied: ${bulkNotices.join(' & ')}`;
                 fullPromo.innerText = notice;
                 halfPromo.innerText = notice;
@@ -4055,11 +4069,6 @@ const app = {
         this.orderData.subtotal = subtotal;
         
         // Apply Partnership Discount
-        const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-        const company = (this.user.companyName || '').trim().toUpperCase();
-        const dKey = Object.keys(discounts).find(k => k.trim().toUpperCase() === company);
-        const d = dKey ? discounts[dKey] : null;
-
         this.orderData.discountAmount = 0;
         this.orderData.discountLabel = '';
 
@@ -4154,20 +4163,41 @@ const app = {
         this.nextStep();
     },
 
-    getCurrentOrderTotalBags() {
-        let count = 0;
+    getCurrentOrderTotalKg() {
+        let totalKg = 0;
         if (this.orderData && this.orderData.qty) {
-            Object.values(this.orderData.qty.fullDice || {}).forEach(v => count += (parseFloat(v) || 0));
-            Object.values(this.orderData.qty.halfDice || {}).forEach(v => count += (parseFloat(v) || 0));
+            const getWeight = (pid) => {
+                if (pid === 'bag3kg') return 3;
+                if (pid === 'bag1kg') return 1;
+                const match = pid.toString().match(/\d+/);
+                return match ? parseInt(match[0], 10) : 1;
+            };
+            Object.keys(this.orderData.qty.fullDice || {}).forEach(pid => {
+                totalKg += (parseFloat(this.orderData.qty.fullDice[pid]) || 0) * getWeight(pid);
+            });
+            Object.keys(this.orderData.qty.halfDice || {}).forEach(pid => {
+                totalKg += (parseFloat(this.orderData.qty.halfDice[pid]) || 0) * getWeight(pid);
+            });
         }
-        return count;
+        return totalKg;
     },
 
-    getTodayDeliveryTotalBags() {
-        let totalToday = 0;
+    getTodayDeliveryTotalKg() {
+        let totalTodayKg = 0;
         try {
             const orders = JSON.parse(localStorage.getItem('iceqube_orders') || '[]');
             const todayStr = new Date().toISOString().split('T')[0];
+            const getWeight = (str) => {
+                if (!str) return 1;
+                if (str.includes('3kg')) return 3;
+                if (str.includes('5kg')) return 5;
+                if (str.includes('1kg')) return 1;
+                const match = str.toString().match(/\d+kg/i);
+                if (match) return parseInt(match[0], 10) || 1;
+                const numMatch = str.toString().match(/\d+/);
+                return numMatch ? parseInt(numMatch[0], 10) : 1;
+            };
+
             orders.forEach(order => {
                 if (order.logistics === 'Doorstep Delivery' && order.status !== 'cancelled' && order.status !== 'rejected') {
                     let isToday = false;
@@ -4182,47 +4212,54 @@ const app = {
                         isToday = true;
                     }
                     if (isToday) {
-                        let orderBags = 0;
+                        let orderKg = 0;
                         if (order.items && Array.isArray(order.items)) {
-                            order.items.forEach(i => orderBags += (parseFloat(i.qty) || 0));
+                            order.items.forEach(i => {
+                                const w = getWeight(i.baseName || i.name || i.id || '');
+                                orderKg += (parseFloat(i.qty) || 0) * w;
+                            });
                         } else if (order.qty) {
-                            Object.values(order.qty.fullDice || {}).forEach(v => orderBags += (parseFloat(v) || 0));
-                            Object.values(order.qty.halfDice || {}).forEach(v => orderBags += (parseFloat(v) || 0));
+                            Object.keys(order.qty.fullDice || {}).forEach(pid => {
+                                orderKg += (parseFloat(order.qty.fullDice[pid]) || 0) * getWeight(pid);
+                            });
+                            Object.keys(order.qty.halfDice || {}).forEach(pid => {
+                                orderKg += (parseFloat(order.qty.halfDice[pid]) || 0) * getWeight(pid);
+                            });
                         }
-                        totalToday += orderBags;
+                        totalTodayKg += orderKg;
                     }
                 }
             });
         } catch (e) {
-            console.warn('Error counting today delivery bags:', e);
+            console.warn('Error counting today delivery kg:', e);
         }
-        return totalToday;
+        return totalTodayKg;
     },
 
     checkDeliveryLimits(forDateStr) {
         if (this.orderData.logistics !== 'Doorstep Delivery') return { exceeded: false };
         const deliveryConfig = this.pricingMatrix?.delivery || {};
-        const maxOrder = parseFloat(deliveryConfig.maxOrderBags) || 100;
-        const maxDaily = parseFloat(deliveryConfig.maxDailyBags) || 500;
-        const currentBags = this.getCurrentOrderTotalBags();
+        const maxOrder = parseFloat(deliveryConfig.maxOrderKg) || 300;
+        const maxDaily = parseFloat(deliveryConfig.maxDailyKg) || 1500;
+        const currentKg = this.getCurrentOrderTotalKg();
 
-        if (maxOrder > 0 && currentBags > maxOrder) {
+        if (maxOrder > 0 && currentKg > maxOrder) {
             return {
                 exceeded: true,
                 type: 'order_limit',
-                msg: `Order size (${currentBags} bags) exceeds the delivery limit per order (${maxOrder} bags). Please reduce quantity or choose Self-Pickup.`
+                msg: `Order weight (${currentKg} kg) exceeds the delivery limit per order (${maxOrder} kg). Please reduce quantity or choose Self-Pickup.`
             };
         }
 
         const todayStr = new Date().toISOString().split('T')[0];
         const isToday = !forDateStr || forDateStr === todayStr || forDateStr === 'now';
         if (isToday && maxDaily > 0) {
-            const todayBags = this.getTodayDeliveryTotalBags();
-            if ((todayBags + currentBags) > maxDaily) {
+            const todayKg = this.getTodayDeliveryTotalKg();
+            if ((todayKg + currentKg) > maxDaily) {
                 return {
                     exceeded: true,
                     type: 'daily_limit',
-                    msg: `Our maximum daily delivery limit (${maxDaily} bags) has been reached for today. We suggest a next day booking!`
+                    msg: `Our maximum daily delivery capacity (${maxDaily} kg) has been reached for today. We suggest a next day booking!`
                 };
             }
         }
@@ -6107,7 +6144,7 @@ const app = {
             receiver_name: (this.orderData.deliveryDetails && this.orderData.deliveryDetails.person) ? this.orderData.deliveryDetails.person : customerName,
             contact_number: contactNumber,
             delivery_notes: (this.isQuickReorder ? '[⚡ QUICK REORDER] ' : '') + ((this.orderData.deliveryDetails && this.orderData.deliveryDetails.instructions) ? this.orderData.deliveryDetails.instructions : 'No special notes.'),
-            items: { ...this.orderData.qty, _matrix: this.pricingMatrix, payment_screenshot: this.orderData.payment_screenshot_base64 || null, payment_receipt_url: paymentReceiptUrl },
+            items: { ...this.orderData.qty, _matrix: this.pricingMatrix, bulkStates: this.orderData.bulkStates || {}, payment_screenshot: this.orderData.payment_screenshot_base64 || null, payment_receipt_url: paymentReceiptUrl },
             total_price: this.orderData.total + (this.orderData.deliveryFee || 0),
             payment_method: this.orderData.payment,
             delivery_status: 'Pending',
@@ -6691,11 +6728,21 @@ const app = {
         
         ['fullDice', 'halfDice'].forEach(type => {
             if (items[type]) {
+                const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+                const cleanCust = (rawOrder.customer_name || rawOrder.customer || '').trim().toUpperCase();
+                const custKey = Object.keys(discounts).find(k => k.trim().toUpperCase() === cleanCust);
+                const isWholesale = custKey && discounts[custKey].category === 'Wholesale';
+
                 matrix.products.forEach(p => {
                     const qty = items[type][p.id] || 0;
                     if (qty > 0) {
                         const totalSizeQty = (items.fullDice ? (items.fullDice[p.id] || 0) : 0) + (items.halfDice ? (items.halfDice[p.id] || 0) : 0);
-                        const price = (totalSizeQty >= p.threshold) ? p.bulk : p.standard;
+                        let price;
+                        if (items.bulkStates && items.bulkStates[p.id] !== undefined) {
+                            price = items.bulkStates[p.id] ? p.bulk : p.standard;
+                        } else {
+                            price = (isWholesale && totalSizeQty >= p.threshold) ? p.bulk : p.standard;
+                        }
 
                         mappedItems.push({
                             baseName: p.name.split(' (')[0],

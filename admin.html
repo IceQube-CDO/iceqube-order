@@ -2389,7 +2389,12 @@
                         </div>
 
                         <div id="pricing-display-mode" class="pricing-grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <!-- ROW 1: Tier & Credit -->
+                            <!-- ROW 1: Account Category -->
+                            <div class="locked-price-card" style="grid-column: span 2; border-color: rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.05);">
+                                <span class="label" style="color: #c084fc;">Account Category (Wholesale Rules)</span>
+                                <div class="locked-value" style="color: #f3e8ff; font-size: 0.95rem;" id="display-account-category">Retail (Standard Pricing Only)</div>
+                            </div>
+                            <!-- ROW 2: Tier & Credit -->
                             <div id="tier-card" class="locked-price-card tier-card-standard">
                                 <span id="tier-label" class="label tier-text-standard">Customer Tier</span>
                                 <div class="locked-value tier-text-standard" style="font-size: 0.95rem; white-space: nowrap;" id="display-customer-tier">Standard</div>
@@ -2399,7 +2404,7 @@
                                 <div class="locked-value" style="color: #60a5fa;">₱<span id="display-credit-limit">0</span></div>
                             </div>
                             
-                            <!-- ROW 2: Discounts -->
+                            <!-- ROW 3: Discounts -->
                             <div class="locked-price-card">
                                 <span class="label">Special Discount</span>
                                 <div class="locked-value"><span id="display-discount-percent">0</span>%</div>
@@ -2411,7 +2416,16 @@
                         </div>
 
                         <div id="pricing-edit-mode" class="pricing-grid" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <!-- ROW 1: Tier & Credit -->
+                            <!-- ROW 1: Account Category -->
+                            <div style="grid-column: span 2;">
+                                <span class="label" style="color: #c084fc;">Account Category (Wholesale Rules)</span>
+                                <select id="drawer-account-category" 
+                                        style="width: 100%; background: #1e293b; border: 1px solid rgba(168, 85, 247, 0.3); color: white; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; outline: none; margin-top: 5px;">
+                                    <option value="Retail">Retail (Standard Pricing Only - No Bulk Rate)</option>
+                                    <option value="Wholesale">Wholesale / Commercial (Enable Bulk Rates)</option>
+                                </select>
+                            </div>
+                            <!-- ROW 2: Tier & Credit -->
                             <div>
                                 <span class="label" style="color: #60a5fa;">Customer Tier</span>
                                 <select id="elite-tier-select" onchange="handleTierChange()" 
@@ -2428,7 +2442,7 @@
                                        style="width: 100%; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; color: #60a5fa; padding: 10px; font-size: 14px; margin-top: 5px; font-weight: 700;">
                             </div>
 
-                            <!-- ROW 2: Discounts -->
+                            <!-- ROW 3: Discounts -->
                             <div>
                                 <span class="label">Disc. (%)</span>
                                 <input type="number" id="drawer-discount-percent" value="0" step="0.1" min="0" max="100" 
@@ -3188,12 +3202,12 @@
                         <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #06b6d4;">Delivery Capacity & Limits</h4>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <div>
-                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Max Limit Per Order (Bags)</label>
-                                <input type="number" id="m-del-max-order" class="matrix-input" value="100" readonly>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Max Limit Per Order (kg)</label>
+                                <input type="number" id="m-del-max-order" class="matrix-input" value="300" readonly>
                             </div>
                             <div>
-                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Max Daily Limit (Bags)</label>
-                                <input type="number" id="m-del-max-daily" class="matrix-input" value="500" readonly>
+                                <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Max Daily Limit (kg)</label>
+                                <input type="number" id="m-del-max-daily" class="matrix-input" value="1500" readonly>
                             </div>
                         </div>
                         <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Set to 0 to disable limits. Reaching daily limit prompts next-day booking in the app.</small>

@@ -194,8 +194,8 @@ var admin = {
             heavyLoadT1Fee: 10,
             heavyLoadT2Weight: 31,
             heavyLoadT2Fee: 15,
-            maxOrderBags: 100,
-            maxDailyBags: 500
+            maxOrderKg: 300,
+            maxDailyKg: 1500
         }
     })),
     cashflowFilter: 'daily', 
@@ -466,24 +466,26 @@ var admin = {
                     heavyLoadT1Fee: 10,
                     heavyLoadT2Weight: 31,
                     heavyLoadT2Fee: 15,
-                    maxOrderBags: 100,
-                    maxDailyBags: 500
+                    maxOrderKg: 300,
+                    maxDailyKg: 1500
                 }
             };
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
         }
 
         // Final Safety: Ensure heavy load and limit fields exist on loaded delivery matrix
-        if (this.pricingMatrix && this.pricingMatrix.delivery && (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined || this.pricingMatrix.delivery.maxOrderBags === undefined)) {
+        if (this.pricingMatrix && this.pricingMatrix.delivery && (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined || this.pricingMatrix.delivery.maxOrderKg === undefined)) {
             if (this.pricingMatrix.delivery.heavyLoadT1Weight === undefined) {
                 this.pricingMatrix.delivery.heavyLoadT1Weight = 19;
                 this.pricingMatrix.delivery.heavyLoadT1Fee = 10;
                 this.pricingMatrix.delivery.heavyLoadT2Weight = 31;
                 this.pricingMatrix.delivery.heavyLoadT2Fee = 15;
             }
-            if (this.pricingMatrix.delivery.maxOrderBags === undefined) {
-                this.pricingMatrix.delivery.maxOrderBags = 100;
-                this.pricingMatrix.delivery.maxDailyBags = 500;
+            if (this.pricingMatrix.delivery.maxOrderKg === undefined) {
+                this.pricingMatrix.delivery.maxOrderKg = this.pricingMatrix.delivery.maxOrderBags !== undefined ? (this.pricingMatrix.delivery.maxOrderBags === 100 ? 300 : this.pricingMatrix.delivery.maxOrderBags * 3) : 300;
+                this.pricingMatrix.delivery.maxDailyKg = this.pricingMatrix.delivery.maxDailyBags !== undefined ? (this.pricingMatrix.delivery.maxDailyBags === 500 ? 1500 : this.pricingMatrix.delivery.maxDailyBags * 3) : 1500;
+                delete this.pricingMatrix.delivery.maxOrderBags;
+                delete this.pricingMatrix.delivery.maxDailyBags;
             }
             localStorage.setItem('iceqube_global_pricing', JSON.stringify(this.pricingMatrix));
         }
@@ -2586,13 +2588,23 @@ var admin = {
             if (matrix && matrix.products) {
                 const productList = Array.isArray(matrix.products) ? matrix.products : Object.values(matrix.products);
                 
+                const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
+                const cleanCust = (order.customer_name || order.customer || '').trim().toUpperCase();
+                const custKey = Object.keys(discounts).find(k => k.trim().toUpperCase() === cleanCust);
+                const isWholesale = custKey && discounts[custKey].category === 'Wholesale';
+
                 productList.forEach(p => {
                     const fQty = parseFloat(fd[p.id]) || 0;
                     const hQty = parseFloat(hd[p.id]) || 0;
                     
                     // Determine which price was used (Bulk or Standard)
                     const totalQtyForThisProduct = fQty + hQty;
-                    const usedPrice = (totalQtyForThisProduct >= p.threshold) ? p.bulk : p.standard;
+                    let usedPrice;
+                    if (parsedItems.bulkStates && parsedItems.bulkStates[p.id] !== undefined) {
+                        usedPrice = parsedItems.bulkStates[p.id] ? p.bulk : p.standard;
+                    } else {
+                        usedPrice = (isWholesale && totalQtyForThisProduct >= p.threshold) ? p.bulk : p.standard;
+                    }
                     
                     if (fQty > 0) {
                         itemEntries.push({ 
@@ -5745,7 +5757,7 @@ var admin = {
                 <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #eab308;">${p.name}</h4>
                 <label style="display: block; font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Min. Bags for Bulk Rate</label>
                 <input type="number" id="m-${p.id}-threshold" class="matrix-input" value="${p.threshold}" readonly>
-                <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Currently ${p.threshold} bags triggers ₱${p.bulk} rate.</small>
+                <small style="display: block; margin-top: 8px; color: #64748b; font-size: 0.7rem;">Currently ${p.threshold} bags triggers ₱${p.bulk} wholesale rate (for Wholesale accounts).</small>
             </div>
         `).join('');
 
@@ -5781,8 +5793,8 @@ var admin = {
         if (delHeavyT1Fee) delHeavyT1Fee.value = this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10;
         if (delHeavyT2Weight) delHeavyT2Weight.value = this.pricingMatrix.delivery.heavyLoadT2Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Weight : 31;
         if (delHeavyT2Fee) delHeavyT2Fee.value = this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15;
-        if (delMaxOrder) delMaxOrder.value = this.pricingMatrix.delivery.maxOrderBags !== undefined ? this.pricingMatrix.delivery.maxOrderBags : 100;
-        if (delMaxDaily) delMaxDaily.value = this.pricingMatrix.delivery.maxDailyBags !== undefined ? this.pricingMatrix.delivery.maxDailyBags : 500;
+        if (delMaxOrder) delMaxOrder.value = this.pricingMatrix.delivery.maxOrderKg !== undefined ? this.pricingMatrix.delivery.maxOrderKg : 300;
+        if (delMaxDaily) delMaxDaily.value = this.pricingMatrix.delivery.maxDailyKg !== undefined ? this.pricingMatrix.delivery.maxDailyKg : 1500;
     },
 
     toggleMatrixLock(cardId, btn) {
@@ -5849,8 +5861,8 @@ var admin = {
                 heavyLoadT1Fee: delHeavyT1FeeEl ? parseFloat(delHeavyT1FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT1Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT1Fee : 10),
                 heavyLoadT2Weight: delHeavyT2WeightEl ? parseFloat(delHeavyT2WeightEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Weight !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Weight : 31),
                 heavyLoadT2Fee: delHeavyT2FeeEl ? parseFloat(delHeavyT2FeeEl.value) : (this.pricingMatrix.delivery.heavyLoadT2Fee !== undefined ? this.pricingMatrix.delivery.heavyLoadT2Fee : 15),
-                maxOrderBags: delMaxOrderEl ? parseFloat(delMaxOrderEl.value) : (this.pricingMatrix.delivery.maxOrderBags !== undefined ? this.pricingMatrix.delivery.maxOrderBags : 100),
-                maxDailyBags: delMaxDailyEl ? parseFloat(delMaxDailyEl.value) : (this.pricingMatrix.delivery.maxDailyBags !== undefined ? this.pricingMatrix.delivery.maxDailyBags : 500)
+                maxOrderKg: delMaxOrderEl ? parseFloat(delMaxOrderEl.value) : (this.pricingMatrix.delivery.maxOrderKg !== undefined ? this.pricingMatrix.delivery.maxOrderKg : 300),
+                maxDailyKg: delMaxDailyEl ? parseFloat(delMaxDailyEl.value) : (this.pricingMatrix.delivery.maxDailyKg !== undefined ? this.pricingMatrix.delivery.maxDailyKg : 1500)
             }
         };
 
@@ -6251,7 +6263,17 @@ function openCustomerDrawer(customerId) {
         
         // Load Discounts & Tier
         const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
-        const custPricing = discounts[cleanName] || discounts[customer.name] || discounts[customerId] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard' };
+        const custPricing = discounts[cleanName] || discounts[customer.name] || discounts[customerId] || { percent: 0, fixed: 0, creditLimit: 0, tier: 'Standard', category: 'Retail' };
+        
+        // Set Account Category
+        const catSelect = document.getElementById('drawer-account-category');
+        const category = custPricing.category || 'Retail';
+        if (catSelect) catSelect.value = category;
+        const catDisplay = document.getElementById('display-account-category');
+        if (catDisplay) {
+            catDisplay.innerText = category === 'Wholesale' ? 'Wholesale / Commercial (Bulk Rates Enabled)' : 'Retail (Standard Pricing Only)';
+            catDisplay.style.color = category === 'Wholesale' ? '#4ade80' : '#f3e8ff';
+        }
         
         // Set Tier Selection
         const tierSelect = document.getElementById('elite-tier-select');
@@ -6467,6 +6489,7 @@ function updateTierVisuals(tier) {
 
 function saveCustomerDiscounts() {
     const customerName = document.getElementById('drawer-customer-name').innerText.trim();
+    const category = document.getElementById('drawer-account-category')?.value || 'Retail';
     const tier = document.getElementById('elite-tier-select').value;
     const percent = parseFloat(document.getElementById('drawer-discount-percent').value) || 0;
     const fixed = parseFloat(document.getElementById('drawer-discount-fixed').value) || 0;
@@ -6475,6 +6498,7 @@ function saveCustomerDiscounts() {
     const discounts = JSON.parse(localStorage.getItem('iceqube_customer_discounts') || '{}');
     discounts[customerName] = { 
         tier,
+        category,
         percent, 
         fixed,
         creditLimit 
@@ -6488,10 +6512,15 @@ function saveCustomerDiscounts() {
         window.IceQubeSync.publishPurge(); 
     }
     
-    console.log(`[SYSTEM] Pricing updated for ${customerName}: Tier=${tier}, Limit=₱${creditLimit}`);
+    console.log(`[SYSTEM] Pricing updated for ${customerName}: Category=${category}, Tier=${tier}, Limit=₱${creditLimit}`);
     alert(`Settings saved for ${customerName}.`);
     
     // Update display mode and lock it
+    const catDisplay = document.getElementById('display-account-category');
+    if (catDisplay) {
+        catDisplay.innerText = category === 'Wholesale' ? 'Wholesale / Commercial (Bulk Rates Enabled)' : 'Retail (Standard Pricing Only)';
+        catDisplay.style.color = category === 'Wholesale' ? '#4ade80' : '#f3e8ff';
+    }
     document.getElementById('display-discount-percent').innerText = percent;
     document.getElementById('display-discount-fixed').innerText = fixed.toFixed(2);
     document.getElementById('display-credit-limit').innerText = creditLimit.toLocaleString();
