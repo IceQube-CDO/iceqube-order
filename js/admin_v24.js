@@ -2751,7 +2751,7 @@ var admin = {
                     const peakEveStart = deliveryConfig.peakEveningStart !== undefined ? parseInt(deliveryConfig.peakEveningStart) : 17;
                     const peakEveEnd = deliveryConfig.peakEveningEnd !== undefined ? parseInt(deliveryConfig.peakEveningEnd) : 18;
                     
-                    const isPeak = (effHour >= peakLunchStart && effHour <= peakLunchEnd) || (effHour >= peakEveStart && effHour <= peakEveEnd);
+                    const isPeak = (effHour >= peakLunchStart && effHour < peakLunchEnd) || (effHour >= peakEveStart && effHour < peakEveEnd);
                     
                     if (isPeak) {
                         peakSurcharge = peakHoursFee;

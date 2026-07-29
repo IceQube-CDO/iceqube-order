@@ -4697,7 +4697,7 @@ const app = {
                 const peakLunchEnd = delivery.peakLunchEnd !== undefined ? parseInt(delivery.peakLunchEnd) : 12;
                 const peakEveStart = delivery.peakEveningStart !== undefined ? parseInt(delivery.peakEveningStart) : 17;
                 const peakEveEnd = delivery.peakEveningEnd !== undefined ? parseInt(delivery.peakEveningEnd) : 18;
-                const isPeakHour = (effectiveHour >= peakLunchStart && effectiveHour <= peakLunchEnd) || (effectiveHour >= peakEveStart && effectiveHour <= peakEveEnd);
+                const isPeakHour = (effectiveHour >= peakLunchStart && effectiveHour < peakLunchEnd) || (effectiveHour >= peakEveStart && effectiveHour < peakEveEnd);
                 if (isPeakHour) {
                     surcharge += peakHoursFee;
                 }
@@ -4731,7 +4731,7 @@ const app = {
                         const peakLunchEnd = delivery.peakLunchEnd !== undefined ? parseInt(delivery.peakLunchEnd) : 12;
                         const peakEveStart = delivery.peakEveningStart !== undefined ? parseInt(delivery.peakEveningStart) : 17;
                         const peakEveEnd = delivery.peakEveningEnd !== undefined ? parseInt(delivery.peakEveningEnd) : 18;
-                        const isPeakHour = (effectiveHour >= peakLunchStart && effectiveHour <= peakLunchEnd) || (effectiveHour >= peakEveStart && effectiveHour <= peakEveEnd);
+                        const isPeakHour = (effectiveHour >= peakLunchStart && effectiveHour < peakLunchEnd) || (effectiveHour >= peakEveStart && effectiveHour < peakEveEnd);
                         if (isPeakHour) {
                             zone += ` + ₱${parseFloat(delivery.peakHoursFee) || 0} Peak`;
                         } else if (effectiveHour >= 21) {
