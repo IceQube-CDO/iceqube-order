@@ -2667,14 +2667,6 @@
                         <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: -6px;">System Controls</div>
 
                         <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Push Alerts</div>
-                            <label class="switch" style="margin: 0; margin-right: 5px;">
-                                <input type="checkbox" id="push-alert-toggle" onclick="if(window.togglePushNotifications) window.togglePushNotifications();">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
                             <div style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;">Buzzer</div>
                             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -4764,51 +4756,21 @@
     <div id="hidden-bridge" style="display:none;"></div>
 
     <script>
-        // Web Push Notification Setup
-        async function updatePushBtnUI(isSubscribed) {
-            const toggle = document.getElementById('push-alert-toggle');
-            if (toggle) {
-                toggle.checked = isSubscribed;
-            }
-        }
+        // Web Push Notification Setup — always on.
+        // The only way to disable alerts is via the phone's system notification settings.
+        function updatePushBtnUI() { /* no UI toggle anymore */ }
 
-        async function checkPushSubscriptionStatus() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                const subscription = await registration.pushManager.getSubscription();
-                updatePushBtnUI(!!subscription);
-            } catch (err) {
-                console.error('Error checking push status:', err);
-            }
-        }
-
-        async function togglePushNotifications() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                console.warn('Push notifications are not supported by the browser.');
-                alert('Push notifications are not supported. Make sure you added IceQube to your Home Screen.');
-                setTimeout(checkPushSubscriptionStatus, 100);
-                return;
-            }
-
-            const toggle = document.getElementById('push-alert-toggle');
-            const isTurningOn = toggle ? toggle.checked : true;
+        async function ensurePushSubscription() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
 
             // iOS requires requestPermission BEFORE any await (like serviceWorker.ready)
-            if (isTurningOn) {
-                if (Notification.permission === 'default') {
-                    const perm = await Notification.requestPermission();
-                    if (perm !== 'granted') {
-                        alert('Permission denied. Please allow notifications when prompted.');
-                        setTimeout(checkPushSubscriptionStatus, 100);
-                        return;
-                    }
-                } else if (Notification.permission === 'denied') {
-                    alert('Notifications are completely blocked. Please enable them in your iPhone Settings under IceQube.');
-                    setTimeout(checkPushSubscriptionStatus, 100);
-                    return;
-                }
+            if (Notification.permission === 'default') {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') return;
+            } else if (Notification.permission === 'denied') {
+                return; // Disabled at OS level — respect it.
             }
+            const isTurningOn = true;
 
             try {
                 const registration = await navigator.serviceWorker.ready;
@@ -4895,14 +4857,26 @@
                 
                 updatePushBtnUI(true);
             } catch (err) {
-                console.error('Error toggling push notifications:', err);
+                console.error('Error ensuring push subscription:', err);
             }
         }
 
-        window.togglePushNotifications = togglePushNotifications;
+        window.ensurePushSubscription = ensurePushSubscription;
         window.addEventListener('load', () => {
-            if (window.checkPushSubscriptionStatus) {
-                window.checkPushSubscriptionStatus();
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'granted') {
+                // Silently (re)subscribe & re-sync to Supabase on every launch
+                ensurePushSubscription();
+            } else if (Notification.permission === 'default') {
+                // iOS only allows the permission prompt from a user gesture —
+                // ask on the first tap anywhere in the app.
+                const askOnce = () => {
+                    document.removeEventListener('click', askOnce, true);
+                    document.removeEventListener('touchend', askOnce, true);
+                    ensurePushSubscription();
+                };
+                document.addEventListener('click', askOnce, true);
+                document.addEventListener('touchend', askOnce, true);
             }
         });
     </script>
