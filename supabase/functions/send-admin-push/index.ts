@@ -21,6 +21,27 @@ serve(async (req) => {
 
     const orderData = payload.record || {}
 
+    // Only alert for genuine NEW customer orders.
+    // The app stores settings/config as rows in the `orders` table (CONFIG_*, SYSTEM_CONFIG,
+    // is_real=false). Those writes happen on every app launch and must NOT trigger a push.
+    const orderId = String(orderData.order_id || '')
+    const isRealNewOrder =
+      payload.type === 'INSERT' &&
+      payload.table === 'orders' &&
+      orderData.is_real !== false &&
+      orderId !== '' &&
+      !orderId.startsWith('CONFIG_') &&
+      !String(orderData.customer_name || '').startsWith('SYSTEM_CONFIG') &&
+      orderData.po_number !== 'GLOBAL_CONFIG_V2' &&
+      orderData.po_number !== 'SYSTEM-GENERATED'
+
+    if (!isRealNewOrder) {
+      console.log(`Skipping push for non-order row: ${orderId || '(no id)'} [${payload.type}]`)
+      return new Response(JSON.stringify({ success: true, skipped: true }), {
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
     // Create a Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
